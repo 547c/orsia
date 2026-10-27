@@ -1,0 +1,846 @@
+keys,ko,en
+일시정지,일시정지,Paused
+계속하기,계속하기,Continue
+저장하기,저장하기,Save
+불러오기,불러오기,Load
+타이틀로,타이틀로,Back to Title
+음악 끄기,음악 끄기,Music Off
+음악 켜기,음악 켜기,Music On
+기록,기록,Records
+저장된 게임이 없습니다,저장된 게임이 없습니다,No saved games
+퀘스트,퀘스트,Quests
+메인 퀘스트,메인 퀘스트,Main
+서브 퀘스트,서브 퀘스트,Side
+닫기,닫기,Close
+[계속],[계속],[Continue]
+의뢰인: %s,의뢰인: %s,Client: %s
+진행도 %d / %d,진행도 %d / %d,Progress %d / %d
+완료했다.,완료했다.,Completed.
+진행 중인 의뢰 없음,진행 중인 의뢰 없음,No active bounty
+엘라라에게 말을 걸어 의뢰판을 확인해보세요.,엘라라에게 말을 걸어 의뢰판을 확인해보세요.,Talk to Elara to check the bounty board.
+엘라라,엘라라,Elara
+로한,로한,Rohan
+유서프,유서프,Yusuf
+미아,미아,Mia
+[우물에 대해 묻는다],[우물에 대해 묻는다],[Ask about the well]
+[무슨 일이에요?],[무슨 일이에요?],[What happened?]
+[선물을 준다],[선물을 준다],[Give a gift]
+카밀,카밀,Kamil
+나딤,나딤,Nadim
+카심,카심,Kasim
+아직은... 좀 더 가까워져야 들을 수 있을 것 같다.,아직은... 좀 더 가까워져야 들을 수 있을 것 같다.,...We're not close enough yet for that.
+지금까지 나눈 대화,지금까지 나눈 대화,Conversations so far
+뒤로가기,뒤로가기,Back
+플레이어: %s,플레이어: %s,You: %s
+보유 골드: %d,보유 골드: %d,Gold: %d
+새로고침 (%d골드),새로고침 (%d골드),Refresh (%d gold)
+이미 진행 중인 의뢰가 있어요. 먼저 마치고 오세요.,이미 진행 중인 의뢰가 있어요. 먼저 마치고 오세요.,You already have an active bounty. Finish that one first.
+골드가 부족해요. (%d골드 필요),골드가 부족해요. (%d골드 필요),Not enough gold. (%d gold needed)
+새 의뢰를 붙였어요.,새 의뢰를 붙였어요.,New bounties posted.
+그 의뢰는 지금 받을 수 없어요.,그 의뢰는 지금 받을 수 없어요.,That bounty can't be accepted right now.
+의뢰를 맡았어요. 조심히 다녀오세요.,의뢰를 맡았어요. 조심히 다녀오세요.,Bounty accepted. Stay safe out there.
+의뢰판,의뢰판,Bounty Board
+의뢰,의뢰,Bounty
+보상,보상,Reward
+수락,수락,Accept
+새로고침,새로고침,Refresh
+[M] 나침반: %s,[M] 나침반: %s,[M] Compass: %s
+켜짐,켜짐,On
+꺼짐,꺼짐,Off
+목표,목표,Objective
+해제,해제,Unequip
+장착,장착,Equip
+인벤토리,인벤토리,Inventory
+퀘스트 완료!,퀘스트 완료!,Quest Complete!
+"
+경험치 +%d","
+경험치 +%d","
++%d XP"
+의뢰 완료!,의뢰 완료!,Bounty Complete!
+레벨 업!,레벨 업!,Level Up!
+"레벨 %d 달성!
+최대 체력 +%d / 최대 마나 +%d / 스킬포인트 +%d","레벨 %d 달성!
+최대 체력 +%d / 최대 마나 +%d / 스킬포인트 +%d","Reached level %d!
+Max HP +%d / Max Mana +%d / Skill Points +%d"
+%s  [완료],%s  [완료],%s  [Done]
+%s  [잠김],%s  [잠김],%s  [Locked]
+아직 수락하지 않았다. (지금 의뢰인에게 말을 걸 수 있다),아직 수락하지 않았다. (지금 의뢰인에게 말을 걸 수 있다),Not yet accepted. (You can talk to the client now.)
+수락 조건: %s,수락 조건: %s,Requirement: %s
+현재: 진행도 %d · 레벨 %d,현재: 진행도 %d · 레벨 %d,Current: Progress %d - Level %d
+진행도: %s,진행도: %s,Progress: %s
+남은 처치: %d마리,남은 처치: %d마리,Remaining: %d
+보상: %s,보상: %s,Reward: %s
+"슬롯 %d
+비어있음","슬롯 %d
+비어있음","Slot %d
+Empty"
+"슬롯 %d    Lv. %d    HP: %d/%d
+%s","슬롯 %d    Lv. %d    HP: %d/%d
+%s","Slot %d    Lv. %d    HP: %d/%d
+%s"
+슬롯 %d에 저장했습니다,슬롯 %d에 저장했습니다,Saved to slot %d
+저장에 실패했습니다,저장에 실패했습니다,Save failed
+이 슬롯을 덮어쓰시겠습니까?,이 슬롯을 덮어쓰시겠습니까?,Overwrite this slot?
+예,예,Yes
+아니요,아니요,No
+%s - %s (%d 골드),%s - %s (%d 골드),%s - %s (%d gold)
+총 %d 골드,총 %d 골드,Total: %d gold
+골드가 부족합니다,골드가 부족합니다,Not enough gold
+%s을(를) %d개 구매했다!,%s을(를) %d개 구매했다!,Bought %s x%d!
+구매,구매,Buy
+유서프의 상점,유서프의 상점,Yusuf's Shop
+카심의 무기점,카심의 무기점,Kasim's Weapon Shop
+스킵,스킵,Skip
+정말 스킵하시겠습니까?,정말 스킵하시겠습니까?,Are you sure you want to skip?
+엔딩 기록,엔딩 기록,Ending Records
+쓰러졌다...,쓰러졌다...,You have fallen...
+다시 시작,다시 시작,Try Again
+마나포션,마나포션,Mana Potion
+마나 50% 회복,마나 50% 회복,Restores 50% Mana
+체력포션,체력포션,Health Potion
+체력 50% 회복,체력 50% 회복,Restores 50% HP
+작은 선물,작은 선물,Small Gift
+누군가에게 선물하면 기뻐할 것이다,누군가에게 선물하면 기뻐할 것이다,Someone would be happy to receive this as a gift
+유적의 열쇠,유적의 열쇠,Ruins Key
+이걸로 사막 유적의 문을 열 수 있을 것 같다,이걸로 사막 유적의 문을 열 수 있을 것 같다,This looks like it could open the door to the desert ruins
+나무검,나무검,Wooden Sword
+물리 피해 +1,물리 피해 +1,Physical Damage +1
+뼈검,뼈검,Bone Sword
+물리 피해 +2,물리 피해 +2,Physical Damage +2
+금검,금검,Gold Sword
+물리 피해 +4,물리 피해 +4,Physical Damage +4
+나무 지팡이,나무 지팡이,Wooden Staff
+마법 피해 +1,마법 피해 +1,Magic Damage +1
+뼈 지팡이,뼈 지팡이,Bone Staff
+마법 피해 +2,마법 피해 +2,Magic Damage +2
+금 지팡이,금 지팡이,Gold Staff
+마법 피해 +4,마법 피해 +4,Magic Damage +4
+나무 방패,나무 방패,Wooden Shield
+최대 체력 +5,최대 체력 +5,Max HP +5
+뼈 방패,뼈 방패,Bone Shield
+최대 체력 +10,최대 체력 +10,Max HP +10
+금 방패,금 방패,Gold Shield
+최대 체력 +20,최대 체력 +20,Max HP +20
+숲의 오크 소탕,숲의 오크 소탕,Orc Cleanup in the Forest
+동굴의 스켈레톤,동굴의 스켈레톤,Skeletons in the Cave
+사막의 미라 처치,사막의 미라 처치,Mummies in the Desert
+유적의 열쇠 찾기,유적의 열쇠 찾기,Find the Ruins Key
+오크,오크,Orc
+스켈레톤,스켈레톤,Skeleton
+미라,미라,Mummy
+%s 토벌 의뢰,%s 토벌 의뢰,%s Bounty
+%s %d마리,%s %d마리,%s x%d
+%s %d/%d,%s %d/%d,%s %d/%d
+골드 %d,골드 %d,%d Gold
+경험치 %d,경험치 %d,%d XP
+%s 호감도 +%d,%s 호감도 +%d,%s Affinity +%d
+보너스: ,보너스: ,Bonus: 
+이전 퀘스트,이전 퀘스트,Previous Quest
+%s 완료 및 레벨 %d 이상 필요,%s 완료 및 레벨 %d 이상 필요,Complete %s and reach Level %d
+"[알겠어요, 안 물어볼게요]","[알겠어요, 안 물어볼게요]","[Okay, I won't ask]"
+[스켈레톤 처치를 돕겠다고 한다],[스켈레톤 처치를 돕겠다고 한다],[Offer to help deal with the skeletons]
+"[저번에 물었던 거, 다시 물어봐도 될까요?]","[저번에 물었던 거, 다시 물어봐도 될까요?]",[Can I ask you again about what I asked before?]
+[심상치 않네요],[심상치 않네요],[Something feels off]
+[당신은 누구세요?],[당신은 누구세요?],[Who are you?]
+[그래도 위험한 건 위험한 거잖아요],[그래도 위험한 건 위험한 거잖아요],"[Still, dangerous is dangerous]"
+[동굴에 대해 묻는다],[동굴에 대해 묻는다],[Ask about the cave]
+[다른 사람들에 대해 묻는다],[다른 사람들에 대해 묻는다],[Ask about the others]
+"[엘라라 촌장님한테 들었어. 걱정 많이 하시더라, 너희 어머니도.]","[엘라라 촌장님한테 들었어. 걱정 많이 하시더라, 너희 어머니도.]","[Elara told me. She's worried, and so is your mother.]"
+[다른 마을은 어떤가요?],[다른 마을은 어떤가요?],[What are other villages like?]
+[사실 좀 지쳤어요],[사실 좀 지쳤어요],"[Actually, I'm a bit tired]"
+[그럼 뭘 드시고 사세요?],[그럼 뭘 드시고 사세요?],[Then what do you live on?]
+"[네, 다른 마을에서도 이런 일이 있었나요?]","[네, 다른 마을에서도 이런 일이 있었나요?]",[Has this happened in other villages too?]
+"[아니, 사실대로 말해줘. 중요한 일이야]","[아니, 사실대로 말해줘. 중요한 일이야]","[No, tell me the truth. This is important.]"
+[그날 밤에도 나비 찾으러 나갔었어?],[그날 밤에도 나비 찾으러 나갔었어?],[Were you out looking for Nabi that night too?]
+"[아니요, 아직요]","[아니요, 아직요]","[No, not yet]"
+[거기는 어떻게 됐어요?],[거기는 어떻게 됐어요?],[What happened there?]
+[요즘도 그 꿈을 꿔?],[요즘도 그 꿈을 꿔?],[Do you still have that dream?]
+[당신을 믿고 도움을 받는다],[당신을 믿고 도움을 받는다],[Trust you and accept the help]
+[제가 가볼게요],[제가 가볼게요],[I'll go take a look]
+[그 기록에 대해 좀 더 자세히 들려주실 수 있어요?],[그 기록에 대해 좀 더 자세히 들려주실 수 있어요?],[Could you tell me more about that record?]
+[그냥 안부를 묻는다],[그냥 안부를 묻는다],[Just ask how they're doing]
+[미라들에 대해 어떻게 생각하세요?],[미라들에 대해 어떻게 생각하세요?],[What do you think about the mummies?]
+"[궁금한 게 있어요, 장로님]","[궁금한 게 있어요, 장로님]","[I have a question, Elder]"
+[그냥 인사만 한다],[그냥 인사만 한다],[Just say hello]
+[뭔데요?],[뭔데요?],[What is it?]
+[엘라라는 어떤 분인가요?],[엘라라는 어떤 분인가요?],[What kind of person is Elara?]
+[오크 처치를 돕겠다고 한다],[오크 처치를 돕겠다고 한다],[Offer to help deal with the orcs]
+[이게... 물지기가 처음 생겨난 순간인가요?],[이게... 물지기가 처음 생겨난 순간인가요?],[Is this... the moment a Warden was first created?]
+[누구세요?],[누구세요?],[Who are you?]
+[요즘 어때?],[요즘 어때?],[How have you been?]
+[장사는 잘 되세요?],[장사는 잘 되세요?],[Is business going well?]
+[그게 무슨 말이에요?],[그게 무슨 말이에요?],[What do you mean by that?]
+[그럼 뭔데요?],[그럼 뭔데요?],[Then what is it?]
+"[오크 얘기, 또 생각났나 보군]","[오크 얘기, 또 생각났나 보군]","[Thinking about the orcs again, are you]"
+[혹시 도망 안 치셨어요?],[혹시 도망 안 치셨어요?],[Didn't you run away?]
+"[미안, 다그치려던 건 아니었어]","[미안, 다그치려던 건 아니었어]","[Sorry, I didn't mean to push you]"
+[유서프 씨는 왜 이 마을에 온 거예요?],[유서프 씨는 왜 이 마을에 온 거예요?],"[Why did you come to this village, Yusuf?]"
+[테스트 선택 B],[테스트 선택 B],[Test Choice B]
+[혹시 옛날부터 전해지는 이야기 아세요?],[혹시 옛날부터 전해지는 이야기 아세요?],"[Do you know any old stories about it, by any chance?]"
+"[가디언... 아니, 그 사람이 사라지기 전에 이런 말을 했어요. ""감시자들은... 지하에 있다""고.]","[가디언... 아니, 그 사람이 사라지기 전에 이런 말을 했어요. ""감시자들은... 지하에 있다""고.]","[The Guardian... no, that person said this before disappearing: ""The Watchers... are underground.""]"
+[미라 처치를 돕겠다고 한다],[미라 처치를 돕겠다고 한다],[Offer to help deal with the mummies]
+[열쇠는 찾았나요?],[열쇠는 찾았나요?],[Did you find the key?]
+[숲에 대해 묻는다],[숲에 대해 묻는다],[Ask about the forest]
+[그럼 도와줄 수 있어요? 지하로 가는 방법.],[그럼 도와줄 수 있어요? 지하로 가는 방법.],[Then can you help me? A way to get underground.]
+[유서프를 아세요?],[유서프를 아세요?],[Do you know Yusuf?]
+[그래서 뭘 보신 거예요?],[그래서 뭘 보신 거예요?],[So what did you see?]
+[수상한데요?],[수상한데요?],[That sounds suspicious.]
+"[...응, 진짜야. 천천히 얘기해도 돼]","[...응, 진짜야. 천천히 얘기해도 돼]","[...Yeah, really. Take your time telling me]"
+[말하기 싫으면 안 해도 돼요],[말하기 싫으면 안 해도 돼요],[You don't have to say it if you don't want to]
+"[응, 약속할게. 네가 본 거 그대로 믿을게]","[응, 약속할게. 네가 본 거 그대로 믿을게]","[Yes, I promise. I'll believe exactly what you saw.]"
+[의뢰판을 살펴본다],[의뢰판을 살펴본다],[Check the bounty board]
+[그냥 소문 아닐까요?],[그냥 소문 아닐까요?],[Could it just be a rumor?]
+[저 밑이라면... 지하요?],[저 밑이라면... 지하요?],[Down there... you mean underground?]
+[역시 뭔가 있었네요],[역시 뭔가 있었네요],[I knew there was something to it]
+[모르겠어요. 그냥 그렇게 들렸어요.],[모르겠어요. 그냥 그렇게 들렸어요.],[I don't know. That's just how it sounded.]
+"[아니, 그냥 안부 물으러 왔어요]","[아니, 그냥 안부 물으러 왔어요]","[No, I just came to see how you're doing]"
+[...알겠어],[...알겠어],[...Okay]
+"[네. ""얼마나 됐을까, 묶인 지""라고 하더니, 마지막엔 ""감시자들은 지하에 있다""는 말을 하다 말고, 그대로 사라졌어요.]","[네. ""얼마나 됐을까, 묶인 지""라고 하더니, 마지막엔 ""감시자들은 지하에 있다""는 말을 하다 말고, 그대로 사라졌어요.]","[Yes. It said ""How long has it been, since I was bound,"" and at the end started to say ""The Watchers are underground"" before disappearing, mid-sentence.]"
+[너... 지금 뭐랑 싸우고 있는 것 같은데. 뭔데 그래.],[너... 지금 뭐랑 싸우고 있는 것 같은데. 뭔데 그래.],[You... seem to be fighting something. What is it.]
+[정말 그냥 상인이 맞아요?],[정말 그냥 상인이 맞아요?],[Are you really just a merchant?]
+[여기 물지기는... 이미],[여기 물지기는... 이미],[The Warden here is already...]
+[이제 어떡하죠?],[이제 어떡하죠?],[What do we do now?]
+"[당신, 알고 있었던 거예요?]","[당신, 알고 있었던 거예요?]",[You knew about this?]
+[마을에 대해 묻는다],[마을에 대해 묻는다],[Ask about the village]
+[거절하고 우리끼리 알아낸다],[거절하고 우리끼리 알아낸다],[Refuse and find out on our own]
+[사냥은 잘 되냐고 묻는다],[사냥은 잘 되냐고 묻는다],[Ask if the hunting's going well]
+[그 기록에 대해서 더 생각해봤나],[그 기록에 대해서 더 생각해봤나],[Ask more about that record]
+[동굴 이야기를 묻는다],[동굴 이야기를 묻는다],[Ask about the cave]
+[여기도 물지기가 있었어요?],[여기도 물지기가 있었어요?],[Was there a Warden here too?]
+[같이 가는 거예요?],[같이 가는 거예요?],[Are you coming with me?]
+[괜찮으면 말 안 해도 돼],[괜찮으면 말 안 해도 돼],[You don't have to tell me if you'd rather not]
+[그래서 아팠던 거구나. 그동안 계속.],[그래서 아팠던 거구나. 그동안 계속.],[So that's why it hurt. This whole time.]
+[의뢰? 뭐 일거리 있나요?],[의뢰? 뭐 일거리 있나요?],[A bounty? Got any work?]
+[왜 저를 기다렸나요?],[왜 저를 기다렸나요?],[Why were you waiting for me?]
+[근데 왜요? 그렇게까지 해서 뭘 얻으려고요?],[근데 왜요? 그렇게까지 해서 뭘 얻으려고요?],[But why? What would they gain from going that far?]
+[다음에 볼게요],[다음에 볼게요],[I'll come back later]
+[오크들도 피해자라는 건가요?],[오크들도 피해자라는 건가요?],[Are the orcs victims too?]
+[로한은 어떤 사람인가요?],[로한은 어떤 사람인가요?],[What kind of person is Rohan?]
+[증거요?],[증거요?],[Proof?]
+[혹시 다른 단서는 없었나요?],[혹시 다른 단서는 없었나요?],[Were there any other clues?]
+"[근데 마지막에... 사람처럼 말을 했어요. ""미안하다""고.]","[근데 마지막에... 사람처럼 말을 했어요. ""미안하다""고.]","[But at the end... it spoke like a person. It said ""I'm sorry.""]"
+[괜찮아? 여기서 뭐 해?],[괜찮아? 여기서 뭐 해?],[Are you okay? What are you doing here?]
+[구체적으로 뭐가 이상한가요?],[구체적으로 뭐가 이상한가요?],[What exactly is strange about it?]
+"[싸우지 않고 이야기했어요. 근데... 사라지기 전에, 사람처럼 말을 하고서 사라졌어요.]","[싸우지 않고 이야기했어요. 근데... 사라지기 전에, 사람처럼 말을 하고서 사라졌어요.]","[I talked instead of fighting. But... before it disappeared, it spoke like a person, and then vanished.]"
+[당신은 몬스터가 아닌가요?],[당신은 몬스터가 아닌가요?],[Aren't you a monster?]
+"[로한, 유서프, 미아... 다들 이상한 얘기를 하더라고요.]","[로한, 유서프, 미아... 다들 이상한 얘기를 하더라고요.]","[Rohan, Yusuf, Mia... they all told me strange stories.]"
+[본 것 같아요],[본 것 같아요],[I think I've seen it]
+[유서프는 믿을 만한가요?],[유서프는 믿을 만한가요?],[Is Yusuf trustworthy?]
+[미아는 왜 저렇게 겁이 많나요?],[미아는 왜 저렇게 겁이 많나요?],[Why is Mia so frightened?]
+"[아니요, 못 봤어요]","[아니요, 못 봤어요]","[No, I haven't seen it]"
+[알겠어요],[알겠어요],[Okay]
+[잠깐! ...싸우러 온 거 아니야.],[잠깐! ...싸우러 온 거 아니야.],[Wait! ...I'm not here to fight.]
+[그 존재가 우물을 마르게 한 걸까요?],[그 존재가 우물을 마르게 한 걸까요?],[Could that thing be what's drying up the well?]
+"[나비, 이름 예쁘다. 원래 여기서 자주 놀아?]","[나비, 이름 예쁘다. 원래 여기서 자주 놀아?]","[Nabi, pretty name. Do you usually play here?]"
+[해결했어요. 근데...],[해결했어요. 근데...],[I resolved it. But...]
+[유적에서 알게 된 걸 말한다],[유적에서 알게 된 걸 말한다],[Tell her what you learned in the ruins]
+"[응, 며칠 전에 왔어. 근데 진짜 여기서 뭐 하고 있었어?]","[응, 며칠 전에 왔어. 근데 진짜 여기서 뭐 하고 있었어?]","[Yeah, I got here a few days ago. But really, what were you doing here?]"
+[감시자들이 뭔가 저지른 건가요?],[감시자들이 뭔가 저지른 건가요?],[Did the Watchers do something?]
+[그럼 우리가 할 수 있는 건...],[그럼 우리가 할 수 있는 건...],[Then what we can do is...]
+[딱히 필요한 건 없어요],[딱히 필요한 건 없어요],[I don't need anything in particular]
+[오크는 어떻게 되어가요?],[오크는 어떻게 되어가요?],[How's it going with the orcs?]
+[뭘 팔고 있어요?],[뭘 팔고 있어요?],[What are you selling?]
+[제가 뭘 도우면 될까요?],[제가 뭘 도우면 될까요?],[What can I do to help?]
+[다녀왔다고 말한다],[다녀왔다고 말한다],[Say you're back]
+"[네, 도움이 필요하다고 들었어요]","[네, 도움이 필요하다고 들었어요]","[Yes, I heard you needed help]"
+[그때는 어떻게 됐나요?],[그때는 어떻게 됐나요?],[What happened then?]
+[그렇군요],[그렇군요],[I see]
+[들어간다],[들어간다],[Go in]
+[작은 마을이라 심심하지 않아요?],[작은 마을이라 심심하지 않아요?],[Isn't it boring in such a small village?]
+"[...괜찮아, 무리해서 말 안 해도 돼]","[...괜찮아, 무리해서 말 안 해도 돼]","[...It's okay, you don't have to force yourself to talk]"
+"[글쎄, 꿈은 꿈이니까]","[글쎄, 꿈은 꿈이니까]","[Well, a dream's just a dream]"
+"[이 소리... 미아가 말했던 거랑 같아. 무섭다기보단, 아파하는 것 같은데.]","[이 소리... 미아가 말했던 거랑 같아. 무섭다기보단, 아파하는 것 같은데.]",[This sound... it's just like what Mia described. It doesn't sound scary so much as it sounds like it's in pain.]
+[평화로워 보여요],[평화로워 보여요],[It looks peaceful]
+[어떤 꿈인데?],[어떤 꿈인데?],[What kind of dream?]
+[무슨 이야기예요?],[무슨 이야기예요?],[What kind of story?]
+"[괜찮아. 이제 그만 쉬어도 돼. 그 명령, 안 들어도 돼.]","[괜찮아. 이제 그만 쉬어도 돼. 그 명령, 안 들어도 돼.]",[It's okay. You can rest now. You don't have to obey that order.]
+[뭔가 고민이 있어 보여요],[뭔가 고민이 있어 보여요],[You seem troubled]
+[미라는 어떻게 되어가요?],[미라는 어떻게 되어가요?],[How's it going with the mummies?]
+[무섭지 않았어?],[무섭지 않았어?],[Weren't you scared?]
+[로한을 아세요?],[로한을 아세요?],[Do you know Rohan?]
+[뭔가 알고 계신 거죠?],[뭔가 알고 계신 거죠?],"[You know something, don't you?]"
+[물건을 산다],[물건을 산다],[Buy something]
+"[아니, 진짜였을 수도 있어]","[아니, 진짜였을 수도 있어]","[No, it might have been real]"
+[오크들이 왜 그렇게 됐을까요?],[오크들이 왜 그렇게 됐을까요?],[Why do you think the orcs ended up like that?]
+[무기를 든다 (전투)],[무기를 든다 (전투)],[Take up arms (combat)]
+[결정적 선택 B],[결정적 선택 B],[Decisive Choice B]
+[짐승들이 왜 숨었을까요?],[짐승들이 왜 숨었을까요?],[Why do you think the animals went into hiding?]
+[유적의 열쇠를 찾아보겠다고 한다],[유적의 열쇠를 찾아보겠다고 한다],[Offer to search for the ruins key]
+"[저 사람들, 늙지를 않네요.]","[저 사람들, 늙지를 않네요.]","[Those people, they don't age.]"
+"[아니에요, 다음에 물어볼게요]","[아니에요, 다음에 물어볼게요]","[No, I'll ask another time]"
+[왜 지금까지 숨기셨어요?],[왜 지금까지 숨기셨어요?],[Why did you hide it until now?]
+[지금 갈게요],[지금 갈게요],[I'll go now]
+[테스트 선택 A],[테스트 선택 A],[Test Choice A]
+[아직 준비가 안 됐어요],[아직 준비가 안 됐어요],[I'm not ready yet]
+"[근데 이상한 게, 물이 원래 우물에서 나오던 양이 아니에요. 훨씬 많아요. 마치... 처음부터 이래야 했던 것처럼요.]","[근데 이상한 게, 물이 원래 우물에서 나오던 양이 아니에요. 훨씬 많아요. 마치... 처음부터 이래야 했던 것처럼요.]",[But here's the strange part — it's not the amount the well used to give. It's far more. Like... it was always supposed to be this much.]
+[됐어요],[됐어요],[Never mind]
+[다가가서 말을 건다 (대화 시도)],[다가가서 말을 건다 (대화 시도)],[Approach and speak (attempt dialogue)]
+[무슨 생각이요?],[무슨 생각이요?],[What are you thinking about?]
+[오래됐네요],[오래됐네요],[That's quite old]
+"[그 꿈 이야기, 좀 더 해줄래?]","[그 꿈 이야기, 좀 더 해줄래?]",[Can you tell me more about that dream?]
+[예전엔 숲이 어땠어요?],[예전엔 숲이 어땠어요?],[What was the forest like before?]
+[결정적 선택 A],[결정적 선택 A],[Decisive Choice A]
+[여기서 무슨 일이 있었던 건가요?],[여기서 무슨 일이 있었던 건가요?],[What happened here?]
+"[괜찮아요, 걱정 마세요]","[괜찮아요, 걱정 마세요]","[It's fine, don't worry]"
+[나딤을 아세요?],[나딤을 아세요?],[Do you know Nadim?]
+[명령... 받고 있는 거야? 그것 때문에 이러는 거야?],[명령... 받고 있는 거야? 그것 때문에 이러는 거야?],[You're... under orders? Is that why you're like this?]
+[카밀을 아세요?],[카밀을 아세요?],[Do you know Kamil?]
+[너무 위험한 거 아닌가요?],[너무 위험한 거 아닌가요?],[Isn't that too dangerous?]
+[뭘 파세요?],[뭘 파세요?],[What do you sell?]
+[스켈레톤은 어떻게 되어가요?],[스켈레톤은 어떻게 되어가요?],[How's it going with the skeletons?]
+[봉인 해제],[봉인 해제],[Release the binding]
+[혹시 그것 때문에 물지기가 필요한 거예요?],[혹시 그것 때문에 물지기가 필요한 거예요?],[Is that why the Wardens are needed?]
+[그냥 우연 아닐까요?],[그냥 우연 아닐까요?],[Could it just be a coincidence?]
+[당신도 감시자예요?],[당신도 감시자예요?],[Are you a Watcher too?]
+[전투],[전투],[Fight]
+"[모르겠어요. 근데 왠지, 그럴 것 같아요.]","[모르겠어요. 근데 왠지, 그럴 것 같아요.]","[I don't know. But somehow, I think so.]"
+[기록을 읽어본다],[기록을 읽어본다],[Read the record]
+문지기,문지기,Gatekeeper
+골드 +%d,골드 +%d,Gold +%d
+경험치 +%d,경험치 +%d,XP +%d
+오르시아,오르시아,Orsia
+[E] 대화,[E] 대화,[E] Talk
+[E] 쉬어가기,[E] 쉬어가기,[E] Rest
+[E] 문,[E] 문,[E] Door
+[E] 상자 열기,[E] 상자 열기,[E] Open Chest
+[E] 살펴보기,[E] 살펴보기,[E] Examine
+[E] 유적으로 들어가기,[E] 유적으로 들어가기,[E] Enter the Ruins
+[E] 부두,[E] 부두,[E] Dock
+[E] 배를 타고 떠나기,[E] 배를 타고 떠나기,[E] Sail Away
+"정말 스킵하시겠습니까?
+이야기의 흐름을 이해하는데 도움이 됩니다","정말 스킵하시겠습니까?
+이야기의 흐름을 이해하는데 도움이 됩니다","Are you sure you want to skip?
+It helps you understand the flow of the story"
+엘라라를 찾아가 대화해보세요,엘라라를 찾아가 대화해보세요,Try going to talk to Elara
+로한과 유서프를 찾아가 대화하세요 (%d/2),로한과 유서프를 찾아가 대화하세요 (%d/2),Go talk to Rohan and Yusuf (%d/2)
+마을 외곽에서 미아를 만나 결정적 정보를 얻으세요,마을 외곽에서 미아를 만나 결정적 정보를 얻으세요,Meet Mia on the outskirts of the village to get the key information
+엘라라에게 돌아가 알아낸 것을 전하세요,엘라라에게 돌아가 알아낸 것을 전하세요,Go back to Elara and tell her what you found out
+퀘스트 버튼을 눌러 받을 수 있는 퀘스트와 의뢰인을 확인한 후 레벨업하세요,퀘스트 버튼을 눌러 받을 수 있는 퀘스트와 의뢰인을 확인한 후 레벨업하세요,"Press the Quest button to check available quests and clients, then level up"
+동굴 깊은 곳의 수호자를 찾아가세요,동굴 깊은 곳의 수호자를 찾아가세요,Head deep into the cave to find the Guardian
+우물의 결과를 엘라라에게 알리세요,우물의 결과를 엘라라에게 알리세요,Tell Elara the outcome at the well
+유서프에게 가서 더 알아보세요,유서프에게 가서 더 알아보세요,Go to Yusuf to find out more
+부두에서 배를 타고 떠나세요,부두에서 배를 타고 떠나세요,Leave by boat from the dock
+사막 정착지에서 나딤을 찾아 대화하세요,사막 정착지에서 나딤을 찾아 대화하세요,Find and talk to Nadim at the desert settlement
+사막의 위협을 처치하고 유적의 열쇠를 찾으세요,사막의 위협을 처치하고 유적의 열쇠를 찾으세요,Defeat the threat in the desert and find the key to the ruins
+유적 안으로 들어가 문지기와 맞서세요,유적 안으로 들어가 문지기와 맞서세요,Enter the ruins and face the Gatekeeper
+필터룸 깊숙이 들어가 진실을 확인하세요,필터룸 깊숙이 들어가 진실을 확인하세요,Go deep into the Filter Room and confirm the truth
+카밀과 이야기해 다음 행보를 정하세요,카밀과 이야기해 다음 행보를 정하세요,Talk to Kamil to decide the next move
+선택을 마쳤습니다. 이야기는 여기서 계속됩니다.,선택을 마쳤습니다. 이야기는 여기서 계속됩니다.,The choice has been made. The story continues from here.
+무언가를 발견했다!,무언가를 발견했다!,Found something!
+%s 발견!,%s 발견!,Found %s!
+골드 %d 발견!,골드 %d 발견!,Found %d gold!
+낡은 부적이 들어있다. 표면에 알아보기 힘든 문양이 새겨져 있다 — 어딘가 익숙한 느낌이다.,낡은 부적이 들어있다. 표면에 알아보기 힘든 문양이 새겨져 있다 — 어딘가 익숙한 느낌이다.,An old talisman is inside. A hard-to-make-out symbol is etched on its surface — it feels oddly familiar.
+컬렉션,컬렉션,Collection
+덱 구성,덱 구성,Deck
+카드 컬렉션,카드 컬렉션,Card Collection
+< 이전,< 이전,< Prev
+다음 >,다음 >,Next >
+잠금해제,잠금해제,Unlock
+취소,취소,Cancel
+덱: %d / %d,덱: %d / %d,Deck: %d / %d
+비워두면 자동 구성,비워두면 자동 구성,Leave empty to auto-build
+스킬포인트: %d,스킬포인트: %d,Skill Points: %d
+보유 중,보유 중,Owned
+"%s 잠금해제에 %d 포인트를 사용하시겠습니까?
+(보유: %d P)","%s 잠금해제에 %d 포인트를 사용하시겠습니까?
+(보유: %d P)","Unlock %s for %d points?
+(You have: %d P)"
+"%s 잠금해제에는 %d 포인트가 필요합니다.
+(보유: %d P — 포인트가 부족합니다)","%s 잠금해제에는 %d 포인트가 필요합니다.
+(보유: %d P — 포인트가 부족합니다)","Unlocking %s requires %d points.
+(You have: %d P — not enough points)"
+마법,마법,Magic
+물리,물리,Physical
+%s 피해 %d,%s 피해 %d,%s Damage %d
+%s + %s,%s + %s,%s + %s
+체력 %d 회복,체력 %d 회복,Restores %d HP
+마나 %d 회복,마나 %d 회복,Restores %d Mana
+다음 피해 %d 감소,다음 피해 %d 감소,Reduces next damage by %d
+이번 턴 완전 회피,이번 턴 완전 회피,Fully dodges this turn
+피해 무효 + 반격 %d,피해 무효 + 반격 %d,Negates damage + counters for %d
+공격력 +%d%% (%d라운드),공격력 +%d%% (%d라운드),Attack +%d%% (%d rounds)
+대상 공격력 -%d%% (%d라운드),대상 공격력 -%d%% (%d라운드),Target's Attack -%d%% (%d rounds)
+다음 카드 1장 코스트 0,다음 카드 1장 코스트 0,Next card costs 0
+%s (%d라운드),%s (%d라운드),%s (%d rounds)
+체력·마나 완전 회복,체력·마나 완전 회복,Fully restores HP & Mana
+"체력 %d, 마나 %d 회복","체력 %d, 마나 %d 회복","Restores %d HP, %d Mana"
+%s (광역),%s (광역),%s (AoE)
+티어 %d,티어 %d,Tier %d
+마나 %d 흡수,마나 %d 흡수,Drains %d Mana
+피해의 %d%% 흡혈,피해의 %d%% 흡혈,Lifesteal %d%% of damage
+체력 %d%% 이하면 %s배,체력 %d%% 이하면 %s배,%d%% HP or below: %sx
+%d%% 확률로 %s배 / 실패 시 0,%d%% 확률로 %s배 / 실패 시 0,%d%% chance: %sx / miss: 0
+빗나갔다!,빗나갔다!,Miss!
+%s %d%%,%s %d%%,%s %d%%
+%s %s%d%% (%d),%s %s%d%% (%d),%s %s%d%% (%d)
+공격력↑,공격력↑,Attack↑
+공격력↓,공격력↓,Attack↓
+방어력↓,방어력↓,Defense↓
+저항↓,저항↓,Resist↓
+검,검,Sword
+지팡이,지팡이,Staff
+반격!,반격!,Counter!
+회피!,회피!,Dodge!
+막았다!,막았다!,Blocked!
+코스트 0,코스트 0,Cost 0
+회피 준비,회피 준비,Dodge Ready
+반격 준비,반격 준비,Counter Ready
+방어 %d,방어 %d,Guard %d
+공격력 +%d%%,공격력 +%d%%,ATK +%d%%
+공격력 -%d%%,공격력 -%d%%,ATK -%d%%
+정신을 잃었다...,정신을 잃었다...,You lost consciousness...
+%s 출현!,%s 출현!,%s appears!
+%s %d마리가 나타났다!,%s %d마리가 나타났다!,%s x%d appeared!
+%d번째 턴 — 카드를 사용하세요.,%d번째 턴 — 카드를 사용하세요.,Turn %d — Use a card.
+%s %s 면역을 얻었다! 데미지 %d%% 감소,%s %s 면역을 얻었다! 데미지 %d%% 감소,%s gained %s immunity! Damage reduced by %d%%
+"%s — 대상을 선택하세요.
+(빈 곳 클릭 · 우클릭 · ESC로 취소)","%s — 대상을 선택하세요.
+(빈 곳 클릭 · 우클릭 · ESC로 취소)","%s — Choose a target.
+(Click empty space, right-click, or ESC to cancel)"
+손패를 모두 사용했다 — 턴을 넘긴다.,손패를 모두 사용했다 — 턴을 넘긴다.,You've used your whole hand — ending turn.
+%s — 체력 %d 회복!,%s — 체력 %d 회복!,%s — Recovered %d HP!
+%s — 마나 %d 회복!,%s — 마나 %d 회복!,%s — Recovered %d MP!
+%s — 다음 공격 피해를 %d 줄인다.,%s — 다음 공격 피해를 %d 줄인다.,%s — Reduces the next attack's damage by %d.
+%s — 다음 공격을 흘려낸다.,%s — 다음 공격을 흘려낸다.,%s — Dodges the next attack.
+%s — 다음 공격을 받아넘기고 반격한다.,%s — 다음 공격을 받아넘기고 반격한다.,%s — Parries and counters the next attack.
+"%s — 체력 %d, 마나 %d 회복!","%s — 체력 %d, 마나 %d 회복!","%s — Recovered %d HP and %d MP!"
+%s — %d라운드 동안 공격력 +%d%%!,%s — %d라운드 동안 공격력 +%d%%!,"%s — For %d rounds, ATK +%d%%!"
+%s! %s의 공격력 -%d%% (%d라운드),%s! %s의 공격력 -%d%% (%d라운드),%s! %s's ATK -%d%% (%d rounds)
+%s — 다음에 내는 카드 1장의 코스트가 0이 된다.,%s — 다음에 내는 카드 1장의 코스트가 0이 된다.,%s — The next card played costs 0.
+%s! %d마리에게 %s (%d라운드),%s! %d마리에게 %s (%d라운드),%s! %d enemies get %s (%d rounds)
+%s! %s (%d라운드),%s! %s (%d라운드),%s! %s (%d rounds)
+무기를 %s(으)로 바꿨다.,무기를 %s(으)로 바꿨다.,Switched weapon to %s.
+이번 턴에는 더 이상 무기를 바꿀 수 없다.,이번 턴에는 더 이상 무기를 바꿀 수 없다.,Can't switch weapons again this turn.
+%s 마력을 회복했다! (체력도 %d 회복),%s 마력을 회복했다! (체력도 %d 회복),%s recovered mana! (also healed %d HP)
+%s 마력을 회복했다!,%s 마력을 회복했다!,%s recovered mana!
+%s의 공격을 받아넘겼다! %d 피해로 되돌려줬다!,%s의 공격을 받아넘겼다! %d 피해로 되돌려줬다!,Parried %s's attack! Countered for %d damage!
+%s의 공격을 피했다!,%s의 공격을 피했다!,Dodged %s's attack!
+%s의 공격을 완전히 막아냈다!,%s의 공격을 완전히 막아냈다!,Completely blocked %s's attack!
+%s의 공격! %d 피해!,%s의 공격! %d 피해!,%s's attack! %d damage!
+전투에서 도망쳤다! (골드 %d 소모),전투에서 도망쳤다! (골드 %d 소모),Fled the battle! (Lost %d gold)
+%s %d마리,%s %d마리,%s x%d
+"%s 처치!
+골드 %d · 경험치 %d 획득!
+체력을 약간 회복했다.","%s 처치!
+골드 %d · 경험치 %d 획득!
+체력을 약간 회복했다.","%s defeated!
+Gained %d gold and %d XP!
+Recovered a bit of health."
+"
+%s을(를) 얻었다!","
+%s을(를) 얻었다!","
+Got %s!"
+%s! %d 피해!,%s! %d 피해!,%s! %d damage!
+"  (마나 %d 흡수)","  (마나 %d 흡수)","  (Drained %d MP)"
+"  (체력 %d 회복)","  (체력 %d 회복)","  (Healed %d HP)"
+%s — 체력과 마나를 완전히 회복했다! (무기 과열 %d%%),%s — 체력과 마나를 완전히 회복했다! (무기 과열 %d%%),%s — Fully restored HP and MP! (Weapon heat %d%%)
+%s — %s,%s — %s,%s — %s
+%s! %d마리에게 총 %d 피해!,%s! %d마리에게 총 %d 피해!,%s! Hit %d enemies for %d damage total!
+"
+[과열]","
+[과열]","
+[Overheated]"
+"
+[마나부족]","
+[마나부족]","
+[Not Enough MP]"
+"
+[체력부족]","
+[체력부족]","
+[Not Enough HP]"
+무기: %s,무기: %s,Weapon: %s
+투기,투기,Fighting Spirit
+흡혈,흡혈,Blood Drain
+카운터 슬래쉬,카운터 슬래쉬,Counter Slash
+무력화,무력화,Disable
+피하기,피하기,Dodge
+처형,처형,Execute
+익스플로전,익스플로전,Explosion
+파이어볼,파이어볼,Fireball
+섬광,섬광,Flash Slash
+광란,광란,Frenzy
+도박의 일격,도박의 일격,Gambler's Strike
+방어,방어,Guard
+가속,가속,Haste
+치유의 빛,치유의 빛,Healing Light
+얼음화살,얼음화살,Ice Arrow
+천벌,천벌,Divine Judgment
+번개창,번개창,Lightning Spear
+마력탄,마력탄,Magic Bolt
+마력흡수,마력흡수,Mana Drain
+마나 회복,마나 회복,Mana Draught
+유성낙하,유성낙하,Meteor Drop
+불사조의 축복,불사조의 축복,Phoenix Blessing
+반사방패,반사방패,Reflect Shield
+봉인,봉인,Seal
+회전베기,회전베기,Spin Slash
+찌르기,찌르기,Stab
+초재생,초재생,Super Regen
+신속,신속,Swift
+위협,위협,Threaten
+시공균열,시공균열,Time Rift
+삼중나선,삼중나선,Triple Helix
+베기,베기,Slash
+숨을 고르며 투지를 끌어올린다. 다음 일격이 한층 매서워진다.,숨을 고르며 투지를 끌어올린다. 다음 일격이 한층 매서워진다.,"Steadying your breath, you stoke your fighting spirit. The next strike lands harder."
+벤 자리에서 흘러나온 것이 칼날을 타고 거꾸로 올라온다.,벤 자리에서 흘러나온 것이 칼날을 타고 거꾸로 올라온다.,What spills from the wound climbs back up the blade.
+적의 공격을 받아넘기며 그 힘을 그대로 되돌려준다.,적의 공격을 받아넘기며 그 힘을 그대로 되돌려준다.,Parry the enemy's blow and send its force right back.
+급소를 노려 자세를 무너뜨린다. 팔은 무거워지고 빈틈은 벌어진다.,급소를 노려 자세를 무너뜨린다. 팔은 무거워지고 빈틈은 벌어진다.,"A strike to the weak point breaks their stance — arms grow heavy, openings widen."
+본능적으로 몸을 비틀어 공격을 흘려낸다.,본능적으로 몸을 비틀어 공격을 흘려낸다.,"Instinct twists the body aside, letting the attack slide past."
+숨이 얕아진 것을 확인하고서야 칼끝을 겨눈다. 쓰러지기 직전의 상대에게는 자비가 없다.,숨이 얕아진 것을 확인하고서야 칼끝을 겨눈다. 쓰러지기 직전의 상대에게는 자비가 없다.,Only once their breath grows shallow does the blade take aim. There is no mercy for the nearly fallen.
+압도적인 마력이 폭발하여 모든 것을 집어삼킨다.,압도적인 마력이 폭발하여 모든 것을 집어삼킨다.,"Overwhelming magic detonates, swallowing everything in its path."
+타오르는 불꽃 덩어리를 적에게 던진다.,타오르는 불꽃 덩어리를 적에게 던진다.,Hurls a blazing ball of fire at the enemy.
+순간적으로 빛나며 빠르게 이동해 베어내는 검기.,순간적으로 빛나며 빠르게 이동해 베어내는 검기.,A flash of blade energy that closes the distance and cuts in an instant.
+"검붉은 열기가 시야를 좁힌다. 제 몸을 태워 얻은 힘은 잠시뿐이지만, 그동안은 무엇도 막지 못한다.","검붉은 열기가 시야를 좁힌다. 제 몸을 태워 얻은 힘은 잠시뿐이지만, 그동안은 무엇도 막지 못한다.","A crimson heat narrows your vision. The power burned from your own body is fleeting, but nothing can stop it while it lasts."
+"겨누지 않고 휘두른다. 맞으면 한 번에 끝나고, 빗나가면 아무것도 남지 않는다.","겨누지 않고 휘두른다. 맞으면 한 번에 끝나고, 빗나가면 아무것도 남지 않는다.","A swing thrown without aim. Land it and it's over in one blow — miss, and nothing is left."
+다가올 일격에 대비해 자세를 낮춘다.,다가올 일격에 대비해 자세를 낮춘다.,Lower your stance to brace for the coming blow.
+한 박자를 앞당긴다. 다음 한 수는 대가를 치르기 전에 이미 나가 있다.,한 박자를 앞당긴다. 다음 한 수는 대가를 치르기 전에 이미 나가 있다.,A single beat ahead. The next move is already out before its cost comes due.
+따스한 빛이 상처를 어루만진다.,따스한 빛이 상처를 어루만진다.,A warm light soothes the wound.
+차가운 냉기를 압축해 쏘아내는 초급 빙결 마법.,차가운 냉기를 압축해 쏘아내는 초급 빙결 마법.,A basic frost spell that compresses biting cold into a bolt.
+하늘의 심판을 빌려와 적을 벌한다. 거스를 수 없는 빛이 모든 것을 꿰뚫는다.,하늘의 심판을 빌려와 적을 벌한다. 거스를 수 없는 빛이 모든 것을 꿰뚫는다.,Calls down heaven's judgment upon the enemy. An unstoppable light pierces through all.
+하늘의 번개를 압축해 창처럼 내리꽂는다.,하늘의 번개를 압축해 창처럼 내리꽂는다.,Compresses the sky's lightning into a spear and drives it down.
+손끝에 모인 마력을 압축해 쏘아내는 초급 마법.,손끝에 모인 마력을 압축해 쏘아내는 초급 마법.,A basic spell that condenses magic gathered at the fingertips into a bolt.
+상대가 끌어모으던 힘의 실마리를 붙잡아 그대로 제 쪽으로 당긴다.,상대가 끌어모으던 힘의 실마리를 붙잡아 그대로 제 쪽으로 당긴다.,Seizes the thread of power the enemy was gathering and pulls it back to yourself.
+체력을 대가로 마력의 흐름을 되찾는다.,체력을 대가로 마력의 흐름을 되찾는다.,Reclaims the flow of magic at the cost of your own vitality.
+하늘 높이 뛰어올라 온몸의 무게를 실어 내리찍는다.,하늘 높이 뛰어올라 온몸의 무게를 실어 내리찍는다.,Leaps high into the air and comes crashing down with the full weight of the body.
+불사조의 깃털이 감싸며 상처와 지친 마력을 단숨에 되돌린다. 다만 그 대가로 다음 몇 턴은 무기가 뜨겁게 달아오른다.,불사조의 깃털이 감싸며 상처와 지친 마력을 단숨에 되돌린다. 다만 그 대가로 다음 몇 턴은 무기가 뜨겁게 달아오른다.,"A phoenix feather wraps around you, restoring wounds and spent magic in an instant. But the price is a weapon that runs white-hot for the next few turns."
+가벼운 몸놀림으로 공격을 흘리며 짧게 반격한다.,가벼운 몸놀림으로 공격을 흘리며 짧게 반격한다.,"A light, agile motion deflects the attack and answers with a quick counter."
+낡은 인장이 대기를 옭아맨다. 힘도 저항도 봉인 안에서는 반쯤 잠든다.,낡은 인장이 대기를 옭아맨다. 힘도 저항도 봉인 안에서는 반쯤 잠든다.,An old seal binds the air itself. Both strength and resistance lie half-dormant within it.
+몸을 팽이처럼 회전시켜 주위를 한 번에 베어낸다.,몸을 팽이처럼 회전시켜 주위를 한 번에 베어낸다.,"Spins the body like a top, cutting down everything nearby in one motion."
+"빠르고 가벼운 찌르기, 준비 없이 즉각 반응할 수 있다.","빠르고 가벼운 찌르기, 준비 없이 즉각 반응할 수 있다.","A quick, light thrust — fast enough to answer without preparation."
+육체와 마력이 동시에 빠르게 재생된다.,육체와 마력이 동시에 빠르게 재생된다.,Body and magic regenerate rapidly at the same time.
+"눈으로 좇을 수 없는 속도로 파고들어, 숨 한 번에 베어낸다.","눈으로 좇을 수 없는 속도로 파고들어, 숨 한 번에 베어낸다.","Closes in at a speed too fast to follow, cutting down in a single breath."
+살기를 드러내 상대의 기세를 꺾는다. 움츠러든 팔은 예전만큼 무겁지 않다.,살기를 드러내 상대의 기세를 꺾는다. 움츠러든 팔은 예전만큼 무겁지 않다.,Bares killing intent to break the enemy's nerve. A cowed arm no longer swings as heavy as before.
+시간의 틈을 열어 순간을 얼려버린다. 모든 타격이 그 안에 갇혔다가 한꺼번에 풀려난다.,시간의 틈을 열어 순간을 얼려버린다. 모든 타격이 그 안에 갇혔다가 한꺼번에 풀려난다.,"Opens a rift in time, freezing the instant itself. Every strike is trapped within it, then released all at once."
+검기가 세 겹의 나선으로 소용돌이치며 적을 짓밟는다.,검기가 세 겹의 나선으로 소용돌이치며 적을 짓밟는다.,"Blade energy spirals into a triple helix, trampling the enemy."
+가장 기본적이지만 믿음직한 검술. 망설임 없이 휘두른다.,가장 기본적이지만 믿음직한 검술. 망설임 없이 휘두른다.,"A basic but reliable swordstroke, swung without hesitation."
+폭주한 근원체,폭주한 근원체,Runaway Wellspring
+미라가 거친 숨을 몰아쉬며 다가온다. 메마른 땅의 기운에 오래 시달려 사나워진 듯하다.,미라가 거친 숨을 몰아쉬며 다가온다. 메마른 땅의 기운에 오래 시달려 사나워진 듯하다.,"The mummy shambles closer, breathing hard. It seems the parched land's long grip has driven it feral."
+"이 모든 폭주의 근원처럼 보이는, 뒤틀린 존재가 앞을 막는다.","이 모든 폭주의 근원처럼 보이는, 뒤틀린 존재가 앞을 막는다.","A warped being, seemingly the source of all this chaos, blocks your path."
+턴 종료,턴 종료,End Turn
+도망가기,도망가기,Flee
+
+"%d번째 턴 — 카드는 즉시 발동. 턴 종료 시 모든 적이 행동합니다.","%d번째 턴 — 카드는 즉시 발동. 턴 종료 시 모든 적이 행동합니다.","Turn %d — Cards act now. End Turn lets every enemy act."
+원정 준비,원정 준비,Expedition Prep
+레벨 %d 달성!,레벨 %d 달성!,Reached level %d!
+투자점 +%d — 로한의 원정 준비에서 배분하세요,투자점 +%d — 로한의 원정 준비에서 배분하세요,+%d talent points — assign them in Rohan's expedition prep
+투자점은 레벨 11까지 20점이 최대입니다,투자점은 레벨 11까지 20점이 최대입니다,Talent points cap at 20 (level 11)
+새 게임 — 저장할 슬롯 고르기,새 게임 — 저장할 슬롯 고르기,New Game — choose a save slot
+(옛 세이브 — 불러오면 새 전투로 옮김),(옛 세이브 — 불러오면 새 전투로 옮김),(old save — converted to the new combat when loaded)
+(들판 전투 중),(들판 전투 중),(in a field battle)
+(원정 중),(원정 중),(on an expedition)
+"슬롯 %d    Lv. %d    HP: %d/%d%s
+%s","슬롯 %d    Lv. %d    HP: %d/%d%s
+%s","Slot %d    Lv. %d    HP: %d/%d%s
+%s"
+불러오지 못했습니다,불러오지 못했습니다,Could not load
+세이브 안내,세이브 안내,Save notice
+저장하지 못해 구매를 취소했습니다,저장하지 못해 구매를 취소했습니다,"Could not save, so the purchase was cancelled"
+%s [%s] - %s (%d 골드)%s,%s [%s] - %s (%d 골드)%s,%s [%s] - %s (%d gold)%s
+ · 보유 %d, · 보유 %d, · owned %d
+물리 무기,물리 무기,Physical weapon
+마법 도구,마법 도구,Magic focus
+보조 장비,보조 장비,Off-hand
+보상 받기,보상 받기,Claim reward
+진행 중: %s — %s%s,진행 중: %s — %s%s,In progress: %s — %s%s
+ (달성! 보상을 받으세요), (달성! 보상을 받으세요), (done! claim your reward)
+"들판에서 이기면 바로 세고, 원정 처치는 그 구간 보스를 이겨 확정될 때 한 번 반영합니다. 보스·장치·미믹은 세지 않고, 보상은 이 의뢰판에서만 받습니다.","들판에서 이기면 바로 세고, 원정 처치는 그 구간 보스를 이겨 확정될 때 한 번 반영합니다. 보스·장치·미믹은 세지 않고, 보상은 이 의뢰판에서만 받습니다.","Field victories count right away; expedition kills count once when that sector's boss is beaten. Bosses, devices and mimics do not count, and rewards are claimed only at this board."
+저장하지 못했어요.,저장하지 못했어요.,Couldn't save.
+수고했어요. 보상을 드릴게요.,수고했어요. 보상을 드릴게요.,Well done. Here is your reward.
+ (장착 중), (장착 중), (equipped)
+출발 카드는 직업으로 정해집니다. 새 카드는 던전 보상에서 고릅니다.,출발 카드는 직업으로 정해집니다. 새 카드는 던전 보상에서 고릅니다.,Starting cards are set by your class. New cards are chosen from dungeon rewards.
+%s 출발 덱,%s 출발 덱,%s starting deck
+옛 카드 기록,옛 카드 기록,Old card records
+옛 기록은 보관만 합니다 (새 전투에 쓰이지 않음),옛 기록은 보관만 합니다 (새 전투에 쓰이지 않음),Old records are archived only (not used by the new combat)
+출발,출발,Start
+미보유,미보유,Not owned
+직업 덱,직업 덱,Class deck
+옛 기록,옛 기록,Archive
+표식 검,표식 검,Mark Sword
+수호 검,수호 검,Guard Sword
+사냥 활,사냥 활,Hunting Bow
+각인 지팡이,각인 지팡이,Inscription Staff
+비축 지팡이,비축 지팡이,Reserve Staff
+잔류 방패,잔류 방패,Lingering Shield
+물리 무기 · 전투 첫 물리 공격 카드의 첫 타격 +1,물리 무기 · 전투 첫 물리 공격 카드의 첫 타격 +1,Physical weapon · first hit of the first physical attack card each battle +1
+물리 무기 · 전투 첫 물리 공격 카드의 첫 타격 +2,물리 무기 · 전투 첫 물리 공격 카드의 첫 타격 +2,Physical weapon · first hit of the first physical attack card each battle +2
+물리 무기 · 전투 첫 물리 공격 카드의 첫 타격 +3,물리 무기 · 전투 첫 물리 공격 카드의 첫 타격 +3,Physical weapon · first hit of the first physical attack card each battle +3
+마법 도구 · 전투 첫 마법 공격 카드의 첫 타격 +1,마법 도구 · 전투 첫 마법 공격 카드의 첫 타격 +1,Magic focus · first hit of the first magic attack card each battle +1
+마법 도구 · 전투 첫 마법 공격 카드의 첫 타격 +2,마법 도구 · 전투 첫 마법 공격 카드의 첫 타격 +2,Magic focus · first hit of the first magic attack card each battle +2
+마법 도구 · 전투 첫 마법 공격 카드의 첫 타격 +3,마법 도구 · 전투 첫 마법 공격 카드의 첫 타격 +3,Magic focus · first hit of the first magic attack card each battle +3
+보조 장비 · 최대 체력 +1,보조 장비 · 최대 체력 +1,Off-hand · max HP +1
+보조 장비 · 최대 체력 +2,보조 장비 · 최대 체력 +2,Off-hand · max HP +2
+보조 장비 · 최대 체력 +3,보조 장비 · 최대 체력 +3,Off-hand · max HP +3
+"전투 중 자기 턴에 마나 +2 (턴당 물약 하나, 들판·탐색 중에는 쓰지 않음)","전투 중 자기 턴에 마나 +2 (턴당 물약 하나, 들판·탐색 중에는 쓰지 않음)",Mana +2 on your turn in battle (one potion per turn; not usable while exploring)
+"체력 +6 (생명 5: +2), 전투 중에는 독·주술도 해제 (턴당 하나)","체력 +6 (생명 5: +2), 전투 중에는 독·주술도 해제 (턴당 하나)",HP +6 (+2 at Life 5); in battle also removes poison and hex (one per turn)
+"물리 무기 · 턴마다 한 번: 표식을 소비한 첫 타격 추가 피해 +2 (마법 소비 포함, 치명 미적용)","물리 무기 · 턴마다 한 번: 표식을 소비한 첫 타격 추가 피해 +2 (마법 소비 포함, 치명 미적용)",Physical weapon · once per turn: +2 extra damage on the first hit that consumes marks (magic too; not multiplied by crits)
+물리 무기 · 턴마다 한 번: 그 턴 첫 방어 카드의 방어 +1,물리 무기 · 턴마다 한 번: 그 턴 첫 방어 카드의 방어 +1,Physical weapon · once per turn: the turn's first defense card gives +1 block
+물리 무기 · 매 턴 첫 공격 카드의 주 대상이 체력 가득이면 그 카드 치명 확률 +15%p,물리 무기 · 매 턴 첫 공격 카드의 주 대상이 체력 가득이면 그 카드 치명 확률 +15%p,"Physical weapon · if the main target of the turn's first attack card is at full HP, that card gets +15%p crit chance"
+마법 도구 · 전투마다 한 번: 첫 마법 공격 뒤 맞고 살아남은 첫 적에게 표식 1,마법 도구 · 전투마다 한 번: 첫 마법 공격 뒤 맞고 살아남은 첫 적에게 표식 1,"Magic focus · once per battle: after the first magic attack, 1 mark on the first surviving enemy it hit"
+마법 도구 · 전투마다 한 번: 처음으로 마나 2 이상 낸 마법 카드 뒤 마나 1,마법 도구 · 전투마다 한 번: 처음으로 마나 2 이상 낸 마법 카드 뒤 마나 1,Magic focus · once per battle: gain 1 mana after the first magic card that cost 2 or more
+보조 장비 · 라운드가 끝날 때 쓰지 않은 방어를 2까지 다음 턴으로,보조 장비 · 라운드가 끝날 때 쓰지 않은 방어를 2까지 다음 턴으로,"Off-hand · at round end, keep up to 2 unused block for next turn"
+살 수 없습니다,살 수 없습니다,Cannot buy that
+지금은 새로 붙일 수 없어요.,지금은 새로 붙일 수 없어요.,Cannot post new requests right now.
+지금은 보상을 드릴 수 없어요.,지금은 보상을 드릴 수 없어요.,Cannot give the reward right now.
+첫 손패에 직업 핵심 카드:,첫 손패에 직업 핵심 카드:,Class core card in opening hand:
+알림 닫기,알림 닫기,Close notice
+메뉴 (Esc): 흔들림 설정 · 전투 정보 · 후퇴 · 종료,메뉴 (Esc): 흔들림 설정 · 전투 정보 · 후퇴 · 종료,Menu (Esc): shake setting · battle info · retreat · quit
+빈 유물 칸 (%d칸 중 %d칸 사용),빈 유물 칸 (%d칸 중 %d칸 사용),"Empty relic slot (%d slots, %d used)"
+보스 · ,보스 · ,Boss · 
+보스 강타 창: 그 턴에 보스에게 준 실제 피해가 기준 이상이면 강타가 약해집니다,보스 강타 창: 그 턴에 보스에게 준 실제 피해가 기준 이상이면 강타가 약해집니다,"Boss slam window: if the real damage dealt to the boss this turn reaches the threshold, the slam weakens"
+사용 [Enter],사용 [Enter],Use [Enter]
+놓으면 함께 소진할 카드 고르기로,놓으면 함께 소진할 카드 고르기로,Release to choose a card to exhaust with it
+(아직 아무것도 소진하지 않음),(아직 아무것도 소진하지 않음),(nothing exhausted yet)
+%s 위에 놓으면 사용,%s 위에 놓으면 사용,Release on %s to use
+다른 곳·우클릭·Esc = 취소,다른 곳·우클릭·Esc = 취소,Elsewhere · right-click · Esc = cancel
+전투 정보,전투 정보,Battle Info
+닫기 (Tab · Esc),닫기 (Tab · Esc),Close (Tab · Esc)
+치명타 확률 %d%% · 피해 ×%s,치명타 확률 %d%% · 피해 ×%s,Crit chance %d%% · damage ×%s
+최대 마나 %d,최대 마나 %d,Max mana %d
+특성,특성,Traits
+ (이번 턴 사용함), (이번 턴 사용함), (used this turn)
+유물,유물,Relics
+특성·유물 없음,특성·유물 없음,No traits or relics
+뽑을 더미 %d장 (순서 숨김): %s,뽑을 더미 %d장 (순서 숨김): %s,Draw pile %d (order hidden): %s
+없음,없음,None
+버린 더미 %d장: %s,버린 더미 %d장: %s,Discard pile %d: %s
+소진 %d장 (이번 전투에서 다시 나오지 않음): %s,소진 %d장 (이번 전투에서 다시 나오지 않음): %s,Exhausted %d (gone for this battle): %s
+손패 %d / %d · 덱 %d장,손패 %d / %d · 덱 %d장,Hand %d / %d · deck %d
+캐릭터 · 장비,캐릭터 · 장비,Character · Gear
+특성 · 유물,특성 · 유물,Traits · Relics
+더미,더미,Piles
+지금 · 이 전투,지금 · 이 전투,Now · This Battle
+연료화: 함께 소진할 카드 고르기,연료화: 함께 소진할 카드 고르기,Fuel: choose a card to exhaust with it
+클릭·1~7 · 취소 Esc,클릭·1~7 · 취소 Esc,Click · 1-7 · cancel Esc
+두 장 모두 이번 전투에서 소진: %s,두 장 모두 이번 전투에서 소진: %s,Both exhausted this battle: %s
+Enter 확정 · Esc 취소,Enter 확정 · Esc 취소,Enter confirm · Esc cancel
+바꿀 카드 최대 2장 고르기,바꿀 카드 최대 2장 고르기,Choose up to 2 cards to swap
+[교체 확정] · 다시 누르면 취소,[교체 확정] · 다시 누르면 취소,[Confirm swap] · press again to cancel
+적을 눌러 사용 · ←/→ 대상,적을 눌러 사용 · ←/→ 대상,Click an enemy to use · ←/→ target
+Enter 사용 · Esc 취소,Enter 사용 · Esc 취소,Enter use · Esc cancel
+다시 누르거나 Enter로 사용,다시 누르거나 Enter로 사용,Press again or Enter to use
+Esc 취소,Esc 취소,Esc cancel
+방패 −%d,방패 −%d,Shield −%d
+갑옷 무시,갑옷 무시,Ignores armor
+갑옷 −%d,갑옷 −%d,Armor −%d
+표식 %d 터짐,표식 %d 터짐,Mark %d bursts
+강타 약화 → %d,강타 약화 → %d,Slam weakened → %d
+확정 치명 처치 (%d),확정 치명 처치 (%d),Certain crit kill (%d)
+처치 (피해 %d),처치 (피해 %d),Kill (damage %d)
+확정 치명 피해 %d,확정 치명 피해 %d,Certain crit damage %d
+예상 피해 %d,예상 피해 %d,Expected damage %d
+치명 %d%%: %d,치명 %d%%: %d,Crit %d%%: %d
+억제 −%d,억제 −%d,Suppress −%d
+치명이면 강타 약화,치명이면 강타 약화,Crit weakens slam
+표식 %d → %d,표식 %d → %d,Mark %d → %d
+마나 부족: 필요 %d · 남은 %d,마나 부족: 필요 %d · 남은 %d,Not enough mana: need %d · have %d
+방어 %d → %d,방어 %d → %d,Block %d → %d
+반격 %d 준비,반격 %d 준비,Counter %d ready
+방어 %d 사용,방어 %d 사용,Uses block %d
+마나 +%d (%s),마나 +%d (%s),Mana +%d (%s)
+X = %d (마나 전부),X = %d (마나 전부),X = %d (all mana)
+준비 %d → %d,준비 %d → %d,Ready %d → %d
+체력 +%d,체력 +%d,HP +%d
+소진: ,소진: ,Exhaust: 
+%d장 뽑기,%d장 뽑기,Draw %d
+뽑을 자리/카드 없음,뽑을 자리/카드 없음,No room or cards to draw
+예비 주머니 1장,예비 주머니 1장,Reserve pouch 1
+마나 %d → %d,마나 %d → %d,Mana %d → %d
+회복약 ×%d,회복약 ×%d,Healing potion ×%d
+"회복약 [Q]: 체력 +%d, 독·주술 해제. 자기 턴에 턴당 하나, 마나 비용 없음.","회복약 [Q]: 체력 +%d, 독·주술 해제. 자기 턴에 턴당 하나, 마나 비용 없음.","Healing potion [Q]: HP +%d, cures poison and hex. One per turn on your turn, no mana cost."
+마나 물약 ×%d,마나 물약 ×%d,Mana potion ×%d
+요령: ,요령: ,Tip: 
+압박: ,압박: ,Pressure: 
+이기면: ,이기면: ,If you win: 
+지금 체력 %d / %d · 시작하면 되돌릴 수 없습니다 (후퇴 = 원정 포기),지금 체력 %d / %d · 시작하면 되돌릴 수 없습니다 (후퇴 = 원정 포기),HP now %d / %d · cannot be undone once started (retreat = abandon run)
+교전 시작,교전 시작,Start Battle
+지나가기,지나가기,Pass By
+물러나기,물러나기,Step Back
+%s 정복 — 보상이 확정되었습니다,%s 정복 — 보상이 확정되었습니다,%s cleared — rewards are secured
+지켜지는 것 (이미 저장됨 — 다음 구간에서 져도 잃지 않음),지켜지는 것 (이미 저장됨 — 다음 구간에서 져도 잃지 않음),Protected (already saved — not lost even if you fall in the next sector)
+금화 +%d · 경험치 +%d,금화 +%d · 경험치 +%d,Gold +%d · XP +%d
+ (상인에 쓴 금화 %d 제외), (상인에 쓴 금화 %d 제외), (excluding %d gold spent at the merchant)
+의뢰 처치 +%d (%s),의뢰 처치 +%d (%s),Bounty kills +%d (%s)
+레벨 %d → %d,레벨 %d → %d,Level %d → %d
+체력 %d / %d · 덱 %d장 · 유물 %d/%d,체력 %d / %d · 덱 %d장 · 유물 %d/%d,HP %d / %d · deck %d · relics %d/%d
+빌드: ,빌드: ,Build: 
+귀환하여 정산,귀환하여 정산,Return and Settle
+"지금 원정을 끝내고 마을로 돌아갑니다. 확정된 보상만 가져갑니다.
+이번 원정의 덱·유물·특성은 사라지고, 쓰지 않은 개인 물약은 돌려받습니다.","지금 원정을 끝내고 마을로 돌아갑니다. 확정된 보상만 가져갑니다.
+이번 원정의 덱·유물·특성은 사라지고, 쓰지 않은 개인 물약은 돌려받습니다.","End the run now and return to town with only the secured rewards.
+This run's deck, relics and traits are gone; unused personal potions come back."
+"지금 빌드(덱·강화·유물)로 %s에 들어갑니다.
+· 체력 +%d (→ %d) 한 번 · 계속 특성 하나 (후보 3)
+· 필수 2전 + 보스: 전투마다 금화 %d · 경험치 %d, 보스 금화 %d · 경험치 %d
+· 걸리는 것: 지거나 포기하면 그 구간의 미확정분만 잃습니다 (위의 확정분은 그대로)","지금 빌드(덱·강화·유물)로 %s에 들어갑니다.
+· 체력 +%d (→ %d) 한 번 · 계속 특성 하나 (후보 3)
+· 필수 2전 + 보스: 전투마다 금화 %d · 경험치 %d, 보스 금화 %d · 경험치 %d
+· 걸리는 것: 지거나 포기하면 그 구간의 미확정분만 잃습니다 (위의 확정분은 그대로)","Enter %s with your current build (deck, upgrades, relics).
+· HP +%d (→ %d) once · one continue trait (3 options)
+· 2 required battles + boss: gold %d · XP %d per battle, boss gold %d · XP %d
+· At risk: losing or abandoning loses only that sector's unsecured gains (secured rewards above stay)"
+더 깊이 도전 — ,더 깊이 도전 — ,Go Deeper — 
+보상은 이미 저장되었습니다. 지금 꺼도 이 선택 화면에서 다시 시작합니다.,보상은 이미 저장되었습니다. 지금 꺼도 이 선택 화면에서 다시 시작합니다.,"Rewards are already saved. If you quit now, you resume at this choice."
+더 깊이 도전 — 계속 특성 하나 고르기,더 깊이 도전 — 계속 특성 하나 고르기,Go Deeper — choose one continue trait
+"특성은 유물 칸을 차지하지 않고 이번 원정이 끝날 때까지 유지됩니다. 고른 뒤에는 바꿀 수 없고, 이미 가진 특성은 다시 나오지 않습니다.","특성은 유물 칸을 차지하지 않고 이번 원정이 끝날 때까지 유지됩니다. 고른 뒤에는 바꿀 수 없고, 이미 가진 특성은 다시 나오지 않습니다.",Traits take no relic slot and last until this run ends. Cannot be changed once chosen; traits you own will not appear again.
+ · 공용, · 공용, · shared
+이 특성으로 계속,이 특성으로 계속,Continue with this trait
+뒤로 (귀환하여 정산 / 더 깊이 다시 보기),뒤로 (귀환하여 정산 / 더 깊이 다시 보기),Back (Return and Settle / Go Deeper)
+덱 %d장 · 체력 %d / %d · 유물 %d/%d,덱 %d장 · 체력 %d / %d · 유물 %d/%d,Deck %d · HP %d / %d · relics %d/%d
+이번 원정의 덱 %d장: %s,이번 원정의 덱 %d장: %s,This run's deck (%d): %s
+선택 확정,선택 확정,Confirm Choice
+강화할 수 있는 사본이 없어 대신 %s을(를) 받습니다.,강화할 수 있는 사본이 없어 대신 %s을(를) 받습니다.,"No copy can be upgraded, so you receive %s instead."
+강화를 하나 고르면 아래에서 강화 전·후를 비교합니다. 사본 한 장만 바뀝니다.,강화를 하나 고르면 아래에서 강화 전·후를 비교합니다. 사본 한 장만 바뀝니다.,Choose an upgrade to compare before and after below. Only one copy changes.
+← 위에서 강화를 고르면 여기에 강화 전 · 강화 후가 나옵니다,← 위에서 강화를 고르면 여기에 강화 전 · 강화 후가 나옵니다,← Choose an upgrade above to see before · after here
+가진 %s %d장 중 1장%s,가진 %s %d장 중 1장%s,%s: 1 of %d owned%s
+ · 직업 강화, · 직업 강화, · class upgrade
+강화 전,강화 전,Before
+강화 후,강화 후,After
+비용 %d → %d,비용 %d → %d,Cost %d → %d
+핵심: %s → %s,핵심: %s → %s,Core: %s → %s
+전: %s,전: %s,Before: %s
+후: %s,후: %s,After: %s
+바뀌는 점,바뀌는 점,What changes
+"이 강화는 %s 한 장에만 적용됩니다 (가진 %d장 중 1장, 나머지 %d장은 그대로)","이 강화는 %s 한 장에만 적용됩니다 (가진 %d장 중 1장, 나머지 %d장은 그대로)",This upgrade applies to one %s only (1 of %d; the other %d stay the same)
+"유물 — 자동 발동, 이번 원정 동안 유지 · 하나를 고르세요","유물 — 자동 발동, 이번 원정 동안 유지 · 하나를 고르세요","Relics — trigger automatically, last this run · choose one"
+ · 칸이 가득: 버릴 유물도 고르기, · 칸이 가득: 버릴 유물도 고르기, · slots full: also choose a relic to discard
+새 유물 · 이번 원정만,새 유물 · 이번 원정만,New relic · this run only
+지금 가진 유물 %d/%d,지금 가진 유물 %d/%d,Relics held %d/%d
+ — 하나를 버리고 바꿉니다, — 하나를 버리고 바꿉니다, — discard one to swap
+건너뛰기 (유물 그대로),건너뛰기 (유물 그대로),Skip (keep relics)
+버리면: 최대 체력 +%d (현재 체력 그대로) · 최대 마나 +1 사라짐,버리면: 최대 체력 +%d (현재 체력 그대로) · 최대 마나 +1 사라짐,If discarded: max HP +%d (current HP unchanged) · max mana +1 lost
+버리면: 이 유물의 효과가 이번 원정에서 사라짐,버리면: 이 유물의 효과가 이번 원정에서 사라짐,If discarded: this relic's effect is lost for this run
+새 카드 한 장을 덱에 더하거나 건너뜁니다. 고른 뒤 [선택 확정]을 눌러야 받습니다.,새 카드 한 장을 덱에 더하거나 건너뜁니다. 고른 뒤 [선택 확정]을 눌러야 받습니다.,Add one new card to your deck or skip. Press [Confirm Choice] to receive it.
+직업,직업,Class
+공용,공용,Shared
+다른 직업,다른 직업,Other class
+덱에 %d장 / 최대 %d,덱에 %d장 / 최대 %d,%d in deck / max %d
+사본 한도라 고를 수 없음,사본 한도라 고를 수 없음,Copy limit reached
+건너뛰기 (덱을 그대로),건너뛰기 (덱을 그대로),Skip (keep deck)
+위에서 하나만 고릅니다 — 고른 것 하나만 받습니다.,위에서 하나만 고릅니다 — 고른 것 하나만 받습니다.,Choose just one above — you receive only that one.
+ 이 전투는 위험 강화로 유물 후보가 보장됩니다., 이 전투는 위험 강화로 유물 후보가 보장됩니다.," This battle was made dangerous, so a relic option is guaranteed."
+회복 +%d,회복 +%d,Heal +%d
+회복 (체력 가득),회복 (체력 가득),Heal (HP full)
+ (후보 없음), (후보 없음), (no options)
+체력 %d → %d,체력 %d → %d,HP %d → %d
+고를 수 있는 것이 없어 대신 %s을(를) 받습니다.,고를 수 있는 것이 없어 대신 %s을(를) 받습니다.,"Nothing to choose, so you receive %s instead."
+다음 위협: %s,다음 위협: %s,Next threat: %s
+건너뛰기를 골랐습니다 — 확정하면 이번 보상은 받지 않습니다,건너뛰기를 골랐습니다 — 확정하면 이번 보상은 받지 않습니다,Skip chosen — confirming forgoes this reward
+받을 것 하나를 위에서 고르세요,받을 것 하나를 위에서 고르세요,Choose one reward above
+고른 카드: %s — %s (확정하면 덱에 1장 추가),고른 카드: %s — %s (확정하면 덱에 1장 추가),Chosen card: %s — %s (confirm adds 1 to deck)
+카드를 하나 고르거나 건너뛰세요,카드를 하나 고르거나 건너뛰세요,Choose a card or skip
+고른 강화: %s → %s (사본 한 장),고른 강화: %s → %s (사본 한 장),Chosen upgrade: %s → %s (one copy)
+대신 %s을(를) 받습니다,대신 %s을(를) 받습니다,Receive %s instead
+강화를 하나 고르세요,강화를 하나 고르세요,Choose an upgrade
+유물을 하나 고르세요,유물을 하나 고르세요,Choose a relic
+새 유물: %s,새 유물: %s,New relic: %s
+버릴 유물: %s,버릴 유물: %s,Relic to discard: %s
+칸이 가득: 버릴 유물을 고르세요,칸이 가득: 버릴 유물을 고르세요,Slots full: choose a relic to discard
+회복: 체력 %d → %d,회복: 체력 %d → %d,Heal: HP %d → %d
+상인 야영지 — 이번 구간 미확정 금화 %d,상인 야영지 — 이번 구간 미확정 금화 %d,Merchant camp — unsecured gold this sector %d
+"이번 구간에서 번, 아직 확정되지 않은 금화만 씁니다 (마을 지갑은 쓰지 않음). 쓴 만큼 보스 정산에서 빠집니다. 서비스마다 한 번씩.","이번 구간에서 번, 아직 확정되지 않은 금화만 씁니다 (마을 지갑은 쓰지 않음). 쓴 만큼 보스 정산에서 빠집니다. 서비스마다 한 번씩.",Spends only unsecured gold earned this sector (not your town wallet). Spent gold is deducted at the boss settlement. Each service once.
+카드 사기 (%d금화),카드 사기 (%d금화),Buy card (%d gold)
+진열: %s — %s,진열: %s — %s,On display: %s — %s
+진열된 카드 없음,진열된 카드 없음,No card on display
+사본 강화 (%d금화),사본 강화 (%d금화),Upgrade a copy (%d gold)
+강화할 사본을 고른 뒤 강화 전·후를 보고 고릅니다.,강화할 사본을 고른 뒤 강화 전·후를 보고 고릅니다.,"Choose a copy, then pick after seeing before · after."
+치료 (%d금화),치료 (%d금화),Heal (%d gold)
+"체력 +%d (최대 체력의 25%%, 올림)","체력 +%d (최대 체력의 25%%, 올림)","HP +%d (25%% of max HP, rounded up)"
+카드 제거 (%d금화),카드 제거 (%d금화),Remove card (%d gold)
+"덱에서 한 장을 뺍니다. 제거할 때마다 +%d금화, 덱이 %d장 이하면 불가.","덱에서 한 장을 뺍니다. 제거할 때마다 +%d금화, 덱이 %d장 이하면 불가.",Removes one card from your deck. +%d gold each removal; not allowed at %d cards or fewer.
+막힘: ,막힘: ,Blocked: 
+진열 카드 (사기 전 미리보기),진열 카드 (사기 전 미리보기),Card on display (preview before buying)
+떠나기,떠나기,Leave
+ — 강화할 사본 고르기, — 강화할 사본 고르기, — choose a copy to upgrade
+강화 이름을 누르면 바로 거래합니다 (사본 한 장만 바뀜). 오른쪽 카드는 강화 뒤 모습.,강화 이름을 누르면 바로 거래합니다 (사본 한 장만 바뀜). 오른쪽 카드는 강화 뒤 모습.,Pressing an upgrade name trades at once (one copy changes). The card on the right shows it after upgrade.
+뒤로,뒤로,Back
+카드 제거 (%d금화) — 뺄 카드 고르기 (누르면 바로 거래),카드 제거 (%d금화) — 뺄 카드 고르기 (누르면 바로 거래),Remove card (%d gold) — choose a card (trades on press)
+선택 지점 — 하나를 고르거나 지나갑니다 (한 번),선택 지점 — 하나를 고르거나 지나갑니다 (한 번),Choice point — choose one or pass by (once)
+미믹,미믹,Mimic
+정예,정예,Elite
+상자: 금화 %d,상자: 금화 %d,Chest: %d gold
+이번 구간 미확정 금화 +%d.,이번 구간 미확정 금화 +%d.,Unsecured gold this sector +%d.
+상자: 회복약 1,상자: 회복약 1,Chest: 1 healing potion
+원정 물약 칸 %d/%d. 원정이 끝나면 사라지는 물약입니다.,원정 물약 칸 %d/%d. 원정이 끝나면 사라지는 물약입니다.,Run potion slots %d/%d. These potions vanish when the run ends.
+체력 %d를 내고 사본 강화,체력 %d를 내고 사본 강화,Pay %d HP to upgrade a copy
+체력이 %d보다 많아야 합니다 (이걸로 쓰러지지 않음). 사본을 고른 뒤 맞는 강화를 고릅니다.,체력이 %d보다 많아야 합니다 (이걸로 쓰러지지 않음). 사본을 고른 뒤 맞는 강화를 고릅니다.,"Requires more than %d HP (cannot knock you out). Choose a copy, then the upgrade."
+위험 전투로 바꾸기,위험 전투로 바꾸기,Make a battle dangerous
+이 구간의 선택 전투(%s)의 적 공격이 타격마다 +%d. 대신 그 보상에 유물 후보가 보장됩니다 (보상이 따로 늘지는 않음).,이 구간의 선택 전투(%s)의 적 공격이 타격마다 +%d. 대신 그 보상에 유물 후보가 보장됩니다 (보상이 따로 늘지는 않음).,Enemy attacks in this sector's optional battle (%s) get +%d per hit. In return its reward guarantees a relic option (the reward itself does not grow).
+체력 %d 지불 강화,체력 %d 지불 강화,Upgrade for %d HP
+지나가기 (나중에 다시 와도 됩니다),지나가기 (나중에 다시 와도 됩니다),Pass by (you may come back later)
+이번 원정의 덱과 유물 — %s · %d장 · 유물 %d/%d,이번 원정의 덱과 유물 — %s · %d장 · 유물 %d/%d,This run's deck and relics — %s · %d cards · relics %d/%d
+유물 %s — %s,유물 %s — %s,Relic %s — %s
+계속 특성 %s — %s,계속 특성 %s — %s,Continue trait %s — %s
+출발 구성(고정): %s · 투자 %s · 최대 체력 %d,출발 구성(고정): %s · 투자 %s · 최대 체력 %d,Starting setup (fixed): %s · investment %s · max HP %d
+빗장,빗장,Latch
+ · 위험 +%d, · 위험 +%d, · danger +%d
+수상한 상자,수상한 상자,Suspicious chest
+ · 위험 강화: 적 공격 타격마다 +%d, · 위험 강화: 적 공격 타격마다 +%d, · dangerous: enemy attacks +%d per hit
+선택 전투 · 들썩이는 상자 (미믹) · 지나쳐도 됨,선택 전투 · 들썩이는 상자 (미믹) · 지나쳐도 됨,Optional battle · rattling chest (mimic) · may pass by
+선택 전투 · 건너뛰어도 됨,선택 전투 · 건너뛰어도 됨,Optional battle · may skip
+구간 보스 · 이기면 정산 후 귀환/더 깊이,구간 보스 · 이기면 정산 후 귀환/더 깊이,"Sector boss · win to settle, then return or go deeper"
+최종 보스 · 이기면 최종 정산,최종 보스 · 이기면 최종 정산,Final boss · win for the final settlement
+하드 경로 · 이기면 다음 방 창살이 열림,하드 경로 · 이기면 다음 방 창살이 열림,Hard route · win to open the next room's bars
+하드 관문 · 통로를 지킴,하드 관문 · 통로를 지킴,Hard gate · guards the passage
+필수 전투 · 통로를 지킴,필수 전투 · 통로를 지킴,Required battle · guards the passage
+귀환 포탈,귀환 포탈,Return portal
+선택한 길,선택한 길,Chosen route
+봉인됨,봉인됨,Sealed
+상인,상인,Merchant
+미확정 금화 %d,미확정 금화 %d,Unsecured gold %d
+상인 (닫힘),상인 (닫힘),Merchant (closed)
+앞 전투를 이기면 열림,앞 전투를 이기면 열림,Opens after winning the battle ahead
+선택 지점 (사용함),선택 지점 (사용함),Choice point (used)
+선택 지점,선택 지점,Choice point
+필수,필수,Required
+선택·미믹,선택·미믹,Optional · mimic
+보스,보스,Boss
+포탈,포탈,Portal
+끝남,끝남,Done
+[E] 살펴보기 — 정보 창만 열고 바로 싸우지 않음,[E] 살펴보기 — 정보 창만 열고 바로 싸우지 않음,"[E] Inspect — opens info only, no fight yet"
+카드 %d · 사본 강화 %d · 치료 %d · 제거 %d금화 (미확정 금화 %d),카드 %d · 사본 강화 %d · 치료 %d · 제거 %d금화 (미확정 금화 %d),Card %d · upgrade %d · heal %d · remove %d gold (unsecured gold %d)
+[E] 거래 창 열기 — 사기 전엔 금화 그대로,[E] 거래 창 열기 — 사기 전엔 금화 그대로,[E] Open trade — gold unchanged until you buy
+앞 전투를 이기면 열립니다,앞 전투를 이기면 열립니다,Opens after winning the battle ahead
+상자 · 체력 지불 강화 · 위험 전투 중 하나 (한 번),상자 · 체력 지불 강화 · 위험 전투 중 하나 (한 번),Chest · HP-paid upgrade · dangerous battle — one of them (once)
+[E] 살펴보기 — 고르기 전엔 아무것도 받지 않음,[E] 살펴보기 — 고르기 전엔 아무것도 받지 않음,[E] Inspect — nothing received until you choose
+빗장 (지름길),빗장 (지름길),Latch (shortcut)
+합류 방으로 가는 지름길을 엽니다,합류 방으로 가는 지름길을 엽니다,Opens a shortcut to the junction room
+[E] 빗장 풀기,[E] 빗장 풀기,[E] Lift the latch
+잠긴 빗장,잠긴 빗장,Locked latch
+안쪽(보물실 쪽)에서만 열립니다,안쪽(보물실 쪽)에서만 열립니다,Opens only from the inside (treasure room side)
+잠긴 창살,잠긴 창살,Locked bars
+경로 %s 표지판,경로 %s 표지판,Route %s sign
+[E] 이 경로로 정하기 (반대 길은 봉인),[E] 이 경로로 정하기 (반대 길은 봉인),[E] Take this route (the other is sealed)
+봉인된 길,봉인된 길,Sealed path
+이번 원정은 경로 %s로 확정했습니다,이번 원정은 경로 %s로 확정했습니다,This run is committed to route %s
+정산을 마치고 마을로 돌아갑니다,정산을 마치고 마을로 돌아갑니다,Settlement done; return to town
+[E] 마을로 돌아가기,[E] 마을로 돌아가기,[E] Return to town
+단축키 %s,단축키 %s,Shortcut %s
+마나 %s · 단축키 %d,마나 %s · 단축키 %d,Mana %s · shortcut %d
+치명 처치 (%d),치명 처치 (%d),Crit kill (%d)
+치명 피해 %d,치명 피해 %d,Crit damage %d
+확정 치명,확정 치명,Certain crit
+치명: 강타 약화,치명: 강타 약화,Crit: slam weakened
+강타 준비,강타 준비,Slam ready
+강타 %d,강타 %d,Slam %d
+강타 %d·힘 풀림,강타 %d·힘 풀림,Slam %d·unwound
+힘 풀림 · 강타 %d,힘 풀림 · 강타 %d,Unwound · slam %d
+3번 맞히면 약해짐,3번 맞히면 약해짐,3 hits weaken it
+맞힘 %d → %d,맞힘 %d → %d,Hits %d → %d
+치명 %d%%: 맞힘 %d → %d,치명 %d%%: 맞힘 %d → %d,Crit %d%%: hits %d → %d
+지금 %d / %d번,지금 %d / %d번,Now %d / %d hits
+지금: 힘 풀림 · 이번 강타 %d,지금: 힘 풀림 · 이번 강타 %d,Now: unwound · this slam %d
+강타 준비 뒤 다음 내 차례에 카드 직접 공격으로 이 적의 체력을 3번 줄이면 그 강타가 %d → %d로 약해집니다. 반격·가시·독·유물 추가 피해와 갑옷에 막혀 0인 타격은 세지 않습니다.,강타 준비 뒤 다음 내 차례에 카드 직접 공격으로 이 적의 체력을 3번 줄이면 그 강타가 %d → %d로 약해집니다. 반격·가시·독·유물 추가 피해와 갑옷에 막혀 0인 타격은 세지 않습니다.,After it readies a slam: on your next turn reduce its HP with direct card attack hits 3 times and that slam drops from %d to %d. Counter/thorn/poison/relic extra damage and hits blocked to 0 by armor do not count.
+맞힘 %d → %d: 강타 %d,맞힘 %d → %d: 강타 %d,Hits %d → %d: slam %d
+다음 손패 1장 봉인,다음 손패 1장 봉인,Seals 1 card in your next hand
+봉인 · 공격 %d장,봉인 · 공격 %d장,Sealed · %d attacks
+봉인된 카드: 공격 2장으로 해제 · 다음 내 턴 자동 해제 (연료화로 함께 소진할 수는 있음),봉인된 카드: 공격 2장으로 해제 · 다음 내 턴 자동 해제 (연료화로 함께 소진할 수는 있음),Sealed card: 2 attacks free it · auto-freed next turn (can still be burned by Fuel)
+공명 %d · 이번 턴 공격 ×%s,공명 %d · 이번 턴 공격 ×%s,Resonance %d · attacks ×%s this turn
+봉인 해제,봉인 해제,Seal broken
+봉인: %s,봉인: %s,Sealed: %s
+물창: 내 공명 0·1·2에 따라 8 · 11 · 14. 첫·세 번째 물창 뒤 다음 손패 1장을 한 차례 봉인합니다(공격 2장으로 공명 2가 되면 해제 · 아니면 다음 내 턴 자동 해제).,물창: 내 공명 0·1·2에 따라 8 · 11 · 14. 첫·세 번째 물창 뒤 다음 손패 1장을 한 차례 봉인합니다(공격 2장으로 공명 2가 되면 해제 · 아니면 다음 내 턴 자동 해제).,Water lance: 8 · 11 · 14 at your resonance 0·1·2. After its 1st and 3rd lance it seals 1 card of your next hand for one turn (freed at resonance 2 from 2 attacks · otherwise next turn).
+이번 턴 공격 ×%s,이번 턴 공격 ×%s,Attacks ×%s this turn
+공명 %d · 보스 공격 %d,공명 %d · 보스 공격 %d,Resonance %d · boss attack %d
+보스 공격 %d → %d,보스 공격 %d → %d,Boss attack %d → %d
+치명 %d%%: 보스 공격 → %d%s,치명 %d%%: 보스 공격 → %d%s,Crit %d%%: boss attack → %d%s
+ · 봉인 해제, · 봉인 해제, · seal broken
+공명: 귀족의 체력을 줄인 카드가 끝날 때마다 한 단계(최대 2). 이번 턴 카드 직접 피해 ×1.5 → ×2 · 귀족 물창 8 → 11 → 14. 내 턴이 끝나면 0으로.,공명: 귀족의 체력을 줄인 카드가 끝날 때마다 한 단계(최대 2). 이번 턴 카드 직접 피해 ×1.5 → ×2 · 귀족 물창 8 → 11 → 14. 내 턴이 끝나면 0으로.,Resonance: +1 step (max 2) each time a card that cut the Noble's HP ends. Card direct damage ×1.5 → ×2 this turn · the Noble's lance 8 → 11 → 14. Resets at end of turn.

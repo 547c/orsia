@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://c7d7rdg51up33"]
+
+[ext_resource type="Script" uid="uid://cb6ryjjmjdbop" path="res://p2/p5_run_host.gd" id="1_host"]
+
+[node name="P5RunHost" type="Node2D" unique_id=1391592114]
+script = ExtResource("1_host")

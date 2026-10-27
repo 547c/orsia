@@ -1,0 +1,18 @@
+{
+ "facing": "left",
+ "foot": [
+  148,
+  235
+ ],
+ "body": 188,
+ "left": -104,
+ "right": 54,
+ "anims": {
+  "idle": {
+   "ms": [
+    220
+   ],
+   "loop": true
+  }
+ }
+}

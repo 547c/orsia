@@ -1,0 +1,246 @@
+[gd_scene format=3 uid="uid://cgfl8c1klgs78"]
+
+[ext_resource type="Script" uid="uid://db3mhle2ouoe1" path="res://ui/main_menu.gd" id="1_title"]
+[ext_resource type="Texture2D" uid="uid://bwptrt4p4xfkh" path="res://assets/Orsia Title.png" id="2_bg"]
+[ext_resource type="FontFile" uid="uid://ch1y0ap4lgmqg" path="res://assets/fonts/Mona/01 Main/Mona12.ttf" id="3_mona"]
+
+[sub_resource type="FontVariation" id="FontVariation_subtitle"]
+base_font = ExtResource("3_mona")
+variation_transform = Transform2D(1, 0.2, 0, 1, 0, 0)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_flat"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_settings_panel"]
+bg_color = Color(0.1, 0.08, 0.14, 0.92)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.75, 0.65, 0.4, 0.9)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="MainMenu" type="Control" unique_id=1694108479]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_title")
+
+[node name="ParallaxRoot" type="Control" parent="." unique_id=1537204981]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Background" type="ColorRect" parent="ParallaxRoot" unique_id=81569925]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.08, 0.05, 0.03, 1)
+
+[node name="TextureRect" type="TextureRect" parent="ParallaxRoot/Background" unique_id=255952480]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("2_bg")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Subtitle" type="Label" parent="ParallaxRoot" unique_id=1204637718]
+layout_mode = 0
+offset_left = 357.0
+offset_top = 223.0
+offset_right = 757.0
+offset_bottom = 257.0
+theme_override_colors/font_color = Color(0.84, 0.8, 0.74, 0.9)
+theme_override_colors/font_outline_color = Color(0.05, 0.03, 0.02, 0.8)
+theme_override_constants/outline_size = 5
+theme_override_fonts/font = SubResource("FontVariation_subtitle")
+theme_override_font_sizes/font_size = 26
+text = "The Last Vein"
+vertical_alignment = 1
+
+[node name="PlayButton" type="Button" parent="ParallaxRoot" unique_id=1985055906]
+layout_mode = 0
+offset_left = 64.0
+offset_top = 251.0
+offset_right = 404.0
+offset_bottom = 289.0
+focus_mode = 0
+theme_override_colors/font_color = Color(0.96, 0.93, 0.85, 1)
+theme_override_colors/font_pressed_color = Color(0.85, 0.7, 0.3, 1)
+theme_override_colors/font_hover_color = Color(1, 0.85, 0.35, 1)
+theme_override_colors/font_outline_color = Color(0.05, 0.03, 0.02, 0.85)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 26
+theme_override_styles/normal = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_flat")
+text = "새 원정"
+alignment = 0
+
+[node name="LoadButton" type="Button" parent="ParallaxRoot" unique_id=402116560]
+layout_mode = 0
+offset_left = 64.0
+offset_top = 305.0
+offset_right = 344.0
+offset_bottom = 335.0
+focus_mode = 0
+theme_override_colors/font_color = Color(0.88, 0.84, 0.78, 1)
+theme_override_colors/font_pressed_color = Color(0.8, 0.65, 0.32, 1)
+theme_override_colors/font_hover_color = Color(0.95, 0.78, 0.4, 1)
+theme_override_colors/font_disabled_color = Color(0.55, 0.52, 0.5, 0.55)
+theme_override_colors/font_outline_color = Color(0.05, 0.03, 0.02, 0.8)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 18
+theme_override_styles/normal = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/disabled = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_flat")
+text = "기록실 · 연습"
+alignment = 0
+
+[node name="LoadHint" type="Label" parent="ParallaxRoot" unique_id=277712609]
+layout_mode = 0
+offset_left = 64.0
+offset_top = 337.0
+offset_right = 344.0
+offset_bottom = 355.0
+theme_override_colors/font_color = Color(0.7, 0.66, 0.62, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.8)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 12
+text = ""
+
+[node name="SettingsButton" type="Button" parent="." unique_id=1330298471]
+layout_mode = 0
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -176.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 44.0
+grow_horizontal = 0
+focus_mode = 0
+theme_override_colors/font_color = Color(0.85, 0.82, 0.76, 1)
+theme_override_colors/font_pressed_color = Color(0.8, 0.65, 0.32, 1)
+theme_override_colors/font_hover_color = Color(0.95, 0.78, 0.4, 1)
+theme_override_colors/font_outline_color = Color(0.05, 0.03, 0.02, 0.8)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_flat")
+text = "설정"
+alignment = 2
+
+[node name="SettingsOverlay" type="Control" parent="." unique_id=-982127121]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Dim" type="ColorRect" parent="SettingsOverlay" unique_id=-2006863063]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.6)
+
+[node name="Panel" type="Panel" parent="SettingsOverlay" unique_id=-440850088]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -120.0
+offset_top = -100.0
+offset_right = 120.0
+offset_bottom = 100.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_settings_panel")
+
+[node name="Title" type="Label" parent="SettingsOverlay/Panel" unique_id=1029384756]
+layout_mode = 0
+offset_top = 18.0
+offset_right = 240.0
+offset_bottom = 42.0
+theme_override_colors/font_color = Color(0.96, 0.93, 0.85, 1)
+theme_override_font_sizes/font_size = 18
+text = "설정"
+horizontal_alignment = 1
+
+[node name="LanguageButton" type="Button" parent="SettingsOverlay/Panel" unique_id=1862702199]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 58.0
+offset_right = 220.0
+offset_bottom = 86.0
+focus_mode = 0
+theme_override_colors/font_color = Color(0.88, 0.84, 0.78, 1)
+theme_override_colors/font_pressed_color = Color(0.8, 0.65, 0.32, 1)
+theme_override_colors/font_hover_color = Color(0.95, 0.78, 0.4, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_flat")
+text = "English"
+
+[node name="RecordButton" type="Button" parent="SettingsOverlay/Panel" unique_id=2049321587]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 96.0
+offset_right = 220.0
+offset_bottom = 124.0
+focus_mode = 0
+theme_override_colors/font_color = Color(0.88, 0.84, 0.78, 1)
+theme_override_colors/font_pressed_color = Color(0.8, 0.65, 0.32, 1)
+theme_override_colors/font_hover_color = Color(0.95, 0.78, 0.4, 1)
+theme_override_font_sizes/font_size = 16
+theme_override_styles/normal = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_flat")
+text = "기록"
+
+[node name="CloseButton" type="Button" parent="SettingsOverlay/Panel" unique_id=-84399403]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 150.0
+offset_right = 220.0
+offset_bottom = 176.0
+focus_mode = 0
+theme_override_colors/font_color = Color(0.68, 0.64, 0.6, 1)
+theme_override_colors/font_pressed_color = Color(0.8, 0.65, 0.32, 1)
+theme_override_colors/font_hover_color = Color(0.95, 0.78, 0.4, 1)
+theme_override_font_sizes/font_size = 14
+theme_override_styles/normal = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/pressed = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/hover = SubResource("StyleBoxEmpty_flat")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_flat")
+text = "닫기"

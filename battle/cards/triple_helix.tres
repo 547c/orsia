@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="Card" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://battle/card.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+card_name = "삼중나선"
+color = 0
+tier = 2
+effect = 0
+value = 16
+secondary_value = 0
+mana_cost = 0
+hp_cost = 3
+icon_key = "triple_slash"
+flavor_text = "검기가 세 겹의 나선으로 소용돌이치며 적을 짓밟는다."

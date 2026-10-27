@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="Card" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://battle/card.gd" id="1_card"]
+
+[resource]
+script = ExtResource("1_card")
+card_name = "카운터 슬래쉬"
+color = 2
+tier = 2
+effect = 5
+value = 12
+secondary_value = 0
+mana_cost = 5
+hp_cost = 0
+icon_key = "counter_swords"
+flavor_text = "적의 공격을 받아넘기며 그 힘을 그대로 되돌려준다."

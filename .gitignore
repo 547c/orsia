@@ -1,0 +1,23 @@
+.godot/
+/android/
+*.translation
+*.tmp
+
+# 외부 에셋 팩: 게임 안에 넣어 배포만 허용, 원본 파일 재배포 금지라 저장소에 안 올림
+assets/GUI/
+assets/graphics/
+assets/items/
+assets/sfx/
+assets/vfx/
+assets/fonts/
+assets/bgm/
+
+# 원정 밖에서 나중에 쓸지 모르는 보관물 (Godot도 읽지 않음)
+_archive/
+
+# 로컬 · 도구
+CLAUDE.md
+AGENTS.md
+.claude
+strip-coauthor.sh
+settings.local.json
