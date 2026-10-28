@@ -7702,7 +7702,7 @@ func _parry_pattern(index: int, hits: Array, simple := false) -> Array:
 	return out
 
 
-# 세계 음악 전투의 악보 계획: 타격 묶음마다 한 마디, 노트 자리는 박 쪼개기 칸(P2MusicMeta.CELLS)을 적 등급 중심으로 섞어 뽑는다
+# 세계 음악 전투의 악보 계획: 공격 하나가 적어도 두 마디(한 번 치면 그 묶음이 두 마디, 여러 번이면 타격마다 한 마디), 노트 자리는 박 쪼개기 칸(P2MusicMeta.CELLS)을 적 등급 중심으로 섞어 뽑는다
 # (묶음끼리 같은 칸은 연달아 안 나옴). 롱·따라가기는 묶음 끝에만, 앞뒤가 좁은 자리의 특수 노트는 짧은 노트로. 같은 차례·같은 적이면 늘 같다
 func _cell_pattern(index: int, hits: Array, simple: bool, tier: int) -> Array:
 	var role: String = battle.roles[index]
@@ -7717,28 +7717,18 @@ func _cell_pattern(index: int, hits: Array, simple: bool, tier: int) -> Array:
 	var sum := 0.0
 	for k in mix:
 		sum += float(mix[k])
+	var span := 2 if hits.size() == 1 else 1
 	for hi in range(hits.size()):
 		var beats: Array = []
-		for _tries in range(4):
-			var lv := String(mix.keys().back())
-			var x := rng.randf() * sum
-			for k in mix:
-				x -= float(mix[k])
-				if x < 0.0:
-					lv = String(k)
-					break
-			var cells: Array = P2MusicMeta.CELLS[lv]
-			var ci := rng.randi() % cells.size()
-			beats = (cells[ci] as Array).duplicate()
-			if "%s%d" % [lv, ci] != prev:
-				prev = "%s%d" % [lv, ci]
-				break
+		for b in range(span):
+			beats.append_array(_pick_cell(mix, sum, rng, prev).map(func(x): return float(x) + 4.0 * b))
+			prev = String(_cell_key)
 		if (simple or shift < 0) and beats.size() > 2:
 			beats.remove_at(beats.size() - 2)
 		var heavy := int(hits[hi]) >= heavy_at
 		var kinds: Array = []
 		for k in range(beats.size()):
-			var after := (float(beats[k + 1]) if k + 1 < beats.size() else 4.0) - float(beats[k])
+			var after := (float(beats[k + 1]) if k + 1 < beats.size() else 4.0 * span) - float(beats[k])
 			var before := float(beats[k]) - (float(beats[k - 1]) if k > 0 else -1.0)
 			var kind := String(pool[0]) if hi == 0 and k == 0 else String(pool[rng.randi() % pool.size()])
 			if kind in ["h", "s"] or (kind in ["d", "f", "x"] and (after < 1.0 or before < 0.5)) or (simple and kind != "t"):
@@ -7750,6 +7740,29 @@ func _cell_pattern(index: int, hits: Array, simple: bool, tier: int) -> Array:
 			kinds[kinds.size() - 1] = "t"
 		out.append({"kinds": kinds, "cells": [], "gaps": [], "beats": beats, "crush": heavy and tier >= 2, "phrase": ""})
 	return out
+
+
+var _cell_key := ""
+
+
+# 섞는 비율대로 등급을 뽑고 그 등급 칸 하나(바로 앞 칸 prev와는 다르게)
+func _pick_cell(mix: Dictionary, sum: float, rng: RandomNumberGenerator, prev: String) -> Array:
+	var pick: Array = []
+	for _tries in range(4):
+		var lv := String(mix.keys().back())
+		var x := rng.randf() * sum
+		for k in mix:
+			x -= float(mix[k])
+			if x < 0.0:
+				lv = String(k)
+				break
+		var cells: Array = P2MusicMeta.CELLS[lv]
+		var ci := rng.randi() % cells.size()
+		pick = cells[ci]
+		_cell_key = "%s%d" % [lv, ci]
+		if _cell_key != prev:
+			break
+	return pick
 
 
 # 다음 노트 시각: 박 칸 계획(beats)이면 묶음마다 다음 마디 첫 박(origin = 첫 묶음 마디 첫 박)에서 칸 자리대로, 아니면 앞 노트에서 반 박 간격만큼
@@ -8169,7 +8182,7 @@ func _parry_chart(index: int, hits: Array, simple := false) -> P2NoteChart:
 	chart.setup(notes, NOTE_R, _ui_tex("status_shield", 4), battle.get_pending_defense() > 0)
 	chart.bounds = area
 	# 입문 판정 × 난이도·하드록 판정 (너무 넓거나 좁지 않게)
-	chart.ease(clampf(_ease_k() * battle.judge_mult, 0.5, 1.6))
+	chart.ease(clampf(_ease_k() * battle.judge_mult * (1.35 if _music != null else 1.0), 0.5, 2.0))
 	chart.hidden_mod = battle.mods.has("hd")
 	chart.beat = beat
 	chart.call = call
@@ -8189,10 +8202,22 @@ func _parry_chart(index: int, hits: Array, simple := false) -> P2NoteChart:
 		# 박 칸 계획이면 첫 노트가 마디 첫 박이 아닐 수 있다(엇박 칸): 마디 첫 박을 음악 마디에 맞춘다
 		if (pat[0] as Dictionary).has("beats"):
 			first -= float(pat[0].beats[0]) * beat
-		var at := _music.entry(0.6 + first)
+		var at := _music.entry(0.6 + beat)
 		chart.follow(_music.clock, at - first)
 		chart.set_meta("world", world)
-		chart.set_meta("semis", _music.pitches(world, groups, notes.size()))
+		var phrases: Array = []
+		for gr in groups:
+			var by_bar := {}
+			for x in gr:
+				var bi := floori((float(notes[int(x)].at) - first) / (beat * 4.0) + 0.001)
+				if not by_bar.has(bi):
+					by_bar[bi] = []
+				(by_bar[bi] as Array).append(x)
+			var keys := by_bar.keys()
+			keys.sort()
+			for bi in keys:
+				phrases.append(by_bar[bi])
+		chart.set_meta("semis", _music.pitches(world, phrases, notes.size()))
 		_music.enemy(world, at)
 		chart.cue.connect(_on_music_cue)
 	else:
@@ -8719,6 +8744,20 @@ func _group_grade(grades: Array, crush := false) -> Dictionary:
 	return {"grade": "good" if frac > 0.0 else "miss", "frac": frac}
 
 
+# 세계 음악 전투의 묶음 판정(노트가 많으니 너그럽게): 놓친 노트 없이 85% 넘게 완벽이면 완벽(강타는 절반),
+# 아니면 막은 몫(완벽 1 · 막음 0.75)을 0.85로 나눈 만큼 막는다(최대 95%)
+func _cell_grade(grades: Array, crush := false) -> Dictionary:
+	var score := 0.0
+	var perfect := 0
+	for g in grades:
+		score += 1.0 if g == "perfect" else (0.75 if g == "good" else 0.0)
+		perfect += 1 if g == "perfect" else 0
+	if not grades.has("miss") and perfect >= 0.85 * grades.size():
+		return {"grade": "good", "frac": 0.5} if crush else {"grade": "perfect", "frac": 1.0}
+	var frac := minf(0.95, score / grades.size() / 0.85) * (0.5 if crush else 1.0)
+	return {"grade": "good" if frac > 0.0 else "miss", "frac": frac}
+
+
 # 보류한 적 행동: 타격 묶음마다 노트들(중간 노트 = 칼 부딪힘, 마지막 노트가 실제로 닿는 순간) → 묶음 판정으로 규칙 처리 → 기존 연출
 func _anim_parry_hits(index: int, sprite: AnimatedSprite2D, monster: MonsterState, chart: P2NoteChart, ranged: bool) -> void:
 	var groups: Array = chart.get_meta("groups")
@@ -8773,6 +8812,8 @@ func _anim_parry_hits(index: int, sprite: AnimatedSprite2D, monster: MonsterStat
 				score += {"perfect": 1.0, "good": 0.5}.get(String(got.get(int(x), "")), 0.0)
 			var share := score / ids.size() * (0.5 if crush else 1.0)
 			res = {"grade": "good" if share > 0.0 else "miss", "frac": share}
+		if _music != null:
+			res = _cell_grade(ids.map(func(x): return String(got.get(int(x), "miss"))), crush)
 		if crush and ids.all(func(x): return String(got.get(int(x), "")) == "perfect"):
 			_float_number(tr("강타 — 절반 막음"), _player_body() + Vector2(0, -150), C_GOLD, 24, 24.0, 1.0)
 		battle.resolve_parry_hit(String(res.grade), float(res.frac))
