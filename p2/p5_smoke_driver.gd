@@ -3948,8 +3948,8 @@ func run_genres() -> void:
 	dr.beat = 0.5
 	v._ui.add_child(dr)
 	var dg: Dictionary = await drive.call(dr, [[0.8, click.call(false)], [1.2, key.call(KEY_F, true)], [1.21, key.call(KEY_F, false)], [1.6, key.call(KEY_K, true)], [1.61, key.call(KEY_K, false)],
-		[2.05, key.call(KEY_J, true)], [2.06, key.call(KEY_J, false)], [2.15, click.call(true)], [2.25, key.call(KEY_J, true)], [2.26, key.call(KEY_J, false)], [2.35, click.call(false)]], 5, "genre_01_drum", 2.2)
-	check(str(dg) == str({0: "perfect", 1: "miss", 2: "perfect", 3: "perfect", 4: "miss"}), "북 장단: 왼쪽 클릭 둥 · 색 틀림 놓침 · K 딱 · 연타 4번 · 안 친 큰 북 놓침 %s" % str(dg))
+		[2.02, key.call(KEY_J, true)], [2.55, key.call(KEY_J, false)]], 5, "genre_01_drum", 2.2)
+	check(str(dg) == str({0: "perfect", 1: "miss", 2: "perfect", 3: "perfect", 4: "miss"}), "북 장단: 왼쪽 클릭 둥 · 색 틀림 놓침 · K 딱 · 노랑 길게 끝까지 누름 · 안 친 큰 북 놓침 %s" % str(dg))
 	if is_instance_valid(dr):
 		dr.queue_free()
 	# 박자 피하기

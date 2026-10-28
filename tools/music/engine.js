@@ -104,9 +104,9 @@ window.E = (function () {
     maek_summoner_low: "echo", mimic_n: "echo", mimic_h: "echo", mimic_x: "echo",
   };
 
-  // 연속으로 얹히는 겹(쌓이는 순서). 놓치면 위에서부터 하나씩 꺼지고, 다시 막아 내면 돌아옴
-  E.PARTS = [["hat", "하이햇", 5], ["perc", "세계 타악", 5], ["kick4", "킥 4박", 10], ["bass", "베이스", 10], ["counter", "맞받는 선율", 20], ["spark", "반짝이", 20]];
-  E.earnedFor = combo => E.PARTS.filter(p => combo >= p[2]).length;
+  // 전투가 무르익을수록 얹히는 겹(쌓이는 순서, 들어오는 진행도 = 적 체력을 깎은 비율). 게임 P2Music.PARTS와 같음
+  E.PARTS = [["hat", "하이햇", 0.1], ["perc", "세계 타악", 0.25], ["kick4", "킥 4박", 0.4], ["bass", "베이스", 0.55], ["counter", "맞받는 선율", 0.7], ["spark", "반짝이", 0.85]];
+  E.earnedFor = x => E.PARTS.filter(p => x >= p[2] - 1e-6).length;
 
   // 음악에서 뽑은 막기 악보: 8마디 고리의 slot번째 마디(변주 slot>>1의 앞 · 뒤 마디)에서 실제로 울리는 소리를 노트로.
   // 앞 악기 선율 음이 뼈대이고, tier(0 일반 · 1 심층 · 2 정예 · 3 보스)가 오를수록 짧은 꾸밈음 → 맞받는 선율 → 킥 → 세계 타악까지 더한다

@@ -68,8 +68,7 @@ canvas#ring { width: 120px; height: 120px; image-rendering: pixelated; display: 
   70% { transform: translateY(8px); opacity: 0.25; }
   100% { transform: none; opacity: 1; }
 }
-.crack { font-size: 12px; color: #6f6888; border: 2px solid var(--line); padding: 2px 6px; }
-.crack.on { color: var(--hurt); border-color: var(--hurt); }
+.prog { font-size: 12px; color: var(--gold); border: 2px solid var(--line); padding: 2px 6px; }
 .parts { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
 @media (max-width: 820px) { .parts { justify-content: flex-start; } }
 .parts span { font-size: 12px; padding: 3px 7px; border: 2px dashed var(--line); color: #6f6888; transition: border-color 0.2s, color 0.2s; }
@@ -147,7 +146,7 @@ canvas#lane { width: 100%; height: 132px; image-rendering: pixelated; display: b
 
   <div class="controls">
     <div class="row" id="bpms"><span class="label">빠르기</span></div>
-    <div class="row" id="sets"><span class="label">연속 넣기</span></div>
+    <div class="row" id="sets"><span class="label">전투 진행</span></div>
   </div>
 
   <section class="top" aria-live="polite">
@@ -163,7 +162,7 @@ canvas#lane { width: 100%; height: 132px; image-rendering: pixelated; display: b
       </div>
     </div>
     <div class="side">
-      <div class="combo"><span class="crack" id="crack" title="한 번 놓치면 금이 가고, 금 간 채로 또 놓치면 한 겹이 꺼집니다">금</span><span class="streak"><b id="streak">0</b>연속</span></div>
+      <div class="combo"><span class="prog" id="prog" title="적 체력을 깎은 비율. 오를수록 겹이 쌓입니다">진행 0%</span><span class="streak"><b id="streak">0</b>연속</span></div>
       <div class="parts" id="parts" aria-label="음악 겹"></div>
       <div class="ev" id="ev"></div>
       <div class="row"><button class="slip" id="slip" type="button">놓침 한 번</button><button class="stop" id="stop" type="button">■ 멈춤</button></div>
@@ -183,8 +182,8 @@ canvas#lane { width: 100%; height: 132px; image-rendering: pixelated; display: b
 
   <section class="step" aria-labelledby="s2">
     <h2 id="s2">한 판: 적 차례대로</h2>
-    <p class="note">내 차례 2마디 뒤에 적 셋이 2마디씩 공격합니다. 막을 때마다 막기 음이 그 세계 동기를 따라가고, 앞 마디 묶음은 <b>솔</b>, 뒷 마디 묶음은 <b>도</b>로 끝납니다. 리듬 칸은 적 등급에 맞춰 마디마다 섞여 나옵니다.</p>
-    <p class="note"><b>연속과 음악은 따로 갑니다.</b> 놓치면 연속은 바로 0이 되고 내 막기 음만 빠질 뿐, 노래는 그대로입니다(금). 금 간 채로 또 놓치면 맨 위 겹 하나가 테이프 멈추듯 처지며 꺼집니다. 4번 연달아 막으면 금이 아물고, 꺼진 겹은 4번마다 하나씩 다음 마디에 돌아옵니다. 겹은 연속 5 · 10 · 20에서 새로 쌓입니다.</p>
+    <p class="note">내 차례 2마디 뒤에 적 셋이 2마디씩 공격합니다. 노트는 그 마디 음악 악보(적 등급대로)이고, 막으면 그 음이 한 옥타브 위로 울립니다.</p>
+    <p class="note"><b>겹은 전투 진행을 따라 쌓입니다.</b> 적 체력을 깎을수록(여기서는 한 바퀴마다 25%) 하이햇 → 세계 타악 → 킥 4박 → 베이스 → 맞받는 선율 → 반짝이가 다음 마디부터 하나씩 더해져, 막바지에는 전부 울립니다. 다 깎으면 끝맺음과 함께 잔잔해지고 다음 전투는 잔잔하게 시작합니다. 놓치면 연속만 0이 되고 내 막기 음만 빠질 뿐, 노래는 그대로입니다(연속 5 이상이 끊기면 금 가는 소리).</p>
     <div class="row" id="presets"><span class="label">적 순서</span></div>
     <div class="seq" id="seq"></div>
     <canvas id="lane" width="320" height="66" aria-label="다가오는 노트, 높이는 음 높이, 금색 선은 도와 솔"></canvas>
@@ -235,7 +234,7 @@ const PRESETS = [
   { name: "포격 장치 → 균열의 핵 → 저주 장치", foes: ["cannon", "x_boss", "curse"] },
 ];
 const BPMS = [[112, "구간 Ⅰ"], [124, "구간 Ⅱ"], [136, "구간 Ⅲ"]];
-const SETS = [0, 5, 10, 20];
+const SETS = [0, 0.25, 0.5, 0.75, 1];
 const MUTES = [["lead", "앞 악기"], ["counter", "맞받는 선율"], ["perc", "세계 타악"], ["bed", "받침"], ["drone", "바닥음"], ["bass", "베이스"], ["kick", "킥"], ["hat", "하이햇"], ["fx", "반짝이 · 차오름"], ["parry", "막기 음"]];
 const AUTOS = [["manual", "직접"], ["perfect", "자동 완벽"], ["mixed", "자동 섞임 (완벽 · 막음 · 놓침)"]];
 const TIERS = [["normal", "일반", "앞 악기 긴 음 위주"], ["deep", "심층", "앞 악기 선율 전부"], ["elite", "정예", "+ 맞받는 선율 · 킥"], ["boss", "보스", "+ 세계 타악"]];
@@ -244,8 +243,8 @@ const TIER_OF = Object.fromEntries(TIERS.map((l, i) => [l[0], i]));
 const SRC_COL = { lead: "#ece6d6", counter: "#b28cff", kick: "#6b5f8a", perc: "#e8c46a" };
 
 let bpm = 124, listenTier = 1, autoMode = "perfect", preset = PRESETS[0];
-// 연속(combo)은 놓치면 0. 음악 겹은 earned(쌓은 수) − cut(위에서 꺼진 수). cracks: 금, run: 놓침 뒤 연달아 막은 수
-const H = { combo: 0, earned: 0, cut: 0, cracks: 0, run: 0 };
+// 연속(combo)은 놓치면 0이 될 뿐 음악과 무관. 음악 겹은 전투 진행(prog, 적 체력을 깎은 비율)대로 earned개
+const H = { combo: 0, earned: 0, prog: 0 };
 let ctx = null, G = null, mode = "", timer = 0, timers = [], nextBar = 0, barIdx = 0, notes = [], bars = [];
 let queued = null, lastBase = "gye", curW = E.WORLDS.gye, seq = [], resolved = new Map(), segVar = new Map(), seen = new Map();
 let lastSemi = null, lastSemiAt = 0, shownW = null, chartW = null, playSlot = -1;
@@ -267,42 +266,30 @@ function show(w, turn) {
 }
 
 // ── 연속과 겹 ──
-function partsOn() { return E.PARTS.slice(0, H.earned - H.cut).map(p => p[0]); }
+function partsOn() { return E.PARTS.slice(0, H.earned).map(p => p[0]); }
 function hit(grow) {
-  const msgs = [];
-  if (grow) {
-    H.combo++;
-    const e = E.earnedFor(H.combo);
-    if (e > H.earned) { msgs.push(["up", "쌓임 → " + E.PARTS.slice(H.earned, e).map(p => p[1]).join(" · ")]); H.earned = e; }
-  }
-  H.run++;
-  if (H.run >= 4) { H.cracks = 0; if (H.cut > 0) { H.cut--; H.run = 0; msgs.push(["back", "돌아옴 → " + E.PARTS[H.earned - H.cut - 1][1] + " (다음 마디)"]); } }
-  return { msgs: msgs };
+  if (grow) H.combo++;
+  return { msgs: [] };
 }
 function miss(t) {
-  const big = H.combo >= 5, left = H.earned - H.cut;
-  H.combo = 0; H.run = 0; H.cracks++;
+  const big = H.combo >= 5;
+  H.combo = 0;
   if (big) E.crack(G, t);
-  if (H.cracks >= 2 && left > 0) {
-    H.cut++; H.cracks = 0;
-    const p = E.PARTS[H.earned - H.cut];
-    E.cut(G, p[0], t);
-    return { big: big, msgs: [["cut", "부서짐 → " + p[1] + " 꺼짐"]] };
-  }
-  H.cracks = Math.min(H.cracks, 1);
-  return { big: big, msgs: [["miss", (big ? "연속 부서짐" : "놓침") + (left > 0 ? " — 금 간 채로 또 놓치면 한 겹 꺼짐" : "")]] };
+  return { big: big, msgs: [["miss", big ? "연속 부서짐 · 노래는 그대로" : "놓침 · 내 막기 음만 빠짐"]] };
 }
 function showHeat(s, out) {
   const b = $("streak");
   if (out && out.big) { b.classList.remove("broke"); void b.offsetWidth; b.classList.add("broke"); }
   b.textContent = s.combo;
-  $("crack").classList.toggle("on", s.cracks > 0);
-  document.querySelectorAll("#parts span").forEach((el, i) => { el.className = i < s.earned - s.cut ? "on" : i < s.earned ? "off" : ""; });
+  $("prog").textContent = "진행 " + Math.round(s.prog * 100) + "%";
+  document.querySelectorAll("#parts span").forEach((el, i) => { el.className = i < s.earned ? "on" : ""; });
   if (out) for (const [kind, msg] of out.msgs) { const e = $("ev"); e.textContent = msg; e.className = "ev " + kind; }
 }
-function setCombo(v) {
-  Object.assign(H, { combo: v, earned: E.earnedFor(v), cut: 0, cracks: 0, run: 0 });
-  showHeat(H, { msgs: [["up", "연속 " + v + " → 겹 " + H.earned + "개"]] });
+// 전투 진행을 v로: 새로 넘은 겹 이름들을 돌려준다(겹은 다음 마디부터)
+function setProg(v) {
+  const before = H.earned;
+  H.prog = Math.max(0, Math.min(1, v)); H.earned = E.earnedFor(H.prog);
+  return E.PARTS.slice(before, H.earned).map(p => p[1]);
 }
 
 function stopAll() {
@@ -426,12 +413,19 @@ function battleBar(b, t) {
   if (half === 0 && s.kind === "enemy") { seen.set(keyOf(w), (seen.get(keyOf(w)) || 0) + 1); segVar.set(k, (seen.get(keyOf(w)) - 1) % 4); }
   const vari = segVar.get(k) || 0, nx = seq[(k + 1) % seq.length], fill = half === 1 && nx.kind === "enemy" ? resolve(k + 1) : null;
   const tier = s.kind === "enemy" ? TIER_OF[FOE_LV[s.foe]] : null, ch = tier === null ? [] : chartOf(w, vari * 2 + half, tier, fill);
+  // 한 바퀴(내 차례로 돌아옴)마다 적 체력을 25%씩 깎은 것으로: 겹이 쌓이다 다 깎으면 끝맺음 뒤 잔잔하게 처음부터
+  let roundMsg = null;
+  if (half === 0 && s.kind === "mine" && k > 0) {
+    if (H.prog >= 1) { E.ending(G, w, t); setProg(0); roundMsg = ["up", "다 깎음 → 끝맺음 · 다음 전투는 잔잔하게"]; }
+    else { const f = setProg(H.prog + 0.25); roundMsg = ["up", "진행 " + Math.round(H.prog * 100) + "%" + (f.length ? " → 겹 + " + f.join(" · ") : "")]; }
+  }
   E.bar(G, { w: w, kind: s.kind, half: half, on: withForced(partsOn(), ch), vari: vari, fill: fill }, t);
   addNotes(w, ch, t);
   bars.push({ t: t, w: w, fill: fill });
   at(t, () => {
     show(w, s.kind === "enemy" ? `적 차례 · ${FOE[s.foe]} · 변주 ${E.VARIS[vari]}` : "내 차례");
     markTier(tier, vari * 2 + half);
+    if (roundMsg) showHeat(H, { msgs: [roundMsg] });
     if (half === 0) { $("queued").textContent = ""; document.querySelectorAll(".seq span").forEach((e, i) => e.classList.toggle("cur", i === k % seq.length)); }
   });
   if (fill) at(t + 3 * G.beat, () => { $("queued").textContent = "넘어가기 예고 → " + fill.name; document.documentElement.style.setProperty("--next", fill.color); });
@@ -439,6 +433,7 @@ function battleBar(b, t) {
 function battle() {
   if (mode === "battle") { stopAll(); return; }
   stopAll(); mode = "battle";
+  H.combo = 0; setProg(0); showHeat(H);
   seq = seqItems();
   $("go").classList.add("playing"); $("go").textContent = "■ 한 판 멈춤";
   fresh();
@@ -481,8 +476,8 @@ MUTES.forEach(([bus, nm]) => {
 });
 E.PARTS.forEach(([id, nm]) => { const s = document.createElement("span"); s.textContent = nm; s.dataset.id = id; $("parts").appendChild(s); });
 SETS.forEach(v => {
-  const b = document.createElement("button"); b.type = "button"; b.textContent = String(v);
-  b.onclick = () => setCombo(v);
+  const b = document.createElement("button"); b.type = "button"; b.textContent = Math.round(v * 100) + "%";
+  b.onclick = () => { const f = setProg(v); showHeat(H, { msgs: [["up", "진행 " + Math.round(v * 100) + "% → 겹 " + H.earned + "개" + (f.length ? " (+ " + f.join(" · ") + ")" : "")]] }); };
   $("sets").appendChild(b);
 });
 BPMS.forEach(([v, nm]) => {

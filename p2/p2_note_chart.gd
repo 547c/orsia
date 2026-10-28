@@ -15,7 +15,8 @@ extends Node2D
 
 signal closed(i: int)
 signal judged(i: int, grade: String, dt: float)
-# 노트 소리가 날 순간: 쳐 낸 그때(길게 · 따라가기 · 두 번은 첫 누름에, 막기 · 피하기는 닿는 박에). n = 같은 노트 안 몇째 타(연타 · 두 번의 뒤 타는 1부터)
+# 노트 소리가 날 순간: 쳐 낸 그때(길게 · 따라가기 · 두 번은 첫 누름에, 막기 · 피하기는 닿는 박에). n = 같은 노트 안 몇째 타:
+# 길게 누르는 동안 노트의 under(그 길이가 덮은 [시각, 음])가 제 박 조금 앞에 1부터 차례로, 두 번의 뒤 타도 1
 signal struck(i: int, n: int)
 signal cue(key: String, step: int, vol: float)
 signal timing(d: float, grade: String)
@@ -29,6 +30,7 @@ const TOO_EARLY := 0.4
 const FADE_IN := 0.14
 const BURST := 0.32
 const HOLD_SLACK := 0.08
+const RING_AHEAD := 0.08
 const DOUBLE_WIN := 0.28
 const FLEE_R := 86.0
 static var offset := 0.0
@@ -253,6 +255,7 @@ func _process(delta: float) -> void:
 					if _cursor.distance_to(ball(i)) <= radius * 1.6:
 						n.ok = float(n.ok) + dt
 		if n.holding:
+			_ring_under(i)
 			n.tick = float(n.tick) + dt
 			if float(n.tick) >= 0.11:
 				n.tick = 0.0
@@ -381,6 +384,17 @@ func set_cursor(p: Vector2) -> void:
 
 func _drop(g: String) -> String:
 	return "good" if g == "perfect" else "miss"
+
+
+# 길게 누르는 동안: 덮인 음 차례가 오면 그 박 RING_AHEAD초 앞에 알린다(소리는 받는 쪽이 제 박에 맞춤)
+func _ring_under(i: int) -> void:
+	var n: Dictionary = notes[i]
+	var u: Array = n.get("under", [])
+	var k := int(n.get("rung", 0))
+	while k < u.size() and _t >= float(n.at) + float(u[k][0]) - RING_AHEAD:
+		k += 1
+		struck.emit(i, k)
+	n.rung = k
 
 
 # 두 번 노트의 두 번째 누름

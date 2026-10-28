@@ -3,7 +3,7 @@ extends Node
 
 # 전투 음악(일곱 세계). 세계마다 구운 8마디 겹 고리를 AudioStreamSynchronized 하나로 늘 함께 돌리고, 음량만 바꿔 세계와 겹을 고른다.
 # 그 재생 위치가 박자 시계(clock)라 막기 악보도 이 시계로 간다. 적 공격 노트는 그 마디에 연주되는 선율 음 그대로(P2MusicMeta 악보, 그 한 박 전에 새 세계 필인).
-# 소리는 tools/music/bake.js로 굽는다(구운 세계는 P2MusicMeta). 겹 쌓기 · 부서짐 규칙은 tools/music 시험 페이지와 같다.
+# 소리는 tools/music/bake.js로 굽는다(구운 세계는 P2MusicMeta). 겹이 쌓이는 규칙은 tools/music 시험 페이지와 같다.
 # 모든 시각 인자는 들리는 시각(clock 기준)이고, 안에서는 출력 지연을 더한 섞는 시각으로 바꿔 맞춘다
 
 const DIR := "res://assets/music/"
@@ -20,8 +20,8 @@ const WORLD_OF := {
 	"x_boss": "core",
 	"maek_summoner_low": "echo", "maek_spawn_low": "echo", "mimic_n": "echo", "mimic_h": "echo", "mimic_x": "echo",
 }
-# 연속으로 얹히는 겹(쌓이는 순서, 필요한 연속, 화면 이름). 놓치면 위에서부터 꺼진다
-const PARTS := [["hat", 5, "하이햇"], ["perc", 5, "타악"], ["kick4", 10, "킥"], ["bass", 10, "베이스"], ["counter", 20, "맞받는 선율"], ["spark", 20, "반짝이"]]
+# 전투가 무르익을수록 얹히는 겹(쌓이는 순서, 들어오는 진행도 = 적 체력을 깎은 비율, 화면 이름). 막바지에 전부 울리고, 잡으면 끝맺음과 함께 잔잔해진다
+const PARTS := [["hat", 0.1, "하이햇"], ["perc", 0.25, "타악"], ["kick4", 0.4, "킥"], ["bass", 0.55, "베이스"], ["counter", 0.7, "맞받는 선율"], ["spark", 0.85, "반짝이"]]
 
 var bpm := 112
 var beat := 0.5
@@ -29,9 +29,6 @@ var bar := 2.0
 var loop_len := 1.0
 var fx_bus := "Master"
 var earned := 0
-var cut := 0
-var cracks := 0
-var run := 0
 var _bus := ""
 var _worlds: Array = []
 var _world := ""
@@ -258,7 +255,7 @@ func _poll_shots() -> void:
 # ── 세계 · 겹 고르기 ──
 func _parts_on() -> Array:
 	var out: Array = []
-	for k in range(earned - cut):
+	for k in range(earned):
 		out.append(String(PARTS[k][0]))
 	return out
 
@@ -371,43 +368,23 @@ func tone_again(world: String, semi: int, at: float) -> void:
 	_shot(bank.get(semi, bank.get(0)), P2MusicMeta.PRE, t, linear_to_db(maxf(P2Beat.gain, 0.001)) + TONE_DB - 6.0, fx_bus)
 
 
-# 연속(전투 콤보)이 바뀜. 이으면 쌓기 · 회복(4번 연달아면 금이 아물고 꺼진 겹 하나가 다음 마디에 돌아옴).
-# 끊기면 금: 처음엔 금만(노래는 그대로, 연속 5 이상이 끊기면 금 가는 소리), 금 간 채 또 끊기면 맨 위 겹 하나가 테이프 멈추듯 처지며 꺼짐. 돌아온 · 꺼진 겹 이름을 돌려준다
-func combo(ok: bool, before: int, now: int) -> Dictionary:
-	var out := {}
+# 전투 진행도(0~1)가 오름: 새로 넘은 겹은 다음 마디 첫 박에 들어온다(진행도가 다시 내려가도 겹은 그대로). 새로 들어온 겹 이름들을 돌려준다
+func progress(x: float) -> Array:
+	var out: Array = []
 	if _mode in ["rest", "off"]:
 		return out
-	if ok:
-		var e := 0
-		for p in PARTS:
-			if now >= int(p[1]):
-				e += 1
-		if e > earned:
-			earned = e
-			_at_bar(func() -> void: _retarget(0.25))
-		run += 1
-		if run >= 4:
-			cracks = 0
-			if cut > 0:
-				cut -= 1
-				run = 0
-				out["back"] = String(PARTS[earned - cut - 1][2])
-				_at_bar(func() -> void: _retarget(0.3))
-		return out
-	var left := earned - cut
-	run = 0
-	cracks += 1
-	if before >= 5:
-		_shot(_crack, P2MusicMeta.PRE, clock(), 0.0, fx_bus)
-	if cracks >= 2 and left > 0:
-		cut += 1
-		cracks = 0
-		var p: Array = PARTS[earned - cut]
-		_tape_stop([String(p[0])])
-		out["cut"] = String(p[2])
-	else:
-		cracks = mini(cracks, 1)
+	while earned < PARTS.size() and x >= float(PARTS[earned][1]) - 0.001:
+		out.append(String(PARTS[earned][2]))
+		earned += 1
+	if not out.is_empty():
+		_at_bar(func() -> void: _retarget(0.25))
 	return out
+
+
+# 연속이 끊김: 노래는 그대로 두고, 연속 5 이상이었으면 금 가는 소리만
+func broke(before: int) -> void:
+	if before >= 5 and _mode not in ["rest", "off"]:
+		_shot(_crack, P2MusicMeta.PRE, clock(), 0.0, fx_bus)
 
 
 # 그 겹만 복제해 지금 자리에서 음이 처지며(재생 속도를 늦춤) 사라지게 하고, 원래 겹은 소리만 끈다(박은 그대로 맞물린 채)

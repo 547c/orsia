@@ -2,7 +2,7 @@ class_name P2DrumChart
 extends P2NoteChart
 
 # 무거운 연타(파괴자·철갑 수비병·정예): 태고식 북 장단. 아래 띠 오른쪽에서 북이 흘러와 왼쪽 판정 원에 닿을 때 친다.
-# 빨강 = 둥(왼쪽 클릭 · F J) · 파랑 = 딱(오른쪽 클릭 · D K) · 노랑 띠 = 연타(띠가 지나는 동안 아무 쪽이나 여러 번) ·
+# 빨강 = 둥(왼쪽 클릭 · F J) · 파랑 = 딱(오른쪽 클릭 · D K) · 노랑 띠 = 길게(닿을 때 아무 쪽이나 누르고 띠 끝까지 누른 채, 그동안 덮인 음은 제 박에 저절로) ·
 # 큰 북 = 강타(완벽해도 절반). 색이 틀리면 놓침. 판정 창·박자·부름·신호는 P2NoteChart 그대로
 
 const DON_KEYS := [KEY_F, KEY_J]
@@ -12,7 +12,6 @@ const C_KA := Color("#4fb4e8")
 const C_ROLL := Color("#ffcf3a")
 const LANE_H := 64.0
 const SCROLL := 2.0
-const ROLL_RATE := 6.0
 
 var judge_x := 400.0
 var lane_y := 572.0
@@ -28,7 +27,6 @@ func setup(list: Array, r: float, tex: Texture2D, wide: bool) -> void:
 	super(list, r, tex, wide)
 	for n in notes:
 		n.drum = String(n.get("drum", "don"))
-		n.rolls = 0
 		n.pos = Vector2(judge_x, lane_y)
 
 
@@ -43,10 +41,6 @@ func travel(n: Dictionary) -> float:
 
 func x_at(n: Dictionary, t: float) -> float:
 	return judge_x + (t - _t) / travel(n) * (spawn_x - judge_x)
-
-
-func roll_need(n: Dictionary) -> int:
-	return maxi(3, ceili(float(n.hold) * ROLL_RATE))
 
 
 func end_time() -> float:
@@ -68,10 +62,12 @@ func _process(delta: float) -> void:
 			n.closed = true
 			closed.emit(i)
 		if n.grade == "":
-			if n.drum == "roll":
-				if _t > float(n.at) + float(n.hold) + offset:
-					var got := int(n.rolls)
-					_judge(i, "perfect" if got >= roll_need(n) else ("good" if got * 2 >= roll_need(n) else "miss"))
+			if n.drum == "roll" and n.holding:
+				_ring_under(i)
+				if _t >= float(n.at) + float(n.hold):
+					_judge(i, n.start)
+				elif not bool(n.get("auto_hold", false)) and not _pressing():
+					_judge(i, n.start if _t >= float(n.at) + float(n.hold) - HOLD_SLACK else ("good" if (_t - float(n.at)) / float(n.hold) >= 0.5 else "miss"))
 			elif _t > float(n.at) + offset + good_late:
 				_judge(i, "miss", _t - float(n.at) - offset)
 		if n.grade == "" or _t - float(n.judged_t) < BURST:
@@ -114,12 +110,18 @@ func _strike(side: String) -> void:
 		if n.grade != "":
 			continue
 		if n.drum == "roll":
-			if _t >= float(n.at) - good_early and _t <= float(n.at) + float(n.hold) + offset:
-				n.rolls = int(n.rolls) + 1
-				struck.emit(i, int(n.rolls) - 1)
-				_pops.append({"t": _t, "c": C_ROLL})
+			if n.holding:
 				return
-			if _t < float(n.at) - good_early:
+			var dr := _t - float(n.at) - offset
+			if dr < -good_early:
+				return
+			if dr <= good_late:
+				var g := "perfect" if dr >= -perfect_early and dr <= perfect_late else "good"
+				timing.emit(dr, g)
+				n.holding = true
+				n.start = g
+				struck.emit(i, 0)
+				_pops.append({"t": _t, "c": C_ROLL})
 				return
 			continue
 		var d := _t - float(n.at) - offset
@@ -133,18 +135,24 @@ func _strike(side: String) -> void:
 		return
 
 
-# 점검 드라이버·봇: 지금 칠 북을 맞는 쪽으로(연타는 다 채운 것으로)
+# 점검 드라이버·봇: 지금 칠 북을 맞는 쪽으로(길게는 끝까지 누른 것으로)
 func press_now() -> void:
 	var i := _current()
 	if i < 0:
 		return
 	var n: Dictionary = notes[i]
 	if n.drum == "roll":
-		if int(n.rolls) == 0:
-			struck.emit(i, 0)
-		n.rolls = roll_need(n)
+		n.holding = true
+		n.start = "perfect"
+		n.auto_hold = true
+		struck.emit(i, 0)
 		return
 	_strike(String(n.drum))
+
+
+# 길게 띠를 누르고 있는지: 북 키나 마우스 단추 하나라도
+func _pressing() -> bool:
+	return not _held.is_empty() or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
 
 
 func cue_rect() -> Rect2:
@@ -265,26 +273,16 @@ func _draw_roll(n: Dictionary, x: float, open: float) -> void:
 	_c.draw_circle(Vector2(x1, lane_y), 15.0, Color(C_ROLL, open))
 	_note_disc(Vector2(x0, lane_y), C_ROLL, false, open)
 	if w > 70.0:
-		_c.text(_small, Vector2(x0 + 30.0, lane_y + 5.0).round(), "연타", 12, Color("#5a3a00", open), 0)
-	var rolling := _t >= float(n.at) - good_early
-	if rolling:
-		var need := roll_need(n)
-		var got := int(n.rolls)
-		var b := Vector2(judge_x, lane_y - 58.0)
-		var tx := "%d / %d" % [got, need]
-		var tw := _font.get_string_size(tx, HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
-		var bub := Rect2(b - Vector2(tw / 2.0 + 10.0, 14.0), Vector2(tw + 20.0, 26.0))
-		_c.draw_rect(bub.grow(3.0), Color(C_OUT, open))
-		_c.draw_rect(bub, Color(C_ROLL if got >= need else Color("#fff4d0"), open))
-		_c.draw_colored_polygon(PackedVector2Array([b + Vector2(-6, 12), b + Vector2(6, 12), b + Vector2(0, 20)]), Color(C_ROLL if got >= need else Color("#fff4d0"), open))
-		_c.text(_font, (b + Vector2(-tw / 2.0, 6.0)).round(), tx, 18, Color("#3a2400", open), 0)
+		_c.text(_small, Vector2(x0 + 30.0, lane_y + 5.0).round(), "길게", 12, Color("#5a3a00", open), 0)
+	if n.holding:
+		_c.draw_arc(Vector2(judge_x, lane_y), 34.0 + 3.0 * sin(_t * 18.0), 0.0, TAU, 40, Color(C_ROLL, 0.9 * open), P2Pixel.w(4.0), false)
 
 
 func _draw_hit(n: Dictionary, u: float) -> void:
 	var p := Vector2(judge_x, lane_y)
 	match String(n.grade):
 		"perfect":
-			_label(p, "연타!" if n.drum == "roll" else "완벽", C_PERFECT, u)
+			_label(p, "완벽", C_PERFECT, u)
 		"good":
 			_label(p, "막음", C_GOOD, u)
 		_:
