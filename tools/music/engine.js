@@ -1,397 +1,804 @@
-// 오르시아 전투 음악 엔진 (WebAudio). 실시간 재생과 오프라인 렌더링이 같은 함수를 쓴다.
-// 뼈대: 으뜸음 C · 딸림음 G에 머무는 바닥음/베이스, G 받침 음, 킥·하이햇은 늘 같은 박. 나라마다 음계·주 악기·부선율 악기·타악기만 바뀜
+// 오르시아 전투 음악 엔진 (WebAudio). 실시간 재생과 오프라인 렌더링(소리 굽기)이 같은 함수를 쓴다.
+// 일곱 세계 모두 도·솔을 가져서, 끊기지 않는 공통 바닥음(C·G) 위에서 적이 바뀔 때마다 이어 넘어간다
 window.E = (function () {
   const E = {};
+  E.NAMES = ["도", "레♭", "레", "미♭", "미", "파", "파#", "솔", "라♭", "라", "시♭", "시"];
+  // mel: 앞 악기 2마디 [16분 자리, C4에서 반음, 길이] · ctr: 맞받는 선율 [자리, C5에서, 길이] · riff: 베이스 [자리, C2에서, 길이]
+  // motifG/C: 막기 음 동기(C5에서). 마지막이 묶음 끝(솔 또는 도), 짧은 묶음은 꼬리부터 씀
   E.WORLDS = {
-    hijaz:  { name: "히자즈", where: "아랍 마캄", scale: [0, 1, 4, 5, 7, 8, 10], color: "#3fb5a8", lead: "oud", counter: "qanun", perc: "darbuka", sixth: 8, leadName: "우드", counterName: "카눈", percName: "다르부카" },
-    dorian: { name: "도리안", where: "유럽 옛 선법", scale: [0, 2, 3, 5, 7, 9, 10], color: "#b48cff", lead: "fiddle", counter: "harp", perc: "frame", sixth: 9, leadName: "피들", counterName: "하프", percName: "프레임 북" },
-    gong:   { name: "궁조", where: "중국 5음", scale: [0, 2, 4, 7, 9], color: "#ff6b5a", lead: "erhu", counter: "zheng", perc: "china", sixth: 9, leadName: "얼후", counterName: "고쟁", percName: "목탁 · 바라" },
-    inn:    { name: "인 음계", where: "일본 미야코부시", scale: [0, 1, 5, 7, 8], color: "#f2a7c3", lead: "koto", counter: "shaku", perc: "taiko", sixth: 8, leadName: "고토", counterName: "샤쿠하치", percName: "타이코 · 카네" },
-    degung: { name: "데궁", where: "순다 가믈란", scale: [0, 1, 3, 7, 8], color: "#e8a64a", lead: "bonang", counter: "suling", perc: "kendang", sixth: 8, leadName: "보낭(가믈란 종)", counterName: "술링 피리", percName: "끈당 · 징" },
+    gye: {
+      name: "계면", where: "한국", scale: [0, 3, 5, 7, 10], color: "#ec6a4f", orn: "gye",
+      lead: "gayageum", counter: "daegeum", perc: "janggu", bed: "saeng", spark: "pungyeong", parry: "gayageum",
+      leadName: "가야금", counterName: "대금", percName: "장구", bedName: "생황풍 화음", sparkName: "풍경",
+      bright: 0.5, dens: 0.55, swing: 0.06, bedTones: [0, 7, 12, 15],
+      mel: [[0, 7, 4], [4, 10, 1], [5, 12, 1], [6, 10, 2], [8, 7, 3], [11, 5, 1], [12, 3, 4],
+            [16, 0, 3], [19, 3, 1], [20, 5, 2], [22, 7, 2], [24, 5, 1], [25, 3, 3], [28, 0, 4]],
+      ctr: [[2, 7, 6], [10, 10, 2], [12, 12, 4], [18, 10, 4], [22, 7, 3], [26, 3, 6]],
+      riff: [[0, 0, 3], [3, 0, 1], [6, 7, 3], [9, 7, 1], [12, 10, 2], [14, 5, 2]],
+      motifG: [0, 3, 5, 7, 10, 7, 5, 3, 5, 7], motifC: [7, 10, 12, 10, 7, 5, 7, 5, 3, 0],
+    },
+    lyd: {
+      name: "리디안", where: "유리 하늘", scale: [0, 2, 4, 6, 7, 9, 11], color: "#8fd8ff", orn: null,
+      lead: "glassharp", counter: "handpan", perc: "handdrum", bed: "glass", spark: "glint", parry: "handpan",
+      leadName: "유리 하프", counterName: "핸드팬", percName: "손북", bedName: "유리 공명", sparkName: "유리 반짝임",
+      bright: 0.85, dens: 0.3, swing: 0, bedTones: [0, 7, 14, 18],
+      mel: [[0, 4, 6], [6, 6, 2], [8, 7, 8], [16, 11, 4], [20, 9, 2], [22, 6, 2], [24, 7, 8]],
+      ctr: [[2, 0, 2], [4, 7, 2], [7, 4, 1], [10, 11, 2], [14, 6, 2], [18, 0, 2], [20, 9, 2], [23, 7, 1], [26, 4, 2], [30, 2, 2]],
+      riff: [[0, 0, 4], [6, 7, 2], [8, 0, 2], [11, 6, 1], [12, 7, 4]],
+      motifG: [0, 4, 7, 9, 11, 9, 7, 6, 7], motifC: [7, 9, 11, 14, 11, 9, 6, 7, 11, 12],
+    },
+    tez: {
+      name: "테제타", where: "에티오피아", scale: [0, 2, 3, 7, 8], color: "#e2b04a", orn: null,
+      lead: "krar", counter: "masenqo", perc: "kebero", bed: "warm", spark: "tsenatsel", parry: "krar",
+      leadName: "크라르", counterName: "마센코", percName: "케베로 북", bedName: "따뜻한 현", sparkName: "체나첼 방울",
+      bright: 0.55, dens: 0.8, swing: 0.2, bedTones: [0, 7, 15, 20],
+      mel: [[0, 0, 2], [2, 7, 1], [3, 8, 1], [4, 7, 2], [6, 3, 2], [8, 2, 1], [9, 3, 1], [10, 7, 2], [12, 12, 2], [14, 8, 2],
+            [16, 7, 2], [18, 3, 2], [20, 2, 1], [21, 3, 1], [22, 2, 2], [24, 0, 3], [27, -5, 1], [28, -4, 2], [30, -5, 2]],
+      ctr: [[2, 3, 4], [6, 2, 2], [8, 0, 6], [18, 8, 4], [22, 7, 2], [24, 3, 4], [28, 2, 4]],
+      riff: [[0, 0, 3], [3, 0, 1], [4, 7, 2], [6, 8, 2], [8, 7, 3], [11, 3, 1], [12, 0, 2], [14, -5, 2]],
+      motifG: [0, 2, 3, 7, 8, 7, 3, 2, 3, 8, 7], motifC: [7, 8, 12, 8, 7, 3, 7, 3, 2, 0],
+    },
+    bhv: {
+      name: "바이라브", where: "인도", scale: [0, 1, 4, 5, 7, 8, 11], color: "#3fc9a0", orn: "bhv",
+      lead: "sitar", counter: "bansuri", perc: "tabla", bed: "tanpura", spark: "manjira", parry: "sitar",
+      leadName: "시타르", counterName: "반수리", percName: "타블라", bedName: "탄푸라", sparkName: "만지라",
+      bright: 0.6, dens: 0.65, swing: 0.04, bedTones: [7, 12, 12, 0],
+      mel: [[0, 0, 2], [2, 1, 4], [6, 0, 2], [8, 4, 2], [10, 5, 2], [12, 7, 4],
+            [16, 8, 4], [20, 7, 2], [22, 5, 1], [23, 4, 1], [24, 5, 2], [26, 1, 3], [29, 0, 3]],
+      ctr: [[4, 1, 4], [8, 0, 4], [18, 8, 4], [22, 7, 6], [30, 11, 2]],
+      riff: [[0, 0, 4], [4, 7, 2], [6, 8, 2], [8, 7, 4], [12, 1, 2], [14, 0, 2]],
+      motifG: [0, 1, 4, 5, 8, 5, 4, 5, 8, 7], motifC: [12, 11, 8, 7, 8, 7, 4, 5, 1, 0],
+    },
+    hun: {
+      name: "헝가리 단조", where: "초원 너머", scale: [0, 2, 3, 6, 7, 8, 11], color: "#d0609f", orn: null, esztam: true,
+      lead: "cimbalom", counter: "violin", perc: "frame", bed: "strings", spark: "cimb", parry: "cimbalom",
+      leadName: "침발롬", counterName: "바이올린", percName: "프레임 북", bedName: "현악 받침", sparkName: "침발롬 잔음",
+      bright: 0.65, dens: 0.75, swing: 0, bedTones: [0, 7, 11, 15],
+      mel: [[0, -5, 2], [2, -4, 1], [3, -5, 1], [4, -6, 2], [6, -5, 2], [8, -1, 1], [9, 0, 1], [10, 2, 2], [12, 3, 4],
+            [16, 2, 2], [18, 0, 2], [20, -1, 2], [22, -4, 2], [24, -5, 6], [30, -6, 2]],
+      ctr: [[0, 7, 4], [4, 8, 2], [6, 11, 2], [8, 12, 6], [14, 11, 2], [16, 8, 4], [20, 7, 4], [24, 6, 4], [28, 7, 4]],
+      riff: [[0, 0, 2], [4, 7, 2], [8, 0, 2], [12, -5, 2]],
+      motifG: [0, 3, 6, 8, 11, 8, 6, 3, 6, 8, 7], motifC: [14, 12, 11, 8, 6, 3, 6, 3, 2, 0],
+    },
+    mac: {
+      name: "기계", where: "정거장", scale: [0, 2, 3, 5, 7, 8, 10], color: "#a7b6c8", orn: null,
+      lead: "chip", counter: "steelpan", perc: "metal", bed: "pulse", spark: "bleep", parry: "steelpan",
+      leadName: "칩 사각파", counterName: "강철 팬", percName: "금속 타악", bedName: "전원 웅웅", sparkName: "삑 소리",
+      bright: 0.7, dens: 0.9, swing: 0, bedTones: [0, 7, 10, 15],
+      mel: [[0, 0, 2], [2, 7, 1], [3, 3, 1], [4, 0, 2], [6, 10, 2], [8, 8, 1], [9, 7, 1], [10, 5, 2], [12, 3, 1], [13, 2, 1], [14, 3, 2],
+            [16, 7, 3], [19, 8, 1], [20, 7, 2], [22, 3, 2], [24, 0, 4], [28, -2, 2], [30, -5, 2]],
+      ctr: [[2, 0, 2], [6, 3, 2], [10, 7, 2], [14, 5, 2], [18, 3, 2], [22, 0, 2], [26, 2, 2], [30, -2, 2]],
+      riff: [[0, 0, 2], [2, 12, 1], [4, 0, 2], [6, 12, 1], [8, 8, 2], [10, 20, 1], [12, 7, 2], [14, 19, 1]],
+      motifG: [0, 3, 7, 3, 8, 3, 10, 3, 7], motifC: [0, 3, 7, 10, 8, 5, 2, 3, 2, 0],
+    },
+    core: {
+      name: "핵", where: "균열 한가운데", scale: [0, 1, 3, 4, 6, 7, 9, 10], color: "#b28cff", orn: null,
+      lead: "glassbell", counter: "tremble", perc: "heart", bed: "choir", spark: "shard", parry: "glassbell",
+      leadName: "유리종", counterName: "떠는 합성음", percName: "심장 북", bedName: "낮은 합창", sparkName: "유리 조각",
+      bright: 0.35, dens: 0.5, swing: 0, bedTones: [0, 7, 10, 16],
+      mel: [[0, 0, 6], [6, 6, 2], [8, 3, 4], [12, 1, 4], [16, 4, 6], [22, 10, 2], [24, 9, 4], [28, 7, 4]],
+      ctr: [[0, 6, 8], [8, 7, 8], [16, 3, 8], [24, 4, 8]],
+      riff: [[0, 0, 6], [6, 6, 2], [8, 7, 6], [14, 1, 2]],
+      motifG: [0, 3, 6, 9, 10, 9, 6, 4, 6, 7], motifC: [10, 9, 6, 7, 4, 6, 3, 4, 1, 0],
+    },
   };
-  E.ORDER = ["hijaz", "dorian", "gong", "inn", "degung"];
-  // 2마디 선율 [16분 자리, 음계 몇 번째, 길이(16분)] — 정박을 당기고 미는 자리 섞음
-  const MAIN = [[0, 4, 2], [3, 5, 1], [4, 4, 3], [7, 2, 1], [8, 3, 2], [10, 4, 2], [12, 2, 3], [15, 1, 1],
-                [16, 0, 4], [22, 1, 1], [23, 2, 2], [26, 4, 2], [28, 3, 1], [29, 2, 3]];
-  // 부선율: 주선율이 길게 끌거나 쉴 때만 빈 곳을 채움 (높게)
-  const COUNTER = [[5, 7, 1], [6, 6, 1], [13, 6, 1], [14, 5, 1], [18, 7, 1], [19, 8, 1], [20, 7, 2], [24, 5, 1], [31, 6, 1]];
+  E.ORDER = ["gye", "lyd", "tez", "bhv", "hun", "mac", "core"];
+  for (const id of E.ORDER) E.WORLDS[id].id = id;
+
+  // 메아리: 바로 앞 세계를 흉내. 같은 악기·음계지만 앞 악기가 8분 늦게 따라 부르고, 음은 살짝 낮게 들어갔다가 맞춰 감
+  const echoes = {};
+  E.echoOf = function (baseId) {
+    const b = E.WORLDS[baseId] || E.WORLDS.gye;
+    if (!echoes[b.id]) echoes[b.id] = Object.assign({}, b, {
+      id: "echo", base: b, mirror: true, name: "메아리", where: b.name + " 흉내",
+      color: mix(b.color, "#d8d4e4", 0.55), bright: b.bright * 0.75,
+    });
+    return echoes[b.id];
+  };
+  function mix(a, b, k) {
+    const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), x = p(a), y = p(b);
+    return "#" + x.map((v, i) => Math.round(v + (y[i] - v) * k).toString(16).padStart(2, "0")).join("");
+  }
+
+  // 적 → 세계 (게임 P2Catalog.ENEMIES 열쇠)
+  E.ENEMY_WORLD = {
+    scout: "gye", scout_h: "gye",
+    archer: "lyd", archer_h: "lyd",
+    breaker: "tez", guard_h: "tez", elite: "tez", maek_elite_low: "tez", leader: "tez",
+    hexer: "bhv", poisoner: "bhv",
+    shieldbearer: "hun", banner: "hun", boss: "hun", hard_boss: "hun", maek_noble_mid: "hun", ruins_boss: "hun",
+    cannon: "mac", curse: "mac",
+    x_boss: "core",
+    maek_summoner_low: "echo", mimic_n: "echo", mimic_h: "echo", mimic_x: "echo",
+  };
+
+  // 박 쪼개기: 마디 둘(묶음 둘), 박 단위 자리. 묶음 하나가 한 마디이고 끝음은 솔(앞 마디) · 도(뒤 마디)
+  E.SUBDIV = [
+    { id: "normal", name: "일반", desc: "한 박 · 반 박", bars: [[0, 1, 2, 2.5, 3], [0, 0.5, 1, 2, 3]] },
+    { id: "deep", name: "심층", desc: "엇박", bars: [[0, 0.5, 1.5, 2.5, 3.5], [0, 0.75, 1.5, 2.25, 3]] },
+    { id: "elite", name: "정예", desc: "4쪼개기 · 셋잇단 조금", bars: [[0, 0.25, 0.5, 1, 1.5, 2, 2.25, 2.5, 3], [0, 0.5, 1, 4 / 3, 5 / 3, 2, 2.75, 3]] },
+    { id: "boss", name: "보스", desc: "4쪼개기 · 셋잇단 · 2:3", bars: [[0, 0.25, 0.5, 0.75, 1, 1.5, 2, 7 / 3, 8 / 3, 3, 3.5], [0, 2 / 3, 4 / 3, 2, 2.25, 2.5, 2.75, 3]] },
+  ];
+  E.layer = s => s >= 20 ? 3 : s >= 10 ? 2 : s >= 5 ? 1 : 0;
+  E.groupPitches = function (w, n, cad) {
+    const M = cad === "G" ? w.motifG : w.motifC, body = M.slice(0, -1), L = body.length, out = [];
+    for (let k = 0; k < n - 1; k++) out.push(body[(((L - (n - 1) + k) % L) + L) % L]);
+    out.push(M[M.length - 1]);
+    return out;
+  };
 
   let seed = 12345;
   function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
   E.reseed = function (s) { seed = s; };
-  function deg(scale, d) { const n = scale.length; const o = Math.floor(d / n); const i = ((d % n) + n) % n; return scale[i] + 12 * o; }
-  E.deg = deg;
   function hz(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+  function hum(ms) { return (rnd() - 0.5) * ms / 500; }
+  function vary(v, k) { return v * (1 - k + rnd() * 2 * k); }
+  function sw(G, w, s) { return s % 2 === 1 ? (w.swing || 0) * G.s16 : 0; }
 
   E.build = function (c, bpm) {
-    const G = { c: c, bpm: bpm || 128, ks: {}, ducks: [], buses: {} };
+    const G = { c: c, bpm: bpm || 124, ks: {}, ducks: [], buses: {}, waves: {}, width: 0.5 };
     G.beat = 60 / G.bpm; G.s16 = G.beat / 4; G.bar = G.beat * 4;
-    const comp = c.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 3; comp.attack.value = 0.004; comp.release.value = 0.18; comp.knee.value = 8;
-    const clip = c.createWaveShaper(); const cv = new Float32Array(1024);
-    for (let i = 0; i < 1024; i++) { const x = i / 511.5 - 1; cv[i] = Math.tanh(1.4 * x) / Math.tanh(1.4); }
+    G.master = c.createGain(); G.master.gain.value = 0.56;
+    const tilt = c.createBiquadFilter(); tilt.type = "highshelf"; tilt.frequency.value = 6500; tilt.gain.value = -2.5;
+    const comp = c.createDynamicsCompressor(); comp.threshold.value = -15; comp.knee.value = 10; comp.ratio.value = 2.5; comp.attack.value = 0.012; comp.release.value = 0.22;
+    const clip = c.createWaveShaper(), cv = new Float32Array(2048);
+    for (let i = 0; i < 2048; i++) { const x = i / 1023.5 - 1; cv[i] = Math.tanh(1.15 * x) / Math.tanh(1.15); }
     clip.curve = cv;
-    const out = c.createGain(); out.gain.value = 0.85;
-    G.master = c.createGain(); G.master.gain.value = 0.7;
-    const air = c.createBiquadFilter(); air.type = "highshelf"; air.frequency.value = 5000; air.gain.value = 5;
-    const lowTrim = c.createBiquadFilter(); lowTrim.type = "lowshelf"; lowTrim.frequency.value = 90; lowTrim.gain.value = -2;
-    G.master.connect(air); air.connect(lowTrim); lowTrim.connect(comp); comp.connect(clip); clip.connect(out); out.connect(c.destination);
-    // 울림: 짧은 초기 반사 + 2.6초 꼬리, 좌우 따로 → 넓게
-    const len = Math.floor(c.sampleRate * 2.6), ir = c.createBuffer(2, len, c.sampleRate);
+    const out = c.createGain(); out.gain.value = 0.92;
+    G.master.connect(tilt); tilt.connect(comp); comp.connect(clip); clip.connect(out); out.connect(c.destination);
+    // 울림: 짧은 초기 반사 + 2.4초 꼬리(뒤로 갈수록 어두워짐), 좌우 따로
+    const sr = c.sampleRate, len = Math.floor(sr * 2.4), ir = c.createBuffer(2, len, sr);
     for (let ch = 0; ch < 2; ch++) {
       const d = ir.getChannelData(ch); let lp = 0;
-      for (let i = 0; i < len; i++) { const n = Math.random() * 2 - 1; lp += (n - lp) * (0.55 - 0.45 * i / len); d[i] = lp * Math.pow(1 - i / len, 3.2); }
-      for (const ms of [11, 19, 29, 37, 53]) { const k = Math.floor(c.sampleRate * (ms + ch * 3) / 1000); if (k < len) d[k] += 0.6 * (Math.random() < 0.5 ? -1 : 1); }
+      for (let i = 0; i < len; i++) { const k = i / len; lp += (Math.random() * 2 - 1 - lp) * (0.5 - 0.42 * k); d[i] = lp * Math.pow(1 - k, 3.4) * Math.min(1, i / (sr * 0.012)); }
+      for (const ms of [9, 17, 23, 31, 43]) { const k = Math.floor(sr * (ms + ch * 2.5) / 1000); d[k] += 0.35 * (Math.random() < 0.5 ? -1 : 1); }
     }
     G.rev = c.createConvolver(); G.rev.buffer = ir;
-    const revLP = c.createBiquadFilter(); revLP.type = "lowpass"; revLP.frequency.value = 9000;
-    const revHP = c.createBiquadFilter(); revHP.type = "highpass"; revHP.frequency.value = 180;
-    const revOut = c.createGain(); revOut.gain.value = 0.62;
+    const revHP = c.createBiquadFilter(); revHP.type = "highpass"; revHP.frequency.value = 170;
+    const revLP = c.createBiquadFilter(); revLP.type = "lowpass"; revLP.frequency.value = 6000;
+    const revOut = c.createGain(); revOut.gain.value = 0.5;
     G.rev.connect(revHP); revHP.connect(revLP); revLP.connect(revOut); revOut.connect(G.master);
-    // 메아리: 점8분 핑퐁
+    // 메아리 틈: 점8분 핑퐁
     G.dly = c.createGain();
     const dl = c.createDelay(2), dr = c.createDelay(2), fb = c.createGain(), dlp = c.createBiquadFilter();
-    dl.delayTime.value = G.beat * 0.75; dr.delayTime.value = G.beat * 0.75; fb.gain.value = 0.34; dlp.type = "lowpass"; dlp.frequency.value = 3200;
-    const pl = c.createStereoPanner(), pr = c.createStereoPanner(); pl.pan.value = -0.75; pr.pan.value = 0.75;
-    const dOut = c.createGain(); dOut.gain.value = 0.5;
+    dl.delayTime.value = G.beat * 0.75; dr.delayTime.value = G.beat * 0.75; fb.gain.value = 0.32; dlp.type = "lowpass"; dlp.frequency.value = 2600;
+    const pl = c.createStereoPanner(), pr = c.createStereoPanner(); pl.pan.value = -0.7; pr.pan.value = 0.7;
+    const dOut = c.createGain(); dOut.gain.value = 0.45;
     G.dly.connect(dl); dl.connect(pl); pl.connect(dOut); dl.connect(dlp); dlp.connect(dr); dr.connect(pr); pr.connect(dOut); dr.connect(fb); fb.connect(dl);
     dOut.connect(G.master); dOut.connect(G.rev);
-    G.setDelay = function (bpm) { const b = 60 / bpm; dl.delayTime.setValueAtTime(b * 0.75, c.currentTime); dr.delayTime.setValueAtTime(b * 0.75, c.currentTime); };
-    function bus(name, gain, pan, rev, dly, duck) {
+    function bus(name, gain, rev, dly, duck) {
       const g = c.createGain(); g.gain.value = gain;
       const mute = c.createGain(); mute.gain.value = 1;
       let tail = g;
-      if (duck) { const dk = c.createGain(); dk.gain.value = 1; g.connect(dk); tail = dk; G.ducks.push(dk.gain); }
-      tail.connect(mute);
-      const p = c.createStereoPanner(); p.pan.value = pan; mute.connect(p); p.connect(G.master);
-      if (name === "lead" || name === "pad" || name === "perc") {
-        const hd = c.createDelay(0.05); hd.delayTime.value = name === "perc" ? 0.017 : 0.012; const hg = c.createGain(); hg.gain.value = 0.3;
-        const hp = c.createStereoPanner(); hp.pan.value = 0.85; p.pan.value = pan - 0.35;
-        mute.connect(hd); hd.connect(hg); hg.connect(hp); hp.connect(G.master);
-      }
+      if (duck) { const dk = c.createGain(); g.connect(dk); tail = dk; G.ducks.push(dk.gain); }
+      tail.connect(mute); mute.connect(G.master);
       if (rev) { const s = c.createGain(); s.gain.value = rev; mute.connect(s); s.connect(G.rev); }
       if (dly) { const s = c.createGain(); s.gain.value = dly; mute.connect(s); s.connect(G.dly); }
-      G.buses[name] = { in: g, mute: mute.gain };
+      (G.buses[name] = G.buses[name] || []).push(mute);
       return g;
     }
-    G.kick = bus("kick", 0.95, 0, 0, 0, false);
-    G.drum = bus("drum", 0.6, 0.1, 0.14, 0, false);
-    G.perc = bus("perc", 0.5, 0, 0.28, 0.06, false);
-    G.bass = bus("bass", 0.62, 0, 0, 0, true);
-    G.pad = bus("pad", 0.24, 0, 0.45, 0, true);
-    G.ost = bus("ost", 0.19, -0.55, 0.25, 0.25, true);
-    G.lead = bus("lead", 0.5, 0.04, 0.32, 0.18, false);
-    G.counter = bus("counter", 0.34, 0.55, 0.4, 0.22, true);
-    G.fx = bus("fx", 0.3, 0, 0.7, 0.3, false);
-    G.parry = bus("parry", 0.5, 0, 0.4, 0.14, false);
-    const nb = c.createBuffer(1, c.sampleRate, c.sampleRate), nd = nb.getChannelData(0);
+    G.kick = bus("kick", 0.7, 0, 0, false);
+    G.hat = bus("hat", 1, 0.1, 0, false);
+    G.perc = bus("perc", 0.6, 0.2, 0.04, false);
+    G.bass = bus("bass", 0.55, 0, 0, true);
+    G.droneBus = bus("drone", 0.11, 0.15, 0, true);
+    G.bed = bus("bed", 0.32, 0.5, 0, true);
+    G.lead = bus("lead", 0.5, 0.3, 0.12, false);
+    G.mirror = bus("lead", 0.42, 0.45, 0.55, false);
+    G.counter = bus("counter", 0.36, 0.42, 0.2, true);
+    G.fx = bus("fx", 0.45, 0.6, 0.2, false);
+    G.parry = bus("parry", 0.62, 0.28, 0.06, false);
+    G.parryEcho = bus("parry", 0.55, 0.32, 0.5, false);
+    G.thudBus = bus("parry", 0.7, 0.06, 0, false);
+    const nb = c.createBuffer(1, sr * 2, sr), nd = nb.getChannelData(0);
     for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
     G.noise = nb;
+    makeDrone(G);
     return G;
   };
-  E.setMute = function (G, name, on) { if (G.buses[name]) G.buses[name].mute.setTargetAtTime(on ? 0 : 1, G.c.currentTime, 0.05); };
+  E.setMute = function (G, name, on) { for (const m of G.buses[name] || []) m.gain.setTargetAtTime(on ? 0 : 1, G.c.currentTime, 0.05); };
 
-  // ── 기본 소리 조각 ──
+  // 공통 바닥음: 처음부터 끝까지 한 벌의 발진기라 세계가 바뀌어도 위상이 끊기지 않음
+  function makeDrone(G) {
+    const c = G.c, g = c.createGain(); g.gain.value = 0.0001; g.connect(G.droneBus);
+    const lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 240; lp.Q.value = 0.5; lp.connect(g);
+    const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 0.07; lg.gain.value = 70; lfo.connect(lg); lg.connect(lp.frequency); lfo.start();
+    for (const [m, type, v, det] of [[36, "sine", 0.55, 0], [24, "sine", 0.12, 0], [43, "sine", 0.16, 1.5], [36, "sawtooth", 0.07, -3], [48, "triangle", 0.05, 2]]) {
+      const o = c.createOscillator(); o.type = type; o.frequency.value = hz(m); o.detune.value = det;
+      const gg = c.createGain(); gg.gain.value = v; o.connect(gg); gg.connect(lp); o.start();
+    }
+    G.droneLevel = g.gain;
+  }
+  E.droneTo = function (G, t, level) { G.droneLevel.setTargetAtTime(Math.max(0.0001, level), t, 0.3); };
+
+  // ── 기본 조각 ──
   function env(G, t, out, a, peak, dec) {
-    const n = G.c.createGain(); n.gain.setValueAtTime(0.0001, t);
-    n.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + a); n.gain.exponentialRampToValueAtTime(0.0001, t + a + dec);
+    const n = G.c.createGain(); n.gain.setValueAtTime(0, t);
+    n.gain.linearRampToValueAtTime(Math.max(0.0002, peak), t + a); n.gain.exponentialRampToValueAtTime(0.0001, t + a + dec);
     n.connect(out); return n;
   }
   function sus(G, t, out, a, peak, hold, rel) {
-    const n = G.c.createGain(); n.gain.setValueAtTime(0.0001, t);
-    n.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + a); n.gain.setValueAtTime(peak, t + a + hold); n.gain.exponentialRampToValueAtTime(0.0001, t + a + hold + rel);
+    const n = G.c.createGain(); n.gain.setValueAtTime(0, t);
+    n.gain.linearRampToValueAtTime(Math.max(0.0002, peak), t + a); n.gain.setValueAtTime(Math.max(0.0002, peak), t + a + hold); n.gain.exponentialRampToValueAtTime(0.0001, t + a + hold + rel);
     n.connect(out); return n;
   }
   function osc(G, t, type, f, out, a, peak, dec) { const o = G.c.createOscillator(); o.type = type; o.frequency.value = f; o.connect(env(G, t, out, a, peak, dec)); o.start(t); o.stop(t + a + dec + 0.05); return o; }
   function nz(G, t, type, f, q, out, peak, dec, a) {
     const s = G.c.createBufferSource(), fl = G.c.createBiquadFilter(); s.buffer = G.noise; fl.type = type; fl.frequency.value = f; fl.Q.value = q;
     s.playbackRate.value = 0.9 + rnd() * 0.2;
-    s.connect(fl); fl.connect(env(G, t, out, a || 0.002, peak, dec)); s.start(t, rnd() * 0.5); s.stop(t + (a || 0.002) + dec + 0.05); return fl;
+    s.connect(fl); fl.connect(env(G, t, out, a || 0.002, peak, dec)); s.start(t, rnd() * 1.5); s.stop(t + (a || 0.002) + dec + 0.05); return fl;
   }
+  function pan(G, out, p) { const n = G.c.createStereoPanner(); n.pan.value = Math.max(-1, Math.min(1, p)); n.connect(out); return n; }
+  function lpf(G, out, f, q) { const n = G.c.createBiquadFilter(); n.type = "lowpass"; n.frequency.value = f; n.Q.value = q || 0.5; n.connect(out); return n; }
   function duck(G, t, depth) {
-    for (const p of G.ducks) { p.setValueAtTime(1, t); p.linearRampToValueAtTime(depth, t + 0.012); p.setTargetAtTime(1, t + 0.04, 0.07); }
+    for (const p of G.ducks) { p.cancelScheduledValues(t); p.setValueAtTime(1, t); p.linearRampToValueAtTime(depth, t + 0.015); p.setTargetAtTime(1, t + 0.05, 0.08); }
   }
-  function ks(G, midi, bright, decay) {
-    const key = midi + ":" + bright + ":" + decay;
+  function drum(G, t, out, f0, f1, drop, v, dec) {
+    const o = G.c.createOscillator(); o.type = "sine"; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + drop);
+    o.connect(env(G, t, out, 0.002, v, dec)); o.start(t); o.stop(t + dec + 0.08); return o;
+  }
+  function partials(G, t, f, out, list, vel, a) {
+    for (const [r, g, dec, beat] of list) {
+      if (f * r > G.c.sampleRate * 0.45) continue;
+      osc(G, t, "sine", f * r, out, a || 0.003, vel * g, dec);
+      if (beat) osc(G, t, "sine", f * r + beat, out, a || 0.003, vel * g * 0.7, dec);
+    }
+  }
+
+  // 뜯는 줄: 카플러스-스트롱. 같은 음도 세 가지로 번갈아(손으로 뜯은 듯 매번 조금 다름)
+  function ks(G, midi, bright, decay, buzz, exc) {
+    const v = Math.floor(rnd() * 3), key = [midi, bright, decay, buzz, exc, v].join(":");
     if (G.ks[key]) return G.ks[key];
-    const sr = G.c.sampleRate, n = Math.max(2, Math.round(sr / hz(midi))), len = Math.round(sr * decay);
-    const buf = G.c.createBuffer(1, len, sr), d = buf.getChannelData(0), ring = new Float32Array(n);
-    for (let i = 0; i < n; i++) ring[i] = Math.random() * 2 - 1;
-    let idx = 0;
-    for (let i = 0; i < len; i++) { const nx = (idx + 1) % n; const v = ring[idx]; ring[idx] = (v * bright + ring[nx] * (1 - bright)) * 0.9975; d[i] = v; idx = nx; }
+    let s = 0;
+    for (let i = 0; i < key.length; i++) s = (s * 31 + key.charCodeAt(i)) & 0x7fffffff;
+    const r = () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff * 2 - 1; };
+    const sr = G.c.sampleRate, f = hz(midi), P = sr / f, a = 0.5 + 0.5 * bright;
+    const D = P - (1 - a), N = Math.floor(D), fr = D - N;
+    const len = Math.ceil(sr * decay), buf = G.c.createBuffer(1, len, sr), d = buf.getChannelData(0);
+    const g = Math.pow(0.001, 1 / (f * decay));
+    const ex = new Float32Array(N + 2); let lp = 0, mean = 0;
+    for (let i = 0; i < N + 2; i++) { lp += (r() - lp) * (0.12 + 0.88 * exc); ex[i] = lp; mean += lp; }
+    mean /= N + 2; let pk = 0;
+    for (let i = 0; i < N + 2; i++) { ex[i] -= mean; pk = Math.max(pk, Math.abs(ex[i])); }
+    for (let i = 0; i < N + 2; i++) ex[i] /= pk || 1;
+    const th = 0.3;
+    let px = 0;
+    for (let i = 0; i < len; i++) {
+      let y;
+      if (i < N + 2) y = ex[i];
+      else {
+        const x = (1 - fr) * d[i - N] + fr * d[i - N - 1];
+        y = g * (a * x + (1 - a) * px); px = x;
+        if (buzz && y > th) y = th + (y - th) * (1 - buzz);
+      }
+      d[i] = y;
+    }
     return (G.ks[key] = buf);
   }
-  function pluck(G, t, midi, vel, out, bright, decay, cut, bend, body) {
-    const s = G.c.createBufferSource(); s.buffer = ks(G, midi, bright, decay);
-    if (bend) { s.playbackRate.setValueAtTime(bend, t); s.playbackRate.exponentialRampToValueAtTime(1, t + 0.06); }
-    const f = G.c.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = cut;
-    let last = f; s.connect(f);
-    for (const [fq, gn] of (body || [])) { const pk = G.c.createBiquadFilter(); pk.type = "peaking"; pk.frequency.value = fq; pk.Q.value = 1.4; pk.gain.value = gn; last.connect(pk); last = pk; }
-    last.connect(env(G, t, out, 0.002, vel, decay)); s.start(t); s.stop(t + decay + 0.05);
+  // 메아리 세계에서는 음이 살짝 낮게 들어갔다가 맞춰 감
+  let dip = 0;
+  function pitchMove(G, params, t, dur, o) {
+    const stops = [], base = params.map(p => p.value);
+    const at = (fn) => params.forEach((p, i) => fn(p, base[i]));
+    const c0 = o.from !== undefined && o.from !== null ? (o.from - o.midi) * 100 : 0;
+    if (c0 && Math.abs(c0) <= 700) at((p, b) => { p.setValueAtTime(b + c0, t); p.linearRampToValueAtTime(b, t + (o.slideT || 0.08)); });
+    else if (dip) at((p, b) => { p.setValueAtTime(b + dip, t); p.linearRampToValueAtTime(b, t + 0.14); });
+    else if (o.scoop) at((p, b) => { p.setValueAtTime(b - o.scoop, t); p.linearRampToValueAtTime(b, t + 0.07); });
+    const lfo = (rate, depth, start, ramp) => {
+      const l = G.c.createOscillator(), lg = G.c.createGain(); l.frequency.value = rate * (0.94 + rnd() * 0.12);
+      lg.gain.setValueAtTime(0, t); lg.gain.setValueAtTime(0, t + start); lg.gain.linearRampToValueAtTime(depth, t + start + ramp);
+      l.connect(lg); params.forEach(p => lg.connect(p)); l.start(t); l.stop(t + dur + 1); stops.push(l);
+    };
+    if (o.orn === "tremble") lfo(5.2, 42, 0.1, 0.22);
+    else if (o.orn === "bend") {
+      const h = Math.min(0.2, dur * 0.4);
+      at((p, b) => { p.setValueAtTime(b, t + 0.02); p.linearRampToValueAtTime(b + 60, t + 0.08); p.setValueAtTime(b + 60, t + h); p.linearRampToValueAtTime(b - 100, t + h + 0.1); });
+    } else if (o.orn === "andolan") { at((p, b) => p.setValueAtTime(b - 12, t + 0.1)); lfo(1.5, 26, 0.12, 0.3); }
+    if (o.vib) lfo(o.vibHz || 5.5, o.vib, o.vibAt || 0.15, 0.2);
+    return stops;
   }
-  function bell(G, t, midi, vel, out, dec, partials, beatHz) {
-    const f = hz(midi);
-    (partials || [[1, 1], [2.756, 0.42], [5.404, 0.22], [8.93, 0.1]]).forEach(([r, a], i) => {
-      osc(G, t, "sine", f * r, out, 0.002, vel * a, dec / (1 + i * 0.7));
-      if (beatHz && i === 0) osc(G, t, "sine", f * r + beatHz, out, 0.002, vel * a * 0.8, dec);
+  E.ornFor = function (w, midi, len) {
+    const pc = ((midi % 12) + 12) % 12;
+    if (w.orn === "gye") { if (pc === 7 && len >= 2) return "tremble"; if (pc === 3 && len >= 3) return "bend"; }
+    if (w.orn === "bhv" && (pc === 1 || pc === 8) && len >= 3) return "andolan";
+    return null;
+  };
+  function pluck(G, t, midi, vel, out, o) {
+    const c = G.c, strings = o.strings || [0], sum = c.createGain(); sum.gain.value = 1 / Math.sqrt(strings.length);
+    const hp = c.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 45; sum.connect(hp);
+    let last = hp;
+    for (const [fq, gn] of (o.body || [])) { const pk = c.createBiquadFilter(); pk.type = "peaking"; pk.frequency.value = fq; pk.Q.value = 1.3; pk.gain.value = gn; last.connect(pk); last = pk; }
+    const l = c.createBiquadFilter(); l.type = "lowpass"; l.frequency.value = o.cut || 6000; l.Q.value = 0.6; last.connect(l);
+    l.connect(env(G, t, o.pan !== undefined ? pan(G, out, o.pan) : out, o.attack || 0.002, vel, o.decay * 1.6));
+    const srcs = strings.map(cents => {
+      const s = c.createBufferSource(); s.buffer = ks(G, midi, o.bright, o.decay, o.buzz || 0, o.exc === undefined ? 0.6 : o.exc);
+      s.detune.value = cents + (o.detune || 0); s.connect(sum); s.start(t); s.stop(t + o.decay + 0.1); return s;
     });
+    pitchMove(G, srcs.map(s => s.detune), t, o.decay, Object.assign({ midi: midi }, o));
   }
   function bowed(G, t, midi, vel, out, dur, o) {
-    const c = G.c, f0 = hz(midi);
-    const v = c.createOscillator(); v.type = "sawtooth";
-    if (o.slide) { v.frequency.setValueAtTime(f0 * Math.pow(2, -o.slide / 12), t); v.frequency.exponentialRampToValueAtTime(f0, t + 0.07); } else v.frequency.value = f0;
-    const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = o.vibHz || 5.6;
-    lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f0 * (o.vib || 0.008), t + Math.min(dur * 0.6, 0.18)); lfo.connect(lg); lg.connect(v.frequency);
-    let last = v;
+    const c = G.c, f0 = hz(midi), voices = o.voices || [0], sum = c.createGain(); sum.gain.value = 1 / voices.length;
+    const cents0 = voices.map(cents => cents + (rnd() - 0.5) * 4);
+    const oscs = cents0.map(cents => { const v = c.createOscillator(); v.type = "sawtooth"; v.frequency.value = f0; v.detune.value = cents; v.connect(sum); return v; });
+    const rel = o.rel || 0.14, end = t + dur + rel + 0.1;
+    const st = pitchMove(G, oscs.map(v => v.detune), t, dur, Object.assign({ midi: midi }, o));
+    if (o.sob && dur > 0.3) oscs.forEach((v, i) => { v.detune.setValueAtTime(cents0[i], t + dur - 0.08); v.detune.linearRampToValueAtTime(cents0[i] - 35, t + dur + rel); });
+    let last = sum;
     for (const [type, fq, q, gn] of o.filters) { const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = fq; fl.Q.value = q; if (gn !== undefined) fl.gain.value = gn; last.connect(fl); last = fl; }
-    const a = o.attack || 0.05;
-    last.connect(sus(G, t, out, a, vel, Math.max(0.01, dur - a), o.rel || 0.12));
-    v.start(t); lfo.start(t); v.stop(t + dur + (o.rel || 0.12) + 0.05); lfo.stop(t + dur + (o.rel || 0.12) + 0.05);
-    if (o.bowNoise) nz(G, t, "bandpass", 3000, 1.2, out, vel * o.bowNoise, Math.min(dur, 0.25), 0.03);
+    const a = o.attack || 0.06, dest = o.pan !== undefined ? pan(G, out, o.pan) : out;
+    last.connect(sus(G, t, dest, a, vel, Math.max(0.01, dur - a), rel));
+    oscs.forEach(v => { v.start(t); v.stop(end); });
+    if (o.noise) nz(G, t, "bandpass", 2800, 1.1, dest, vel * o.noise, Math.min(dur, 0.3), 0.04);
+    return st;
   }
-  function flute(G, t, midi, vel, out, dur, breath, drop) {
-    const c = G.c, f0 = hz(midi);
-    const v = c.createOscillator(); v.type = "sine"; v.frequency.value = f0;
-    if (drop) { v.frequency.setValueAtTime(f0, t + dur * 0.7); v.frequency.exponentialRampToValueAtTime(f0 * 0.97, t + dur); }
-    const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 4.8; lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(f0 * 0.009, t + Math.min(0.25, dur * 0.7));
-    lfo.connect(lg); lg.connect(v.frequency);
-    const h = c.createOscillator(); h.type = "triangle"; h.frequency.value = f0 * 2; const hg = c.createGain(); hg.gain.value = 0.12; h.connect(hg);
-    const sum = c.createGain(); v.connect(sum); hg.connect(sum);
-    sum.connect(sus(G, t, out, 0.06, vel, Math.max(0.02, dur - 0.06), 0.15));
-    v.start(t); h.start(t); lfo.start(t); v.stop(t + dur + 0.25); h.stop(t + dur + 0.25); lfo.stop(t + dur + 0.25);
-    nz(G, t, "bandpass", f0 * 2.2, 2.5, out, vel * (breath || 0.3), dur * 0.8, 0.04);
+  function flute(G, t, midi, vel, out, dur, o) {
+    const c = G.c, f0 = hz(midi), sum = c.createGain();
+    const parts = [["sine", 1, 1], ["triangle", 2, 0.1], ["sine", 3, 0.035]].map(([type, r, g]) => {
+      const v = c.createOscillator(); v.type = type; v.frequency.value = f0 * r; const gg = c.createGain(); gg.gain.value = g; v.connect(gg); gg.connect(sum); return v;
+    });
+    pitchMove(G, parts.map(v => v.detune), t, dur, Object.assign({ midi: midi, scoop: 35, vib: o.vib || 14, vibHz: 4.8, vibAt: 0.18 }, o));
+    const rel = 0.18, dest = o.pan !== undefined ? pan(G, out, o.pan) : out, e = sus(G, t, dest, 0.07, vel, Math.max(0.02, dur - 0.07), rel);
+    const l = lpf(G, e, o.cut || 4200, 0.5); sum.connect(l);
+    if (o.buzz) {
+      const ws = c.createWaveShaper(), cv = new Float32Array(256);
+      for (let i = 0; i < 256; i++) { const x = i / 127.5 - 1; cv[i] = Math.max(-1, Math.min(1, x * 5)); }
+      ws.curve = cv; const hp = c.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 1800;
+      const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 3200; bp.Q.value = 0.8;
+      const bg = c.createGain(); bg.gain.value = o.buzz; sum.connect(ws); ws.connect(hp); hp.connect(bp); bp.connect(bg); bg.connect(e);
+    }
+    parts.forEach(v => { v.start(t); v.stop(t + dur + rel + 0.1); });
+    nz(G, t, "bandpass", f0 * 2.1, 1.6, dest, vel * (o.breath || 0.3), dur * 0.85, 0.05);
+    nz(G, t, "bandpass", 2400, 1.2, dest, vel * 0.18, 0.035, 0.004);
+  }
+  function pulseWave(G, duty) {
+    const key = "p" + duty;
+    if (G.waves[key]) return G.waves[key];
+    const n = 40, re = new Float32Array(n), im = new Float32Array(n);
+    for (let k = 1; k < n; k++) { const soft = Math.pow(1 - k / n, 1.2); re[k] = Math.sin(2 * Math.PI * k * duty) / (k * Math.PI) * soft; im[k] = (1 - Math.cos(2 * Math.PI * k * duty)) / (k * Math.PI) * soft; }
+    return (G.waves[key] = G.c.createPeriodicWave(re, im));
+  }
+  function stepTri(G) {
+    if (G.waves.tri) return G.waves.tri;
+    const n = 48, re = new Float32Array(n), im = new Float32Array(n), steps = 32;
+    for (let j = 0; j < steps; j++) {
+      const v = (j < 16 ? 15 - j : j - 16) / 7.5 - 1, a0 = 2 * Math.PI * j / steps, a1 = 2 * Math.PI * (j + 1) / steps;
+      for (let k = 1; k < n; k++) { re[k] += v * (Math.sin(k * a1) - Math.sin(k * a0)) / (k * Math.PI); im[k] += v * (Math.cos(k * a0) - Math.cos(k * a1)) / (k * Math.PI); }
+    }
+    return (G.waves.tri = G.c.createPeriodicWave(re, im));
+  }
+  // 칩 소리 크기는 1/60초마다 계단으로 줄어듦(옛 게임기처럼)
+  function stepEnv(G, t, out, peak, dur, rel) {
+    const g = G.c.createGain(); g.gain.setValueAtTime(0, t);
+    const frames = Math.max(1, Math.round((dur + rel) * 60));
+    for (let f = 0; f <= frames; f++) {
+      const k = f / 60 < dur ? 1 - 0.35 * f / (dur * 60) : 0.65 * (1 - (f / 60 - dur) / rel);
+      g.gain.setValueAtTime(peak * Math.max(0, Math.round(Math.max(0, k) * 15) / 15), t + f / 60);
+    }
+    g.gain.setValueAtTime(0, t + (frames + 1) / 60);
+    g.connect(out); return g;
   }
 
   // ── 악기 ──
-  E.inst = function (G, kind, t, midi, vel, dur, out) {
-    out = out || G.lead;
+  E.inst = function (G, w, kind, t, midi, vel, dur, out, prev) {
+    const orn = E.ornFor(w, midi, dur / G.s16 + 0.01), wide = G.width;
     switch (kind) {
-      case "oud": pluck(G, t, midi, vel * 1.3, out, 0.5, 1.0, 5200, 0.985, [[260, 4], [1250, 3], [3200, 3]]); break;
-      case "qanun": for (let k = 0; k < 3; k++) pluck(G, t + k * G.s16 / 2, midi + 12, vel * (0.9 - k * 0.22), out, 0.78, 0.7, 9000, 0, [[2400, 3], [5000, 3]]); break;
-      case "fiddle": bowed(G, t, midi, vel * 0.55, out, dur, { filters: [["lowpass", 7500, 0.7], ["peaking", 520, 1.2, 3], ["peaking", 1600, 1.4, 3], ["peaking", 3200, 1.6, 5]], vib: 0.006, attack: 0.04, bowNoise: 0.15 }); break;
-      case "harp": pluck(G, t, midi + 12, vel * 1.05, out, 0.68, 1.4, 7000, 0, [[900, 2], [3500, 3]]); break;
-      case "erhu": bowed(G, t, midi, vel * 0.6, out, dur, { filters: [["highpass", 320, 0.7], ["peaking", 1150, 1.2, 7], ["peaking", 2600, 1.5, 4], ["lowpass", 7000, 0.7]], vib: 0.011, vibHz: 6.2, slide: 1, attack: 0.06, bowNoise: 0.25 }); break;
-      case "zheng": pluck(G, t, midi + 12, vel * 1.1, out, 0.84, 1.2, 9500, 0.94, [[1800, 3], [4500, 3]]); break;
-      case "koto": pluck(G, t, midi, vel * 1.2, out, 0.78, 1.5, 7500, 0.97, [[700, 3], [2200, 4], [4800, 3]]); break;
-      case "shaku": flute(G, t, midi + 12, vel * 0.5, out, Math.max(dur, 0.25), 0.55, true); break;
-      case "bonang": bell(G, t, midi + 12, vel * 0.55, out, 1.3, [[1, 1], [2.01, 0.35], [3.0, 0.18], [4.12, 0.08]], 4.5); break;
-      case "suling": flute(G, t, midi + 12, vel * 0.45, out, Math.max(dur, 0.2), 0.35, false); break;
+      case "gayageum":
+        pluck(G, t, midi, vel * 2, out, { bright: 0.42, decay: 1.6, exc: 0.45, body: [[220, 4], [900, 2], [2600, -3]], cut: 3800 + 1800 * w.bright, attack: 0.003, orn: orn, vib: orn ? 0 : 6, vibHz: 4.6, vibAt: 0.3, pan: -0.15 * wide });
+        break;
+      case "daegeum":
+        flute(G, t, midi, vel * 0.8, out, Math.max(dur, 0.25), { breath: 0.32, buzz: 0.16, orn: orn, vib: orn ? 0 : 16, cut: 5200, pan: 0.5 * wide });
+        break;
+      case "glassharp": {
+        const f = hz(midi), dest = pan(G, out, (rnd() - 0.5) * 0.4 * wide), d = Math.max(dur, 0.4);
+        for (const [r, g, b] of [[1, 1, 0.7], [2, 0.07, 0], [3, 0.025, 0]]) {
+          for (const det of b ? [0, b] : [0]) {
+            const o = G.c.createOscillator(); o.type = "sine"; o.frequency.value = f * r + det;
+            o.connect(sus(G, t, dest, 0.16, vel * 0.32 * g * (det ? 0.7 : 1), d - 0.16, 0.6)); o.start(t); o.stop(t + d + 0.8);
+          }
+        }
+        const s = G.c.createBufferSource(); s.buffer = G.noise; s.loop = true;
+        const bp = G.c.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = f; bp.Q.value = 30;
+        const am = G.c.createGain(); am.gain.value = 0.5; const l = G.c.createOscillator(); l.frequency.value = 8 + rnd() * 3; const lg = G.c.createGain(); lg.gain.value = 0.5; l.connect(lg); lg.connect(am.gain);
+        s.connect(bp); bp.connect(am); am.connect(sus(G, t, dest, 0.12, vel * 0.32, d - 0.12, 0.4)); s.start(t, rnd()); s.stop(t + d + 0.6); l.start(t); l.stop(t + d + 0.6);
+        break;
+      }
+      case "handpan": handpan(G, t, midi, vel * 0.8, pan(G, out, (rnd() - 0.5) * 0.9 * wide), 1); break;
+      case "krar":
+        pluck(G, t, midi, vel * 1.6, out, { bright: 0.8, decay: 1.0, exc: 0.92, buzz: 0.22, body: [[380, 4], [2300, 3]], cut: 6200, pan: -0.1 * wide });
+        break;
+      case "masenqo":
+        bowed(G, t, midi, vel * 0.75, out, dur, { filters: [["highpass", 260, 0.7], ["peaking", 950, 2, 8], ["peaking", 2400, 2, 4], ["lowpass", 5000, 0.7]], vib: 22, vibHz: 5.2, vibAt: 0.12, from: prev === undefined ? midi - 1.5 : prev, slideT: 0.11, attack: 0.07, noise: 0.32, pan: 0.45 * wide });
+        break;
+      case "sitar": {
+        const meend = prev !== undefined && prev !== null && Math.abs(prev - midi) <= 2 && prev !== midi;
+        pluck(G, t, midi, vel * 1.9, out, { bright: 0.9, decay: 1.7, exc: 0.95, buzz: 0.55, body: [[1100, 4], [3000, 2]], cut: 6800, orn: orn, from: meend ? prev : undefined, slideT: 0.07, pan: -0.1 * wide });
+        pluck(G, t + 0.03, midi + 12, vel * 0.18, out, { bright: 0.6, decay: 2.2, exc: 0.4, cut: 5000, attack: 0.05, pan: 0.4 * wide });
+        break;
+      }
+      case "chikari": for (let k = 0; k < 3; k++) pluck(G, t + k * 0.012, [72, 84, 79][k], vel * 0.35, out, { bright: 0.85, decay: 0.5, exc: 0.9, buzz: 0.4, cut: 7000, pan: 0.3 * wide }); break;
+      case "bansuri":
+        flute(G, t, midi, vel * 0.9, out, Math.max(dur, 0.25), { breath: 0.5, orn: orn, vib: orn ? 0 : 12, cut: 3800, pan: 0.45 * wide });
+        break;
+      case "cimbalom": {
+        const o = { bright: 0.9, decay: 2.2, exc: 1.0, strings: [-3, 0, 3.5], body: [[2500, 3]], cut: 7000, pan: -0.1 * wide };
+        if (dur >= G.s16 * 3.9) {
+          const n = Math.floor(dur / (G.s16 / 2));
+          for (let k = 0; k < n; k++) pluck(G, t + k * G.s16 / 2 + hum(3), midi, vel * (k % 2 ? 0.55 : 0.75) * (1 - k / (n * 2.5)), out, Object.assign({}, o, { decay: 1.2 }));
+        } else pluck(G, t, midi, vel * 1.05, out, o);
+        break;
+      }
+      case "violin":
+        bowed(G, t, midi, vel * 1.0, out, dur, { voices: [-4, 4], filters: [["highpass", 190, 0.7], ["peaking", 290, 1.4, 4], ["peaking", 1200, 1.6, 3], ["peaking", 2900, 1.8, 5], ["lowpass", 7500, 0.7]], vib: 16, vibHz: 6.2, vibAt: 0.1, from: prev, slideT: 0.09, attack: 0.05, noise: 0.14, sob: true, pan: 0.5 * wide });
+        break;
+      case "chip": {
+        const c = G.c, o = c.createOscillator(); o.setPeriodicWave(pulseWave(G, 0.25)); o.frequency.value = hz(midi);
+        o.detune.setValueAtTime(100 + (rnd() - 0.5) * 8, t); o.detune.linearRampToValueAtTime((rnd() - 0.5) * 8, t + 0.018);
+        const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = 6; lg.gain.setValueAtTime(0, t); lg.gain.setValueAtTime(0, t + 0.2); lg.gain.linearRampToValueAtTime(18, t + 0.3); l.connect(lg); lg.connect(o.detune);
+        const d = Math.max(dur * 0.9, 0.06);
+        o.connect(lpf(G, stepEnv(G, t, pan(G, out, -0.1 * wide), vel * 0.55, d, 0.08), 4200, 0.7));
+        o.start(t); o.stop(t + d + 0.2); l.start(t); l.stop(t + d + 0.2);
+        break;
+      }
+      case "steelpan": steelpan(G, t, midi, vel * 2.5, pan(G, out, (0.3 + rnd() * 0.3) * wide), 1); break;
+      case "glassbell": glassbell(G, t, midi, vel, pan(G, out, (rnd() - 0.5) * 0.6 * wide), 1); break;
+      case "tremble": {
+        const c = G.c, f = hz(midi), sum = c.createGain(), d = Math.max(dur, 0.4);
+        const vs = [-9, 0, 9].map(cents => { const v = c.createOscillator(); v.type = "sawtooth"; v.frequency.value = f; v.detune.value = cents; v.connect(sum); return v; });
+        pitchMove(G, vs.map(v => v.detune), t, d, { midi: midi, vib: 8, vibHz: 5, vibAt: 0.2 });
+        const fl = c.createBiquadFilter(); fl.type = "lowpass"; fl.Q.value = 2; fl.frequency.setValueAtTime(700, t); fl.frequency.linearRampToValueAtTime(1800, t + d * 0.6); fl.frequency.linearRampToValueAtTime(900, t + d);
+        const trem = c.createGain(); trem.gain.value = 0.55; const tl = c.createOscillator(); tl.frequency.value = 6.4; const tg = c.createGain(); tg.gain.value = 0.45; tl.connect(tg); tg.connect(trem.gain);
+        sum.connect(fl); fl.connect(trem); trem.connect(sus(G, t, pan(G, out, 0.5 * wide), 0.2, vel * 0.9, d - 0.2, 0.5));
+        vs.forEach(v => { v.start(t); v.stop(t + d + 0.7); }); tl.start(t); tl.stop(t + d + 0.7);
+        break;
+      }
     }
   };
+  function handpan(G, t, midi, vel, out, k) {
+    const f = hz(midi), l = lpf(G, out, 3400, 0.5);
+    partials(G, t, f, l, [[1, 1, 2.2 * k, 0.45], [2, 0.42, 1.3 * k, 0.6], [3, 0.16, 0.6 * k, 0]], vel * 0.45, 0.004);
+    nz(G, t, "lowpass", 900, 0.6, l, vel * 0.25, 0.02);
+  }
+  function steelpan(G, t, midi, vel, out, k) {
+    const f = hz(midi), l = lpf(G, out, 4200, 0.5), c = G.c;
+    osc(G, t, "sine", f, l, 0.003, vel * 0.42, 1.3 * k);
+    const o2 = c.createOscillator(); o2.type = "sine"; o2.frequency.setValueAtTime(f * 2 * 1.006, t); o2.frequency.exponentialRampToValueAtTime(f * 2, t + 0.08);
+    o2.connect(env(G, t, l, 0.018, vel * 0.3, 0.9 * k)); o2.start(t); o2.stop(t + 1.2 * k);
+    osc(G, t, "sine", f * 3.003, l, 0.003, vel * 0.12, 0.45 * k);
+    osc(G, t, "sine", f * 4.07, l, 0.002, vel * 0.04, 0.2 * k);
+    nz(G, t, "lowpass", 1400, 0.6, l, vel * 0.18, 0.015);
+  }
+  function glassbell(G, t, midi, vel, out, k) {
+    const f = hz(midi), l = lpf(G, out, 5600, 0.5);
+    partials(G, t, f, l, [[1, 1, 3.2 * k, 0.6], [2.32, 0.32, 1.9 * k, 0], [4.25, 0.16, 1.0 * k, 0], [6.63, 0.06, 0.5 * k, 0]], vel * 0.4, 0.004);
+  }
 
-  // ── 박 뼈대 (늘 같음) ──
+  // ── 박 뼈대 ──
   function kick(G, t, v) {
-    const o = G.c.createOscillator(); o.type = "sine"; o.frequency.setValueAtTime(170, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.09);
-    o.connect(env(G, t, G.kick, 0.002, v, 0.34)); o.start(t); o.stop(t + 0.4);
-    const sb = G.c.createOscillator(); sb.type = "sine"; sb.frequency.setValueAtTime(62, t); sb.frequency.exponentialRampToValueAtTime(44, t + 0.3);
-    sb.connect(env(G, t, G.kick, 0.004, v * 0.75, 0.42)); sb.start(t); sb.stop(t + 0.5);
-    nz(G, t, "highpass", 2500, 0.7, G.kick, v * 0.4, 0.012);
-    duck(G, t, 0.42);
+    drum(G, t, G.kick, 118, 46, 0.1, v, 0.34);
+    nz(G, t, "lowpass", 1400, 0.7, G.kick, v * 0.22, 0.012);
+    duck(G, t, 0.62);
   }
-  function clap(G, t, v) {
-    for (const d of [0, 0.011, 0.024]) nz(G, t + d, "bandpass", 1700, 0.9, G.drum, v * (d ? 0.55 : 0.8), 0.022);
-    nz(G, t + 0.03, "bandpass", 1500, 0.7, G.drum, v * 0.45, 0.16);
-    osc(G, t, "triangle", 210, G.drum, 0.002, v * 0.2, 0.06);
+  function hat(G, t, v, open) {
+    const p = pan(G, G.hat, 0.15 + (rnd() - 0.5) * 0.4 * G.width);
+    nz(G, t, "highpass", 7200, 0.7, p, v * 5, open ? 0.16 : 0.03, 0.001);
+    nz(G, t, "bandpass", 10000, 1.0, p, v * 2.5, open ? 0.12 : 0.02, 0.001);
   }
-  function hat(G, t, v, open) { nz(G, t, "highpass", 6800, 0.8, G.drum, v * 1.5, open ? 0.22 : 0.04); nz(G, t, "bandpass", 10500, 1.2, G.drum, v * 0.9, open ? 0.16 : 0.03); }
-  function shaker(G, t, v) { nz(G, t, "bandpass", 7000, 1.2, G.drum, v * 1.6, 0.05, 0.008); }
-  function hum(G) { return (rnd() - 0.5) * 0.008; }
-
-  E.groove = function (G, t, kind, intensity) {
-    for (let s = 0; s < 16; s++) {
-      const ts = t + s * G.s16, j = s % 4 === 0 ? 0 : hum(G), acc = 0.85 + rnd() * 0.3;
-      if (kind === "A") {
-        if (s === 0 || s === 8) kick(G, ts, 0.95);
-        if (s === 10 && intensity > 0) kick(G, ts, 0.55);
-        if (s === 8 && intensity > 0) clap(G, ts, 0.55);
-        if (s % 2 === 0) hat(G, ts + j, (s % 4 === 0 ? 0.1 : 0.16) * acc, false);
-      } else if (kind === "B") {
-        if (s % 4 === 0) kick(G, ts, 1.0);
-        if (s === 4 || s === 12) clap(G, ts, 0.75);
-        if (s % 4 === 2) hat(G, ts + j, 0.17 * acc, true);
-        if (s % 2 === 1) hat(G, ts + j, 0.06 * acc, false);
-        shaker(G, ts + j, (s % 4 === 2 ? 0.1 : 0.05) * acc);
-      } else if (kind === "break") {
-        if (s % 2 === 0) hat(G, ts + j, 0.07 * acc, false);
-      }
+  function shaker(G, t, v) { nz(G, t, "bandpass", 6500, 1.3, pan(G, G.hat, -0.2 * G.width), v, 0.05, 0.012); }
+  E.hats = function (G, w, t, L, cut) {
+    for (let s = 0; s < cut * 4; s++) {
+      const ts = t + s * G.s16 + sw(G, w, s) + (s % 4 ? hum(6) : 0), acc = vary(1, 0.15);
+      if (s % 2 === 0) {
+        if (L >= 2 && s % 4 === 2) hat(G, ts, 0.09 * acc, true);
+        else hat(G, ts, (s % 4 === 0 ? 0.05 : 0.1) * acc, false);
+      } else if (L >= 2) hat(G, ts, 0.03 * acc, false);
     }
   };
 
-  // ── 나라 타악기 (마디 하나) · 필인 ──
-  E.perc = function (G, w, t, fill) {
-    const P = G.perc, step = s => t + s * G.s16 + (s % 4 ? hum(G) : 0);
-    const doum = (ts, v) => { const o = osc(G, ts, "sine", 115, P, 0.002, v, 0.22); o.frequency.exponentialRampToValueAtTime(68, ts + 0.12); nz(G, ts, "lowpass", 400, 1, P, v * 0.2, 0.05); };
-    const tek = (ts, v) => nz(G, ts, "bandpass", 4300, 2.2, P, v * 1.3, 0.05);
-    const ka = (ts, v) => nz(G, ts, "bandpass", 2400, 2, P, v, 0.035);
-    if (w.perc === "darbuka") { doum(step(0), 0.55); tek(step(2), 0.32); tek(step(6), 0.3); doum(step(8), 0.5); tek(step(12), 0.32); for (const s of [3, 5, 10, 14, 15]) ka(step(s), 0.13); }
-    if (w.perc === "frame") { for (const s of [0, 3, 6, 8, 11, 14]) { nz(G, step(s), "lowpass", 260, 1, P, s % 8 === 0 ? 0.6 : 0.32, 0.14); nz(G, step(s), "bandpass", 2900, 1.2, P, 0.2, 0.04); } }
-    if (w.perc === "china") { for (const s of [0, 4, 8, 12, 14]) { osc(G, step(s), "sine", 920, P, 0.001, 0.26, 0.05); osc(G, step(s), "sine", 1860, P, 0.001, 0.08, 0.03); } nz(G, step(8), "bandpass", 6800, 0.9, P, 0.3, 0.42); }
-    if (w.perc === "taiko") {
-      for (const s of [0, 7, 8]) { const ts = step(s), o = osc(G, ts, "sine", 78, P, 0.003, s === 0 ? 0.85 : 0.55, 0.5); o.frequency.exponentialRampToValueAtTime(52, ts + 0.3); nz(G, ts, "lowpass", 320, 1, P, 0.3, 0.16); }
-      for (const s of [4, 12]) nz(G, step(s), "bandpass", 2600, 3, P, 0.2, 0.03);
-      for (const s of [2, 6, 10, 14]) bell(G, step(s), 90, 0.1, P, 0.14, [[1, 1], [2.4, 0.5], [3.9, 0.3]]);
+  // ── 세계 타악: 소리(stroke) · 한 마디 장단(pat) · 가벼운 장단(light) · 넘어가기 필인(fill, 한 박 안의 자리) ──
+  const KIT = {
+    janggu: {
+      gain: 1,
+      pan: { kung: -0.35, deok: 0.35 },
+      s: {
+        kung: (G, t, v, o) => { drum(G, t, o, 105, 72, 0.08, v, 0.32); nz(G, t, "lowpass", 350, 0.7, o, v * 0.25, 0.05); },
+        deok: (G, t, v, o) => { nz(G, t, "bandpass", 2600, 1.4, o, v * 1.1, 0.045); drum(G, t, o, 430, 380, 0.04, v * 0.3, 0.05); nz(G, t, "highpass", 5000, 0.7, o, v * 0.3, 0.006); },
+      },
+      combo: { deong: ["kung", "deok"], gideok: [["deok", -0.035, 0.45], "deok"] },
+      pat: [[0, "deong", 1], [2, "deok", 0.3], [3, "deok", 0.6], [6, "kung", 0.75], [8, "deong", 0.75], [10, "gideok", 0.6], [12, "kung", 0.6], [14, "deok", 0.5], [15, "deok", 0.28]],
+      light: [[0, "kung", 0.5], [6, "deok", 0.28], [8, "kung", 0.38], [12, "deok", 0.3]],
+      fill: [[0, "gideok", 0.5], [0.25, "deok", 0.5], [0.5, "kung", 0.7], [0.75, "deok", 0.55], [0.875, "deok", 0.62]],
+    },
+    handdrum: {
+      gain: 1.6,
+      pan: { bass: 0, tone: -0.3, slap: 0.3, tap: 0.4 },
+      s: {
+        bass: (G, t, v, o) => { drum(G, t, o, 82, 56, 0.1, v, 0.3); nz(G, t, "lowpass", 300, 0.7, o, v * 0.2, 0.04); },
+        tone: (G, t, v, o) => { drum(G, t, o, 230, 205, 0.05, v * 0.6, 0.14); nz(G, t, "bandpass", 600, 1, o, v * 0.3, 0.03); },
+        slap: (G, t, v, o) => { nz(G, t, "bandpass", 2200, 1.3, o, v, 0.05); drum(G, t, o, 330, 300, 0.03, v * 0.25, 0.03); },
+        tap: (G, t, v, o) => nz(G, t, "bandpass", 3200, 2, o, v * 0.8, 0.02),
+      },
+      pat: [[0, "bass", 0.8], [3, "tap", 0.3], [6, "tone", 0.55], [8, "bass", 0.5], [10, "slap", 0.55], [13, "tap", 0.3], [14, "tone", 0.45]],
+      light: [[0, "bass", 0.5], [10, "tap", 0.3]],
+      fill: [[0, "tap", 0.35], [0.25, "tap", 0.45], [0.5, "tone", 0.55], [0.75, "slap", 0.65]],
+    },
+    kebero: {
+      gain: 1.1,
+      pan: { dum: 0, tone: -0.25, slap: 0.3 },
+      s: {
+        dum: (G, t, v, o) => { drum(G, t, o, 72, 48, 0.12, v, 0.42); nz(G, t, "lowpass", 280, 0.7, o, v * 0.3, 0.06); },
+        tone: (G, t, v, o) => { drum(G, t, o, 160, 130, 0.06, v * 0.7, 0.16); nz(G, t, "bandpass", 700, 1, o, v * 0.3, 0.03); },
+        slap: (G, t, v, o) => { nz(G, t, "bandpass", 1900, 1.2, o, v, 0.06); drum(G, t, o, 280, 250, 0.03, v * 0.25, 0.03); },
+      },
+      pat: [[0, "dum", 1], [3, "slap", 0.4], [4, "tone", 0.5], [6, "slap", 0.7], [8, "dum", 0.8], [10, "slap", 0.4], [11, "tone", 0.5], [12, "slap", 0.7], [14, "tone", 0.45], [15, "slap", 0.3]],
+      light: [[0, "dum", 0.6], [6, "slap", 0.35], [12, "slap", 0.3]],
+      fill: [[0, "slap", 0.45], [1 / 3, "slap", 0.55], [2 / 3, "tone", 0.6], [5 / 6, "slap", 0.75]],
+    },
+    tabla: {
+      gain: 1,
+      pan: { na: 0.3, tin: 0.3, te: 0.3, ge: -0.3, ka: -0.3 },
+      s: {
+        na: (G, t, v, o) => { partials(G, t, 261.6, o, [[1, 1, 0.45], [2, 0.55, 0.3], [3, 0.35, 0.2], [4, 0.18, 0.12]], v * 0.4, 0.002); nz(G, t, "bandpass", 3500, 1.5, o, v * 0.4, 0.008); },
+        tin: (G, t, v, o) => partials(G, t, 261.6, o, [[1, 1, 0.55], [2, 0.2, 0.25]], v * 0.4, 0.003),
+        te: (G, t, v, o) => { nz(G, t, "bandpass", 1600, 1, o, v * 0.8, 0.025); osc(G, t, "sine", 262, o, 0.002, v * 0.15, 0.03); },
+        ge: (G, t, v, o) => { const x = G.c.createOscillator(); x.type = "sine"; x.frequency.setValueAtTime(88, t); x.frequency.linearRampToValueAtTime(118, t + 0.18); x.connect(env(G, t, o, 0.003, v * 0.9, 0.55)); x.start(t); x.stop(t + 0.65); nz(G, t, "lowpass", 220, 0.7, o, v * 0.25, 0.03); },
+        ka: (G, t, v, o) => { nz(G, t, "lowpass", 600, 0.8, o, v * 0.8, 0.035); osc(G, t, "sine", 110, o, 0.002, v * 0.2, 0.03); },
+      },
+      combo: { dha: ["ge", "na"], dhin: ["ge", "tin"] },
+      pat: [[0, "dha", 0.9], [2, "ge", 0.55], [4, "na", 0.6], [6, "te", 0.45], [7, "te", 0.25], [8, "na", 0.6], [10, "ka", 0.5], [12, "dhin", 0.75], [14, "na", 0.55], [15, "te", 0.25]],
+      light: [[0, "ge", 0.45], [8, "tin", 0.3], [12, "ge", 0.3]],
+      fill: [[0, "te", 0.5], [0.25, "te", 0.45], [0.5, "ka", 0.5], [0.75, "na", 0.7]],
+    },
+    frame: {
+      gain: 1.3,
+      pan: { dum: 0, tek: 0.3, jing: -0.35 },
+      s: {
+        dum: (G, t, v, o) => { drum(G, t, o, 66, 48, 0.12, v, 0.4); nz(G, t, "lowpass", 240, 0.7, o, v * 0.3, 0.05); },
+        tek: (G, t, v, o) => { nz(G, t, "bandpass", 2500, 1.1, o, v, 0.05); drum(G, t, o, 360, 330, 0.03, v * 0.25, 0.03); },
+        jing: (G, t, v, o) => { for (const [d, k] of [[0, 0.6], [0.012, 0.4], [0.026, 0.28]]) { nz(G, t + d, "highpass", 7000, 0.8, o, v * k, 0.05); nz(G, t + d, "bandpass", 9000, 2, o, v * k * 0.5, 0.04); } },
+      },
+      combo: { tekj: ["tek", "jing"] },
+      pat: [[0, "dum", 0.9], [2, "tekj", 0.5], [4, "tek", 0.35], [6, "tekj", 0.6], [8, "dum", 0.7], [10, "tekj", 0.5], [12, "tek", 0.35], [14, "tekj", 0.6], [15, "tek", 0.2]],
+      light: [[0, "dum", 0.5], [6, "jing", 0.3], [14, "jing", 0.3]],
+      fill: [[0, "tek", 0.4], [0.25, "tek", 0.5], [0.5, "tek", 0.55], [0.625, "tek", 0.45], [0.75, "dum", 0.65], [0.875, "tekj", 0.6]],
+    },
+    metal: {
+      gain: 3,
+      pan: { clank: -0.2, pipe: 0.35, tick: 0.25, hiss: -0.4 },
+      s: {
+        clank: (G, t, v, o) => { nz(G, t, "bandpass", 1100, 3, o, v * 0.8, 0.07); partials(G, t, 380, o, [[1, 0.5, 0.18], [2.745, 0.3, 0.1], [5.81, 0.2, 0.06]], v * 0.5, 0.001); },
+        pipe: (G, t, v, o) => { partials(G, t, 620, o, [[1, 0.35, 0.6], [2.757, 0.2, 0.3], [5.4, 0.1, 0.14]], v * 0.6, 0.002); nz(G, t, "bandpass", 4000, 2, o, v * 0.2, 0.01); },
+        tick: (G, t, v, o) => { partials(G, t, 2650, o, [[1, 0.3, 0.035], [2.3, 0.15, 0.025]], v, 0.001); nz(G, t, "highpass", 6000, 0.7, o, v * 0.3, 0.01); },
+        hiss: (G, t, v, o) => nz(G, t, "highpass", 4500, 0.7, o, v * 0.6, 0.18, 0.05),
+      },
+      pat: [[0, "clank", 0.75], [3, "tick", 0.3], [4, "pipe", 0.5], [6, "tick", 0.35], [8, "clank", 0.6], [10, "tick", 0.35], [11, "tick", 0.2], [12, "pipe", 0.5], [14, "tick", 0.35], [15, "hiss", 0.25]],
+      light: [[0, "tick", 0.3], [8, "tick", 0.25], [12, "hiss", 0.15]],
+      fill: [[0, "tick", 0.2], [0.125, "tick", 0.26], [0.25, "tick", 0.32], [0.375, "tick", 0.38], [0.5, "tick", 0.44], [0.625, "tick", 0.5], [0.75, "clank", 0.7]],
+    },
+    heart: {
+      gain: 1,
+      pan: { lub: 0, dub: 0, shard: 0.45 },
+      s: {
+        lub: (G, t, v, o) => { drum(G, t, o, 58, 38, 0.12, v, 0.38); nz(G, t, "lowpass", 160, 0.7, o, v * 0.3, 0.05); },
+        dub: (G, t, v, o) => drum(G, t, o, 52, 36, 0.1, v * 0.7, 0.28),
+        shard: (G, t, v, o) => partials(G, t, 3100, o, [[1, 0.5, 0.15], [1.571, 0.3, 0.09], [2.265, 0.2, 0.05]], v, 0.002),
+      },
+      pat: [[0, "lub", 0.9], [2, "dub", 0.6], [5, "shard", 0.2], [8, "lub", 0.8], [10, "dub", 0.55], [13, "shard", 0.18]],
+      light: [[0, "lub", 0.5], [2, "dub", 0.3]],
+      fill: [[0, "lub", 0.5], [0.375, "dub", 0.4], [0.625, "lub", 0.6], [0.8125, "dub", 0.6]],
+    },
+  };
+  function stroke(G, kit, name, t, v, out) {
+    const list = (kit.combo && kit.combo[name]) || [name];
+    for (const it of list) {
+      const [nm, dt, k] = typeof it === "string" ? [it, 0, 1] : it;
+      kit.s[nm](G, t + dt, vary(v * k * kit.gain, 0.1), pan(G, out, (kit.pan[nm] || 0) * (0.4 + 0.6 * G.width)));
     }
-    if (w.perc === "kendang") {
-      for (const s of [0, 5, 8, 13]) { const ts = step(s), o = osc(G, ts, "sine", 150, P, 0.002, 0.42, 0.2); o.frequency.exponentialRampToValueAtTime(95, ts + 0.1); }
-      for (const s of [4, 12]) nz(G, step(s), "bandpass", 2700, 1.6, P, 0.32, 0.05);
+  }
+  E.perc = function (G, w, t, o) {
+    const kit = KIT[w.perc], out = w.mirror ? G.mirror : G.perc, cut = o.cut === undefined ? 4 : o.cut;
+    for (const [s, nm, v] of (o.light ? kit.light : kit.pat)) {
+      if (s >= cut * 4) continue;
+      stroke(G, kit, nm, t + s * G.s16 + sw(G, w, s) + (s % 4 ? hum(7) : hum(2)), v * (o.light ? 0.75 : 1), out);
     }
-    if (fill) {
-      for (let s = 8; s < 16; s++) {
-        const v = 0.15 + 0.4 * (s - 8) / 8, ts = step(s);
-        if (w.perc === "darbuka") (s % 2 ? tek : doum)(ts, v);
-        else if (w.perc === "taiko") { const o = osc(G, ts, "sine", 82, P, 0.003, v * 1.2, 0.3); o.frequency.exponentialRampToValueAtTime(55, ts + 0.2); }
-        else if (w.perc === "china") osc(G, ts, "sine", 900 + (s - 8) * 40, P, 0.001, v * 0.8, 0.05);
-        else if (w.perc === "kendang") { const o = osc(G, ts, "sine", 160, P, 0.002, v, 0.15); o.frequency.exponentialRampToValueAtTime(100, ts + 0.08); }
-        else nz(G, ts, "lowpass", 300, 1, P, v * 1.1, 0.12);
-      }
-    }
+    if (o.light) for (let s = 2; s < cut * 4; s += 4) shaker(G, t + s * G.s16 + hum(6), vary(0.2, 0.2));
+    if (w.lead === "sitar" && !o.light) for (const s of [7, 15]) if (s < cut * 4) E.inst(G, w, "chikari", t + s * G.s16 + hum(4), 72, 0.5, G.s16, G.lead);
+  };
+  E.fill = function (G, w, t) {
+    const kit = KIT[w.perc];
+    for (const [f, nm, v] of kit.fill) stroke(G, kit, nm, t + f * G.beat + hum(3), v, G.perc);
   };
 
-  // ── 바닥음 · 베이스 · 받침 음 ──
-  E.pad = function (G, w, t, bars, level) {
-    const notes = [48, 55, 60, 48 + deg(w.scale, 2) + (deg(w.scale, 2) < 3 ? 12 : 0)];
-    const dur = bars * G.bar;
-    notes.forEach((m, i) => {
-      for (const det of [-7, 0, 7]) {
-        const o = G.c.createOscillator(); o.type = "sawtooth"; o.frequency.value = hz(m); o.detune.value = det + (rnd() - 0.5) * 3;
-        const f = G.c.createBiquadFilter(); f.type = "lowpass"; f.frequency.setValueAtTime(900, t); f.frequency.linearRampToValueAtTime(2800, t + dur * 0.5); f.frequency.linearRampToValueAtTime(1200, t + dur);
-        const p = G.c.createStereoPanner(); p.pan.value = det === 0 ? 0 : (det < 0 ? -0.85 : 0.85);
-        o.connect(f); f.connect(p); p.connect(sus(G, t, G.pad, 0.35, (i === 3 ? 0.05 : 0.08) * level, dur - 0.35, 0.5));
-        o.start(t); o.stop(t + dur + 0.6);
+  // ── 바닥 위 받침(세계 색) · 베이스 반복 ──
+  E.bed = function (G, w, t, dur, level) {
+    const c = G.c, cut = (w.mirror ? 0.6 : 1), a = w.mirror ? 1.2 : 0.5, wide = 0.3 + 0.6 * G.width;
+    if (w.bed === "tanpura") {
+      for (let b = 0; b < Math.round(dur / G.beat); b++) {
+        const m = 48 + w.bedTones[b % 4];
+        pluck(G, t + b * G.beat + 0.02 + rnd() * 0.04, m, 1.1 * level, G.bed, { bright: 0.75, decay: 3.2, exc: 0.5, buzz: 0.6, body: [[600, 3]], cut: 3800 * cut, attack: 0.01, pan: ((b % 2) - 0.5) * wide });
+      }
+      return;
+    }
+    w.bedTones.forEach((semi, i) => {
+      const m = 48 + semi, f = hz(m), side = i % 2 ? 1 : -1;
+      const lv = { saeng: 1, glass: 1.1, warm: 1.5, strings: 1.5, pulse: 1.2, choir: 1 }[w.bed];
+      const g = sus(G, t, pan(G, G.bed, side * wide * (i === 0 ? 0.3 : 1)), a, (i === 0 ? 0.09 : 0.07) * level * lv, Math.max(0.1, dur - a), 0.9);
+      if (w.bed === "choir") {
+        const sum = c.createGain(); sum.gain.value = 0.5;
+        for (let v = 0; v < 3; v++) {
+          const o = c.createOscillator(); o.type = "sawtooth"; o.frequency.value = f; o.detune.value = (rnd() - 0.5) * 16;
+          const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = 4 + rnd() * 1.5; lg.gain.value = 6; l.connect(lg); lg.connect(o.detune);
+          o.connect(sum); o.start(t); o.stop(t + dur + 1.2); l.start(t); l.stop(t + dur + 1.2);
+        }
+        for (const [f1, f2, q, gn] of [[300, 650, 6, 1], [870, 1080, 8, 0.5], [2240, 2650, 10, 0.18]]) {
+          const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = q;
+          bp.frequency.setValueAtTime(f1, t); bp.frequency.linearRampToValueAtTime(f2, t + dur * 0.55); bp.frequency.linearRampToValueAtTime((f1 + f2) / 2, t + dur);
+          const gg = c.createGain(); gg.gain.value = gn * 9; sum.connect(bp); bp.connect(gg); gg.connect(g);
+        }
+        return;
+      }
+      const type = { saeng: "square", glass: "sine", warm: "sawtooth", strings: "sawtooth", pulse: "pulse" }[w.bed] || "sawtooth";
+      const fc = { saeng: 1300, glass: 5000, warm: 850, strings: 1300, pulse: 1500 }[w.bed] * cut * (0.7 + 0.6 * w.bright);
+      const fl = lpf(G, g, fc, 0.6);
+      for (const det of [-5, 5]) {
+        const o = c.createOscillator();
+        if (type === "pulse") o.setPeriodicWave(pulseWave(G, det < 0 ? 0.125 : 0.4)); else o.type = type;
+        o.frequency.value = f; o.detune.value = det + (rnd() - 0.5) * 3;
+        o.connect(fl); o.start(t); o.stop(t + dur + 1.1);
+      }
+      if (w.bed === "glass") { const o = c.createOscillator(); o.frequency.value = f * 2.002; const gg = c.createGain(); gg.gain.value = 0.25; o.connect(gg); gg.connect(fl); o.start(t); o.stop(t + dur + 1.1); }
+      if (w.bed === "saeng" || w.bed === "strings") {
+        const l = c.createOscillator(), lg = c.createGain(); l.frequency.value = w.bed === "saeng" ? 0.35 : 0.2; lg.gain.value = 260; l.connect(lg); lg.connect(fl.frequency); l.start(t); l.stop(t + dur + 1.1);
       }
     });
+    if (w.bed === "pulse") osc(G, t + rnd() * G.bar, "square", 1800 + rnd() * 900, lpf(G, G.fx, 3000), 0.001, 0.02 * level, 0.02);
   };
-  E.drone = function (G, t, bars) {
-    const dur = bars * G.bar;
-    for (const [m, typ, v] of [[36, "sine", 0.22], [36, "sawtooth", 0.08], [43, "sawtooth", 0.05]]) {
-      const o = G.c.createOscillator(); o.type = typ; o.frequency.value = hz(m);
-      const f = G.c.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 240;
-      o.connect(f); f.connect(sus(G, t, G.bass, 0.08, v, dur - 0.1, 0.12)); o.start(t); o.stop(t + dur + 0.3);
+  function bassNote(G, w, t, m, dur, v) {
+    const c = G.c;
+    if (w.lead === "chip") {
+      const o = c.createOscillator(); o.setPeriodicWave(stepTri(G)); o.frequency.value = hz(m);
+      o.connect(stepEnv(G, t, G.bass, v * 0.9, Math.max(0.05, dur * 0.8), 0.05)); o.start(t); o.stop(t + dur + 0.2);
+      return;
+    }
+    if (w.lead === "glassbell" || w.lead === "glassharp") {
+      const o = c.createOscillator(); o.type = w.lead === "glassbell" ? "sawtooth" : "sine"; o.frequency.value = hz(m);
+      const sub = c.createOscillator(); sub.type = "sine"; sub.frequency.value = hz(m);
+      const g = sus(G, t, G.bass, 0.02, v * 0.35, Math.max(0.05, dur - 0.05), 0.15), l = lpf(G, g, w.lead === "glassbell" ? 260 : 900, 0.7);
+      o.connect(l); sub.connect(g); o.start(t); sub.start(t); o.stop(t + dur + 0.3); sub.stop(t + dur + 0.3);
+      return;
+    }
+    pluck(G, t, m, v * 1.3, G.bass, { bright: 0.35, decay: Math.min(1.2, dur + 0.35), exc: 0.5, body: [[110, 3]], cut: 1200, attack: 0.004 });
+    const sub = c.createOscillator(); sub.type = "sine"; sub.frequency.value = hz(m);
+    sub.connect(sus(G, t, G.bass, 0.005, v * 0.7, Math.max(0.04, dur - 0.04), 0.1)); sub.start(t); sub.stop(t + dur + 0.2);
+  }
+  E.riff = function (G, w, t, cut) {
+    for (const [s, semi, len] of w.riff) {
+      if (s >= cut * 4) continue;
+      bassNote(G, w, t + s * G.s16 + sw(G, w, s) + hum(3), 36 + semi, len * G.s16, vary(0.5, 0.1));
+    }
+    if (w.esztam) for (const s of [2, 6, 10, 14]) {
+      if (s >= cut * 4) continue;
+      const ch = s < 8 ? [51, 55, 60] : [47, 50, 55];
+      ch.forEach((m, k) => pluck(G, t + s * G.s16 + k * 0.006 + hum(3), m, 0.16, G.lead, { bright: 0.85, decay: 0.28, exc: 0.9, cut: 4200, pan: (k - 1) * 0.3 * G.width }));
     }
   };
-  E.riff = function (G, w, t) {
-    const seq = [36, 43, 36, 36 + w.sixth - 12];
-    for (let b = 0; b < 4; b++) {
-      for (const off of [0, 2]) {
-        const ts = t + b * G.beat + off * G.s16, m = seq[b] + (off ? 12 : 0);
-        const o = G.c.createOscillator(); o.type = "sawtooth"; o.frequency.value = hz(m);
-        const sub = G.c.createOscillator(); sub.type = "sine"; sub.frequency.value = hz(m - (off ? 12 : 0));
-        const f = G.c.createBiquadFilter(); f.type = "lowpass"; f.Q.value = 4; f.frequency.setValueAtTime(900, ts); f.frequency.exponentialRampToValueAtTime(160, ts + 0.22);
-        const e = env(G, ts, G.bass, 0.003, off ? 0.22 : 0.42, 0.3);
-        o.connect(f); f.connect(e); const sg = G.c.createGain(); sg.gain.value = off ? 0 : 1.4; sub.connect(sg); sg.connect(e);
-        o.start(ts); sub.start(ts); o.stop(ts + 0.4); sub.stop(ts + 0.4);
-      }
-    }
-  };
-  E.ost = function (G, t, level) {
-    for (let e = 0; e < 8; e++) {
-      const ts = t + e * 2 * G.s16 + hum(G), v = (e % 2 ? 0.55 : 0.85) * level * (0.9 + rnd() * 0.2);
-      osc(G, ts, "sine", hz(67), G.ost, 0.002, v, 0.22); osc(G, ts, "sine", hz(67) * 3, G.ost, 0.001, v * 0.3, 0.07); osc(G, ts, "sine", hz(67) * 4, G.ost, 0.001, v * 0.2, 0.05); nz(G, ts, "bandpass", 4200, 2, G.ost, v * 0.35, 0.012);
-    }
-  };
-  // 선율 2마디 (half: 0 = 앞 마디, 1 = 뒤 마디)
-  E.melody = function (G, w, t, half, vel, kind) {
-    for (const [p, d, l] of MAIN) {
+
+  // ── 앞 악기 · 맞받는 선율 · 반짝이 ──
+  E.lead = function (G, w, t, half, cut, vel) {
+    const lag = w.mirror ? 2 : 0, out = w.mirror ? G.mirror : G.lead;
+    let prev;
+    for (const [p, semi, len] of w.mel) {
       if (Math.floor(p / 16) !== half) continue;
-      E.inst(G, kind || w.lead, t + (p % 16) * G.s16 + hum(G) * 0.5, 72 + deg(w.scale, d) - 12, vel * (0.85 + rnd() * 0.25), l * G.s16 * 1.1, G.lead);
+      const s = (p % 16) + lag;
+      if (s >= cut * 4) continue;
+      const ts = t + s * G.s16 + sw(G, w, s) + hum(5), m = 60 + semi;
+      dip = w.mirror ? -30 : 0;
+      E.inst(G, w, w.lead, ts, m, vary(vel || 0.62, 0.12), len * G.s16, out, prev);
+      dip = 0;
+      prev = m;
     }
   };
-  E.counterLine = function (G, w, t, half, vel) {
-    for (const [p, d, l] of COUNTER) {
+  E.counter = function (G, w, t, half, cut) {
+    let prev;
+    for (const [p, semi, len] of w.ctr) {
       if (Math.floor(p / 16) !== half) continue;
-      E.inst(G, w.counter, t + (p % 16) * G.s16 + hum(G) * 0.5, 72 + deg(w.scale, d) - 12, vel * (0.85 + rnd() * 0.25), l * G.s16 * 1.2, G.counter);
+      const s = p % 16;
+      if (s >= cut * 4) continue;
+      const m = 72 + semi;
+      E.inst(G, w, w.counter, t + s * G.s16 + sw(G, w, s) + hum(6), m, vary(0.55, 0.12), len * G.s16, G.counter, prev);
+      prev = m;
     }
   };
-  E.sparkle = function (G, w, t, density) {
-    for (let e = 0; e < 8; e++) if (rnd() < density) bell(G, t + e * 2 * G.s16 + G.s16 * (rnd() < 0.5 ? 0 : 1), 84 + deg(w.scale, Math.floor(rnd() * 5)), 0.06, G.fx, 0.6, [[1, 1], [3.0, 0.2]]);
-  };
-  // 라이저: 걸러진 바람 소리가 차오름 (dur초 동안) · 임팩트: 낮은 쿵 + 울림
-  E.riser = function (G, t, dur, peak) {
-    const s = G.c.createBufferSource(); s.buffer = G.noise; s.loop = true;
-    const f = G.c.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 2.5; f.frequency.setValueAtTime(350, t); f.frequency.exponentialRampToValueAtTime(7000, t + dur);
-    const g = G.c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + dur * 0.97); g.gain.linearRampToValueAtTime(0.0001, t + dur);
-    s.connect(f); f.connect(g); g.connect(G.fx); s.start(t); s.stop(t + dur + 0.05);
-    const o = G.c.createOscillator(); o.type = "sine"; o.frequency.setValueAtTime(hz(55), t); o.frequency.exponentialRampToValueAtTime(hz(79), t + dur);
-    const og = G.c.createGain(); og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(peak * 0.25, t + dur * 0.97); og.gain.linearRampToValueAtTime(0.0001, t + dur);
-    o.connect(og); og.connect(G.fx); o.start(t); o.stop(t + dur + 0.05);
-  };
-  // 막기 소리: 거친 현·활 소리 대신 부드러운 말렛(칼림바 같은) 한 음. 그 나라 음계 음만 쓰고, 뜯는 악기 나라면 그 악기 색을 아주 살짝 섞음
-  E.parryVoice = function (G, w, t, midi, vel) {
-    const f = hz(midi), lp = G.c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 2600; lp.Q.value = 0.5; lp.connect(G.parry);
-    osc(G, t, "sine", f, lp, 0.004, vel, 0.55);
-    osc(G, t, "sine", f * 2, lp, 0.003, vel * 0.16, 0.2);
-    osc(G, t, "sine", f * 4.01, lp, 0.002, vel * 0.05, 0.07);
-    if (w.lead === "oud" || w.lead === "koto" || w.lead === "bonang") E.inst(G, w.lead, t, midi - 12, vel * 0.16, G.s16 * 2, lp);
-  };
-  E.thud = function (G, t) { nz(G, t, "lowpass", 260, 1, G.fx, 0.6, 0.12); osc(G, t, "square", 90, G.fx, 0.002, 0.1, 0.08); };
-  E.impact = function (G, t, v) {
-    const o = G.c.createOscillator(); o.type = "sine"; o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(34, t + 0.6);
-    o.connect(env(G, t, G.fx, 0.003, v, 1.4)); o.start(t); o.stop(t + 1.5);
-    nz(G, t, "lowpass", 1200, 0.7, G.fx, v * 0.5, 0.9);
-    bell(G, t, 43, v * 0.25, G.fx, 2.5);
+  E.sparkle = function (G, w, t, cut) {
+    const out = pan(G, G.fx, 0), sc = w.scale, n = sc.length, top = s => 84 + sc[s % n] + 12 * Math.floor(s / n);
+    const end = cut * 4;
+    switch (w.spark) {
+      case "pungyeong":
+        for (let k = 0; k < 3; k++) { const ts = t + rnd() * G.bar * cut / 4; if (rnd() < 0.8) partials(G, ts, hz(top(Math.floor(rnd() * n * 1.5))), pan(G, G.fx, (rnd() - 0.5) * 1.6 * G.width), [[1, 1, 1.6], [2.4, 0.3, 0.8], [4.1, 0.12, 0.4]], 0.15, 0.003); }
+        break;
+      case "glint":
+        for (let s = 2; s < end; s += 4) if (rnd() < 0.6) partials(G, t + s * G.s16, hz(top(Math.floor(rnd() * n))), pan(G, G.fx, (rnd() - 0.5) * 1.8 * G.width), [[1, 1, 1.2], [2, 0.2, 0.5]], 0.15, 0.01);
+        break;
+      case "tsenatsel":
+        for (let s = 0; s < end; s += 2) { const ts = t + s * G.s16 + sw(G, w, s); for (let k = 0; k < 4; k++) nz(G, ts + k * 0.009, "highpass", 6000, 0.8, out, (s % 4 ? 0.35 : 0.2) * (1 - k * 0.2), 0.03); }
+        break;
+      case "manjira":
+        for (let s = 0; s < end; s += 4) partials(G, t + s * G.s16 + hum(4), s % 8 ? 2100 : 1800, pan(G, G.fx, (s % 8 ? 0.4 : -0.4) * G.width), [[1, 1, s % 8 ? 0.08 : 0.7], [2.76, 0.4, 0.3], [5.4, 0.2, 0.15]], 0.18, 0.001);
+        break;
+      case "cimb":
+        for (let s = 4; s < end; s += 8) if (rnd() < 0.8) { const m = top(Math.floor(rnd() * n)); pluck(G, t + s * G.s16 - G.s16 / 2, m, 0.5, G.fx, { bright: 0.9, decay: 0.8, exc: 1, cut: 7000 }); pluck(G, t + s * G.s16, m + (rnd() < 0.5 ? -1 : 2), 0.65, G.fx, { bright: 0.9, decay: 1.0, exc: 1, cut: 7000 }); }
+        break;
+      case "bleep":
+        for (let s = 1; s < end; s += 2) if (rnd() < 0.35) { const o = G.c.createOscillator(); o.setPeriodicWave(pulseWave(G, 0.125)); o.frequency.value = hz(top(Math.floor(rnd() * n))); o.connect(stepEnv(G, t + s * G.s16, lpf(G, out, 5000), 0.3, 0.05, 0.03)); o.start(t + s * G.s16); o.stop(t + s * G.s16 + 0.15); }
+        break;
+      case "shard":
+        for (let k = 0; k < 4; k++) if (rnd() < 0.7) glassbell(G, t + Math.floor(rnd() * end) * G.s16, top(Math.floor(rnd() * n) + n), 0.25, pan(G, G.fx, (rnd() - 0.5) * 1.8 * G.width), 0.3);
+        break;
+    }
   };
 
-  // ── 다섯 나라 한 곡: 앞 절반(킥 1·3) → 드럼 빔 + 라이저 → 뒤 절반(킥 4박 · 베이스 반복 · 부선율 · 반짝이) → 다섯 섞임 ──
-  E.SECTIONS = [];
-  E.scheduleTrack = function (G, t0, onWorld) {
-    E.reseed(777);
-    const B = G.bar, sec = [];
-    let t = t0;
-    E.ORDER.forEach((id, i) => {
-      const w = E.WORLDS[id];
-      sec.push({ t: t, world: id, part: "앞 절반" });
-      E.pad(G, w, t, 2, 0.9); E.drone(G, t, 2);
-      for (let h = 0; h < 2; h++) {
-        const tb = t + h * B;
-        E.groove(G, tb, "A", i > 0 ? 1 : 0); E.ost(G, tb, i > 0 ? 1 : 0.6); E.melody(G, w, tb, h, 0.8); E.sparkle(G, w, tb, 0.12);
-        const nxt = E.WORLDS[E.ORDER[(i + 1) % 5]];
-        E.perc(G, h === 1 && i < 4 ? nxt : w, tb, h === 1 && i < 4);
-      }
-      t += 2 * B;
-    });
-    // 드럼 빔 2마디: 킥 없음, 바닥음 · 받침 음 · 선율만, 둘째 마디 라이저
-    const wb = E.WORLDS.degung;
-    sec.push({ t: t, world: "degung", part: "드럼 빔" });
-    E.pad(G, wb, t, 2, 1.1); E.drone(G, t, 2); E.ost(G, t, 0.5); E.ost(G, t + B, 0.7);
-    E.groove(G, t, "break", 0); E.groove(G, t + B, "break", 0);
-    E.melody(G, wb, t, 0, 0.6, "suling"); E.melody(G, wb, t + B, 1, 0.6, "suling");
-    E.riser(G, t + B, B, 0.5); E.perc(G, E.WORLDS.hijaz, t + B, true);
-    t += 2 * B;
-    E.impact(G, t, 0.8);
-    E.ORDER.forEach((id, i) => {
-      const w = E.WORLDS[id];
-      sec.push({ t: t, world: id, part: "뒤 절반" });
-      E.pad(G, w, t, 2, 1.0);
-      for (let h = 0; h < 2; h++) {
-        const tb = t + h * B;
-        E.groove(G, tb, "B", 1); E.riff(G, w, tb); E.ost(G, tb, 0.9);
-        E.melody(G, w, tb, h, 0.85); E.counterLine(G, w, tb, h, 0.7); E.sparkle(G, w, tb, 0.3);
-        const nxt = E.WORLDS[E.ORDER[(i + 1) % 5]];
-        E.perc(G, h === 1 && i < 4 ? nxt : w, tb, h === 1 && i < 4);
-        if (h === 1 && i < 4) E.riser(G, tb + B * 0.5, B * 0.5, 0.22);
-      }
-      t += 2 * B;
-    });
-    // 다섯 섞임 4마디: 한 박마다 다른 나라 악기가 선율을 이어받음, 타악기 겹침
-    sec.push({ t: t, world: "mix", part: "다섯 섞임" });
-    E.WORLDS.mix = E.WORLDS.mix || { name: "다섯 섞임", where: "모든 나라", scale: [0, 1, 2, 3, 4, 5, 7, 8, 9, 10], color: "#ffffff", leadName: "다섯 악기", counterName: "", percName: "모두" };
-    for (let b = 0; b < 4; b++) {
-      const tb = t + b * B;
-      E.groove(G, tb, "B", 1); E.riff(G, E.WORLDS.hijaz, tb); E.ost(G, tb, 1);
-      E.perc(G, E.WORLDS[E.ORDER[b % 5]], tb, false); E.perc(G, E.WORLDS[E.ORDER[(b + 2) % 5]], tb, false);
-      if (b % 2 === 0) E.pad(G, E.WORLDS[E.ORDER[b]], tb, 2, 1.0);
-      for (const [p, d, l] of MAIN) {
-        if (Math.floor(p / 16) !== b % 2) continue;
-        const w = E.WORLDS[E.ORDER[(Math.floor((p % 16) / 4) + b) % 5]];
-        E.inst(G, w.lead, tb + (p % 16) * G.s16, 72 + deg(w.scale, d) - 12, 0.8, l * G.s16, G.lead);
-      }
-      E.sparkle(G, E.WORLDS.degung, tb, 0.45);
+  // 차오르는 소리: 다음 세계 밝기만큼 열리는 바람 + 솔에서 솔로 오르는 낮은 음
+  E.riser = function (G, w, t, dur) {
+    const c = G.c, s = c.createBufferSource(); s.buffer = G.noise; s.loop = true;
+    const f = c.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 1.6; f.frequency.setValueAtTime(350, t); f.frequency.exponentialRampToValueAtTime(2200 + 4500 * w.bright, t + dur);
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.14, t + dur * 0.92); g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.02);
+    s.connect(f); f.connect(g); g.connect(G.fx); s.start(t, rnd()); s.stop(t + dur + 0.05);
+    const o = c.createOscillator(); o.type = "triangle"; o.frequency.setValueAtTime(hz(55), t); o.frequency.exponentialRampToValueAtTime(hz(67), t + dur);
+    const og = c.createGain(); og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.035, t + dur * 0.92); og.gain.linearRampToValueAtTime(0.0001, t + dur + 0.02);
+    o.connect(og); og.connect(lpf(G, G.fx, 1200)); o.start(t); o.stop(t + dur + 0.05);
+  };
+
+  // 막기 음: 무딘 시작(8~12ms) · 높은 소리 깎음 · 잔향 조금. 완벽 = 온음, 막음 = 작고 짧게
+  E.parry = function (G, w, t, semi, kind) {
+    const b = w.mirror ? w.base : w, full = kind !== "block", midi = 72 + semi;
+    const vel = full ? 0.85 : 0.32, k = full ? 1 : 0.3, out = w.mirror ? G.parryEcho : G.parry;
+    const l = lpf(G, out, (full ? 2500 : 1600) * (0.85 + 0.3 * b.bright), 0.45);
+    const dest = l;
+    const core = G.c.createOscillator(); core.type = "sine"; core.frequency.value = hz(midi);
+    if (w.mirror) { core.detune.setValueAtTime(-30, t); core.detune.linearRampToValueAtTime(0, t + 0.12); }
+    core.connect(env(G, t, dest, 0.012, vel * 0.3, 0.55 * k)); core.start(t); core.stop(t + 0.7 * k + 0.1);
+    const orn = full ? E.ornFor(b, midi, 4) : null;
+    dip = w.mirror ? -30 : 0;
+    switch (b.parry) {
+      case "gayageum": pluck(G, t, midi, vel * 1.9, dest, { bright: 0.28, decay: 1.3 * k, exc: 0.3, body: [[250, 3], [900, 2]], cut: 2600, attack: 0.009, orn: orn }); break;
+      case "handpan": handpan(G, t, midi, vel * 0.42, dest, k); break;
+      case "krar": pluck(G, t, midi, vel * 1.8, dest, { bright: 0.5, decay: 1.0 * k, exc: 0.45, body: [[380, 3]], cut: 2800, attack: 0.008 }); break;
+      case "sitar": pluck(G, t, midi, vel * 1.6, dest, { bright: 0.6, decay: 1.2 * k, exc: 0.45, buzz: 0.12, body: [[1000, 2]], cut: 2600, attack: 0.009, orn: orn, scoop: 40 }); break;
+      case "cimbalom": pluck(G, t, midi, vel * 1.2, dest, { bright: 0.55, decay: 1.5 * k, exc: 0.3, strings: [-3, 0, 3.5], cut: 2700, attack: 0.008 }); break;
+      case "steelpan": steelpan(G, t, midi, vel * 0.75, dest, k); break;
+      case "glassbell": glassbell(G, t, midi, vel * 0.5, dest, k * 0.6); break;
     }
-    t += 4 * B;
-    E.impact(G, t, 0.9);
-    for (const id of E.ORDER) E.inst(G, E.WORLDS[id].lead, t + rnd() * 0.03, 72, 0.5, G.bar, G.lead);
-    sec.push({ t: t, world: "mix", part: "끝" });
-    E.SECTIONS = sec;
-    return t + 3;
+    dip = 0;
+  };
+  E.thud = function (G, t) {
+    nz(G, t, "lowpass", 230, 0.6, G.thudBus, 0.55, 0.11, 0.003);
+    const o = G.c.createOscillator(); o.type = "sine"; o.frequency.setValueAtTime(105, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.05);
+    o.connect(env(G, t, lpf(G, G.thudBus, 300), 0.002, 0.32, 0.07)); o.start(t); o.stop(t + 0.15);
+    nz(G, t, "bandpass", 520, 0.9, G.thudBus, 0.12, 0.03);
+  };
+
+  // ── 한 마디 짜기 ──
+  // sp: { w 세계, kind "enemy" | "mine", half 0|1(두 마디 중), L 층 0~3, fill 다음 세계(마지막 박에 필인 + 차오름, 킥·앞 악기는 비움) }
+  E.bar = function (G, sp, t) {
+    const w = sp.w, L = sp.L, mine = sp.kind === "mine", cut = sp.fill ? 3 : 4;
+    G.width = mine ? 0.45 : [0.35, 0.55, 0.8, 1][L];
+    E.droneTo(G, t, mine ? 0.85 : L >= 2 ? 0.5 : 1);
+    if (sp.half === 0) E.bed(G, w, t, 2 * G.bar, mine ? 0.9 : 0.55 + 0.15 * L);
+    if (!mine) for (let b = 0; b < cut; b++) if (L >= 2 || b % 2 === 0) kick(G, t + b * G.beat, b === 0 ? 0.9 : vary(0.76, 0.06));
+    if (!mine && L >= 1) E.hats(G, w, t, L, cut);
+    if (mine) E.perc(G, w, t, { light: true, cut: cut });
+    else if (L >= 1) E.perc(G, w, t, { cut: cut, L: L });
+    if (!mine && L >= 2) E.riff(G, w, t, cut);
+    if (!mine) E.lead(G, w, t, sp.half, cut);
+    if (!mine && L >= 3) { E.counter(G, w, t, sp.half, cut); E.sparkle(G, w, t, cut); }
+    if (sp.fill) { E.fill(G, sp.fill, t + 3 * G.beat); E.riser(G, sp.fill, t + 3 * G.beat, G.beat); }
+  };
+
+  // 오프라인 굽기: schedule(G, t0)로 짠 것을 그대로 렌더링해 AudioBuffer로
+  E.render = function (seconds, bpm, schedule, sr) {
+    const oc = new OfflineAudioContext(2, Math.ceil(seconds * (sr || 44100)), sr || 44100);
+    const G = E.build(oc, bpm);
+    schedule(G, 0.05);
+    return oc.startRendering();
   };
   return E;
 })();

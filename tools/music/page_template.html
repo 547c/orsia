@@ -1,16 +1,18 @@
-<title>오르시아 음계 시험실</title>
+<title>오르시아 일곱 세계</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
-/* 게임 화면 같은 어두운 한 가지 모습: 위 고정 띠(지금 나라 · 고리 · 층) · 아래 단계 카드 */
+/* 게임 화면처럼 어두운 한 가지 모습: 위 고정 띠(지금 세계 · 박 · 연속 층 · 빠르기) · 아래 세계 카드 · 한 판 · 박 쪼개기 · 적 표 */
 :root {
   --bg: #12101a;
   --panel: #1c1928;
+  --panel2: #241f33;
   --line: #3a3450;
   --fg: #ece6d6;
   --dim: #a59fb6;
   --gold: #e8c46a;
-  --accent: #7fd6ff;
   --world: #9fb4d8;
+  --next: #9fb4d8;
   --font-display: "Do Hyeon", "IBM Plex Sans KR", system-ui, sans-serif;
   --font-body: "IBM Plex Sans KR", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
@@ -18,114 +20,168 @@
 }
 * { box-sizing: border-box; }
 body {
-  background: var(--bg);
-  color: var(--fg);
-  font: 15px/1.6 var(--font-body);
+  background: var(--bg); color: var(--fg); font: 15px/1.6 var(--font-body);
   padding-block: 20px 48px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
-.wrap { max-width: 1060px; margin: 0 auto; display: grid; gap: 18px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 18px; }
 h1 { font: 34px/1.15 var(--font-display); margin: 0; text-wrap: balance; }
 h2 { font: 25px/1.2 var(--font-display); margin: 0; text-wrap: balance; }
 .lead { color: var(--dim); margin: 4px 0 0; max-width: 68ch; }
+.note { color: var(--dim); font-size: 14px; margin: 0; max-width: 74ch; }
+.note b { color: var(--fg); font-weight: 600; }
+
 .top {
   background: var(--panel); border: 2px solid var(--line); border-left: 6px solid var(--world);
-  padding: 14px; display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 16px; align-items: center;
+  padding: 12px 14px; display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 16px; align-items: center;
   position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
 }
-@media (max-width: 640px) { .top { grid-template-columns: 1fr; justify-items: center; position: static; } }
-canvas#ring { width: 170px; height: 170px; image-rendering: pixelated; display: block; }
-.world { font: 30px/1.1 var(--font-display); color: var(--world); }
-.world small { display: block; font: 14px/1.5 var(--font-body); color: var(--dim); }
-.meters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
-.layer { font-size: 13px; padding: 4px 10px; border: 2px solid var(--line); color: var(--dim); }
-.layer.on { border-color: var(--world); color: var(--fg); }
-.turn { font: 18px/1 var(--font-display); color: var(--fg); padding: 4px 10px; border: 2px solid var(--gold); }
-.streak { font: 22px/1 var(--font-display); color: var(--gold); margin-left: auto; }
-.step { background: var(--panel); border: 2px solid var(--line); padding: 16px; display: grid; gap: 12px; }
-.step .num { font: 15px/1 var(--font-mono); color: var(--gold); letter-spacing: 0.06em; }
-.game { color: var(--fg); background: #241f33; border-left: 4px solid var(--gold); padding: 8px 12px; margin: 0; max-width: 76ch; }
-.game b { color: var(--gold); font-weight: 600; }
-.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.label { font-size: 12px; letter-spacing: 0.08em; color: var(--dim); min-width: 64px; }
+@media (max-width: 760px) { .top { grid-template-columns: 96px minmax(0, 1fr); position: static; } .top .side { grid-column: 1 / -1; } }
+canvas#ring { width: 120px; height: 120px; image-rendering: pixelated; display: block; }
+@media (max-width: 760px) { canvas#ring { width: 96px; height: 96px; } }
+.now { min-width: 0; display: grid; gap: 6px; }
+.world { font: 30px/1.05 var(--font-display); color: var(--world); }
+.world small { font: 15px/1 var(--font-body); color: var(--dim); margin-left: 6px; }
+.scale { font: 15px/1.4 var(--font-body); color: var(--dim); word-spacing: 0.15em; }
+.scale .cg { color: var(--gold); }
+.inst { font-size: 13px; color: var(--dim); }
+.status { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.turn { font: 17px/1 var(--font-display); padding: 5px 10px; border: 2px solid var(--gold); color: var(--fg); }
+.queued { font: 17px/1 var(--font-display); color: var(--next); }
+.beats { display: inline-flex; gap: 5px; }
+.beats i { width: 12px; height: 12px; border: 2px solid var(--line); display: block; }
+.beats i.on { background: var(--world); border-color: var(--world); }
+.beats i.fill { background: var(--next); border-color: var(--next); }
+.side { display: grid; gap: 8px; justify-items: end; }
+@media (max-width: 760px) { .side { justify-items: start; } }
+.streak { font: 15px/1 var(--font-body); color: var(--dim); }
+.streak b { font: 28px/1 var(--font-display); color: var(--gold); margin-right: 4px; font-variant-numeric: tabular-nums; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.label { font-size: 12px; letter-spacing: 0.08em; color: var(--dim); min-width: 52px; }
+
 button {
-  font: 15px/1 var(--font-body); color: var(--fg); background: #26223a; border: 2px solid var(--line);
-  padding: 9px 12px; cursor: pointer;
+  font: 14px/1.2 var(--font-body); color: var(--fg); background: #26223a; border: 2px solid var(--line);
+  padding: 7px 10px; cursor: pointer; text-align: left;
 }
 button:hover { border-color: var(--dim); }
-button:focus-visible, .toggle:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
-button[aria-pressed="true"] { border-color: var(--world); color: var(--world); background: #1e2a33; }
-.go { font: 21px/1 var(--font-display); padding: 12px 20px; border-color: var(--gold); color: var(--gold); }
+button:focus-visible, .toggle:focus-within { outline: 2px solid var(--gold); outline-offset: 2px; }
+button[aria-pressed="true"] { border-color: var(--world); color: var(--world); background: #1e2633; }
+.layers button { font-size: 13px; padding: 6px 8px; }
+.layers button span { display: block; font-size: 11px; color: var(--dim); }
+.layers button.lit { border-color: var(--gold); color: var(--gold); }
+.stop { border-color: #7a4a52; color: #f0b4bc; }
+.go { font: 20px/1 var(--font-display); padding: 11px 18px; border-color: var(--gold); color: var(--gold); }
 .go.playing { background: var(--gold); color: var(--bg); }
-.toggle { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; border: 2px solid var(--line); padding: 7px 10px; background: #26223a; }
+.toggle { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; border: 2px solid var(--line); padding: 6px 10px; background: #26223a; font-size: 14px; }
 .toggle input { accent-color: var(--gold); }
-canvas#lane { width: 100%; height: 90px; image-rendering: pixelated; display: block; background: #0e0c15; border: 2px solid var(--line); }
-.judge { font: 26px/1 var(--font-display); min-width: 90px; color: var(--gold); }
-.note { color: var(--dim); font-size: 13px; margin: 0; max-width: 76ch; }
-.timeline { display: flex; gap: 2px; width: 100%; }
-.timeline span { flex: 1; height: 26px; border: 1px solid var(--line); font-size: 11px; color: var(--dim); display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; }
-.timeline span.now { color: var(--bg); background: var(--world); border-color: var(--world); }
-.map { width: 100%; border-collapse: collapse; font-size: 14px; }
-.map th, .map td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
-.map th { color: var(--dim); font-weight: 400; font-size: 12px; letter-spacing: 0.06em; }
+
+.step { background: var(--panel); border: 2px solid var(--line); padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 900px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 460px) { .cards { grid-template-columns: 1fr; } }
+.wcard { display: grid; gap: 4px; align-content: start; padding: 10px 12px; border-left: 6px solid var(--c); min-width: 0; }
+.wcard[aria-pressed="true"] { border-color: var(--c); border-left-width: 6px; color: var(--fg); background: #2a2540; box-shadow: inset 0 0 0 1px var(--c); }
+.wcard .wn { font: 22px/1.1 var(--font-display); color: var(--c); }
+.wcard .wn small { font: 12px/1 var(--font-mono); color: var(--dim); margin-right: 6px; }
+.wcard .ww { font-size: 12px; color: var(--dim); }
+.wcard .ws { font: 14px/1.4 var(--font-body); word-spacing: 0.1em; }
+.wcard .ws .cg { color: var(--gold); }
+.wcard .wi { font-size: 13px; color: var(--fg); }
+.wcard .wf { font-size: 12px; color: var(--dim); }
+
+.seq { display: flex; flex-wrap: wrap; gap: 6px; }
+.seq span { white-space: nowrap; border: 2px solid var(--line); border-left: 6px solid var(--c); padding: 5px 10px; font-size: 14px; }
+.seq span small { color: var(--dim); margin-left: 4px; font-size: 12px; }
+.seq span.now { background: var(--c); color: var(--bg); }
+.seq span.now small { color: var(--bg); }
+canvas#lane { width: 100%; height: 132px; image-rendering: pixelated; display: block; background: #0e0c15; border: 2px solid var(--line); }
+.judge { font: 26px/1 var(--font-display); min-width: 74px; color: var(--gold); }
+.judge.block { color: var(--fg); }
+.judge.miss { color: #c98b93; }
+
+.subs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 900px) { .subs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 460px) { .subs { grid-template-columns: 1fr; } }
+.scard { display: grid; gap: 6px; padding: 10px; min-width: 0; }
+.scard .sn { font: 20px/1 var(--font-display); }
+.scard .sd { font-size: 12px; color: var(--dim); }
+.scard canvas { width: 100%; height: auto; aspect-ratio: 300 / 58; max-width: 100%; image-rendering: pixelated; display: block; background: #0e0c15; }
+.scard[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); background: #2a2540; }
+
 .tbl { overflow-x: auto; }
+.map { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
+.map th, .map td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.map th { color: var(--dim); font-weight: 400; font-size: 12px; letter-spacing: 0.06em; }
 .dot { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: middle; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
 <div class="wrap">
   <header>
-    <h1>음계 시험실 — 적마다 다른 나라</h1>
-    <p class="lead">영상 음악을 분석해서 나온 비결을 그대로 넣었습니다. 빠르기는 128 BPM 하나, 베이스와 바닥음은 늘 C · G, 나라 하나가 2마디입니다. 앞 절반은 킥이 1 · 3박, 뒤 절반은 킥 4박에 베이스 반복으로 터집니다. 그 위에 부선율, 반짝이, 라이저, 그 나라 타악기 필인이 얹힙니다.</p>
+    <h1>일곱 세계 음악 시험실</h1>
+    <p class="lead">적마다 세계(음계와 악기)가 바뀝니다. 일곱 세계 모두 도와 솔을 함께 가져서, 끊기지 않는 C · G 바닥음 위에서 이어 넘어갑니다. 세계를 눌러 듣고, 아래에서 한 판을 돌려 보세요.</p>
   </header>
 
   <section class="top" aria-live="polite">
-    <canvas id="ring" width="96" height="96" aria-label="12음 고리: 지금 나라 음계의 모양"></canvas>
-    <div>
-      <div class="world" id="world">대기 중<small>아래에서 시작을 누르세요</small></div>
-      <div class="meters">
+    <canvas id="ring" width="64" height="64" aria-label="12음 고리: 지금 세계 음계 모양, 금색은 도와 솔"></canvas>
+    <div class="now">
+      <div class="world" id="world">대기 중<small>아래에서 세계를 누르세요</small></div>
+      <div class="scale" id="scale">도 · 솔이 모든 세계의 바닥</div>
+      <div class="inst" id="inst">—</div>
+      <div class="status">
         <span class="turn" id="turn">—</span>
-        <span class="layer" id="m1">받침 음 · 베이스</span>
-        <span class="layer" id="m2">뒤 절반 리듬</span>
-        <span class="layer" id="m3">부선율 · 반짝이</span>
-        <span class="streak" id="streak"></span>
+        <span class="beats" id="beats" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span class="queued" id="queued"></span>
       </div>
+    </div>
+    <div class="side">
+      <div class="streak" id="streakBox"><b id="streak">0</b>연속</div>
+      <div class="row layers" id="layers" aria-label="연속 층"></div>
+      <div class="row" id="bpms"></div>
+      <button class="stop" id="stop" type="button">■ 멈춤</button>
     </div>
   </section>
 
   <section class="step" aria-labelledby="s1">
-    <span class="num">1단계</span>
-    <h2 id="s1">다섯 나라 한 곡 (영상 구조 그대로, 약 50초)</h2>
-    <div class="timeline" id="timeline"></div>
-    <div class="row"><button class="go" id="go1" type="button">▶ 한 곡 듣기</button></div>
-    <div class="row" id="mutes"><span class="label">층 끄고 켜기</span></div>
-    <p class="game"><b>들어 볼 것:</b> 재생 중에 층을 하나씩 꺼 보세요. 소리가 얇아지는 만큼이 그 층이 채우던 '풍부함'입니다. 특히 '바닥음·패드'와 '받침 음'을 끄면 나라가 바뀔 때 이어지는 느낌이 약해집니다.</p>
+    <h2 id="s1">세계 듣기</h2>
+    <p class="note">누르면 그 세계를 2마디씩 되풀이합니다. 재생 중에 다른 세계를 누르면 다음 2마디 경계로 넘어가는데, 그 앞 한 박에 <b>새 세계 타악 필인과 짧게 차오르는 소리</b>가 들어가고 킥은 비웁니다. 층은 위 띠의 연속 칸으로 바꿉니다.</p>
+    <div class="cards" id="cards"></div>
+    <div class="row">
+      <label class="toggle"><input type="checkbox" id="lp" checked><span>막기 음 함께 (자동 완벽)</span></label>
+      <label class="toggle"><input type="checkbox" id="lm"><span>내 차례 소리로 (받침 + 가벼운 타악)</span></label>
+    </div>
+    <div class="row" id="mutes"><span class="label">부분 끄기</span></div>
   </section>
 
   <section class="step" aria-labelledby="s2">
-    <span class="num">2단계</span>
-    <h2 id="s2">한 판: 적 셋 → 내 차례 → 다시</h2>
-    <p class="note">적마다 2마디입니다. 첫 마디에는 그 나라 악기가 선율을 작게 먼저 부르고, 둘째 마디에는 노트가 옵니다. 노트가 왼쪽 선에 닿을 때 <b>Space</b>를 누르세요. 완벽이면 그 나라 악기로 답하는 음이 울립니다. 연속 3에 받침 음과 베이스, 6에 뒤 절반 리듬(킥 4박), 9에 부선율과 반짝이가 들어옵니다. 놓치면 처음 모양으로 돌아갑니다. 내 차례에는 마지막으로 막은 나라가 이어지고, 다음 적 1마디 전에 라이저와 그 나라 타악기 필인이 들어옵니다.</p>
-    <canvas id="lane" width="320" height="30" aria-label="다가오는 적 노트"></canvas>
+    <h2 id="s2">한 판: 적 차례대로</h2>
+    <p class="note">내 차례 2마디 뒤에 적 셋이 2마디씩 공격합니다. 적 차례에는 그 세계 앞 악기가 부르고, 막을 때마다 막기 음이 그 세계 동기를 따라갑니다. 앞 마디 묶음은 <b>솔</b>, 뒷 마디 묶음은 <b>도</b>로 끝납니다. 첫 노트 한 박 전에 넘어가기 예고가 들어갑니다. 직접 칠 때는 노트가 왼쪽 선에 닿을 때 <b>Space</b>.</p>
+    <div class="row" id="presets"><span class="label">적 순서</span></div>
+    <div class="seq" id="seq"></div>
+    <canvas id="lane" width="320" height="66" aria-label="다가오는 노트, 높이는 음 높이, 금색 선은 도와 솔"></canvas>
     <div class="row">
-      <button class="go" id="go2" type="button">▶ 한 판 시작</button>
+      <button class="go" id="go" type="button">▶ 한 판 시작</button>
       <button id="hit" type="button">막기 (Space)</button>
       <span class="judge" id="judge"></span>
-      <label class="toggle"><input type="checkbox" id="auto"><span>자동으로 막기 (듣기만)</span></label>
     </div>
-    <div class="row" id="diffs"><span class="label">난이도</span></div>
-    <div class="row" id="bpms"><span class="label">빠르기</span></div>
-    <p class="game"><b>게임에서는:</b> 적 막기 장르마다 나라가 정해지고(아래 표), 연속이 높을수록 음악이 뒤 절반처럼 터집니다. 난이도는 빠르기를 바꾸지 않고 박을 잘게 쪼개 올립니다. 빠르기는 시작 전에 고르면 그 판 내내 같습니다.</p>
+    <div class="row" id="autos"><span class="label">막기</span></div>
   </section>
 
   <section class="step" aria-labelledby="s3">
-    <span class="num">정리</span>
-    <h2 id="s3">적 막기 장르 → 나라 (예시)</h2>
+    <h2 id="s3">박 쪼개기</h2>
+    <p class="note">고른 쪼개기는 세계 듣기와 한 판에 모두 쓰입니다. 누르면 지금 세계로 바로 들려줍니다. 금색 테두리 칸이 묶음 끝(솔 · 도)입니다. 빠르기는 바꾸지 않고 박만 잘게 나눕니다.</p>
+    <div class="subs" id="subs"></div>
+  </section>
+
+  <section class="step" aria-labelledby="s4">
+    <h2 id="s4">적 → 세계</h2>
     <div class="tbl"><table class="map">
-      <thead><tr><th>나라 (음계)</th><th>주 악기 · 부선율 · 타악기</th><th>적 막기 장르</th></tr></thead>
+      <thead><tr><th>세계</th><th>막기 장르</th><th>적 (게임 열쇠)</th></tr></thead>
       <tbody id="maprows"></tbody>
     </table></div>
-    <p class="note">악기는 여전히 브라우저에서 합성한 소리입니다. 구조, 층, 공간감은 실제 게임에서도 그대로 쓰고, 악기만 진짜 녹음으로 바꿉니다.</p>
+    <p class="note">악기는 모두 브라우저에서 합성한 소리입니다. 같은 엔진 함수가 오프라인 렌더링(E.render)도 하므로, 고른 소리는 다음 단계에서 그대로 WAV로 구워 게임에 넣습니다.</p>
   </section>
 </div>
 
@@ -133,180 +189,292 @@ canvas#lane { width: 100%; height: 90px; image-rendering: pixelated; display: bl
 /*ENGINE*/
 </script>
 <script>
-const GENRE = { hijaz: "고리", dorian: "따라 치기", gong: "화살", inn: "북", degung: "피하기" };
-const ENEMIES = [{ name: "고리 적", world: "hijaz", seed: 3 }, { name: "북 적", world: "inn", seed: 7 }, { name: "화살 적", world: "gong", seed: 11 }];
-const DIFFS = [
-  { name: "쉬움 · 4분", pos: [0, 4, 8, 12] },
-  { name: "보통 · 8분", pos: [0, 2, 4, 6, 8, 10, 12] },
-  { name: "어려움 · 16분 섞임", pos: [0, 2, 3, 4, 6, 8, 10, 11, 12, 14] },
-  { name: "극한 · 16분 + 셋잇단", pos: [0, 1, 2, 4, 5, 6, 8, 8 + 4 / 3, 8 + 8 / 3, 12, 13, 14, 15] },
+const FOE = { scout: "척후병", scout_h: "추격 척후", archer: "사수", archer_h: "심층 사수", breaker: "파괴자", guard_h: "철갑 수비병", elite: "정예 돌격대장", maek_elite_low: "맥 거완", leader: "돌파 대장", hexer: "해골 저주꾼", poisoner: "독침병", shieldbearer: "방패병", banner: "기수", boss: "균열 수문장", hard_boss: "심층 파수자", maek_noble_mid: "맥 귀족", ruins_boss: "폭주한 근원체", cannon: "포격 장치", curse: "저주 장치", x_boss: "균열의 핵", maek_summoner_low: "맥 소환사", mimic_n: "상자 미믹", mimic_h: "심층 미믹", mimic_x: "균열 미믹" };
+const GENRE = { gye: "고리 (게임의 얼굴)", lyd: "화살 막기", tez: "북 장단 · 정예", bhv: "박자 피하기", hun: "방패 · 지원 · 구간 보스", mac: "장치", core: "최종 보스", echo: "따라 치기 (부름-응답)" };
+const PRESETS = [
+  { name: "척후 → 사수 → 파괴자", foes: ["scout", "archer", "breaker"] },
+  { name: "방패병 → 저주꾼 → 기수", foes: ["shieldbearer", "hexer", "banner"] },
+  { name: "척후 → 미믹 → 사수", foes: ["scout", "mimic_n", "archer"] },
+  { name: "심층 사수 → 수비병 → 포격 장치", foes: ["archer_h", "guard_h", "cannon"] },
+  { name: "포격 장치 → 균열의 핵 → 저주 장치", foes: ["cannon", "x_boss", "curse"] },
 ];
-const MUTES = [["pad", "바닥음 · 패드"], ["ost", "받침 음 (G)"], ["counter", "부선율"], ["perc", "나라 타악기"], ["fx", "장식 (라이저 · 반짝이)"], ["lead", "주선율"]];
-let diff = DIFFS[1], bpm = 128;
-let ctx = null, G = null, mode = "", timer = null, timers = [];
-let nextBar = 0, barIdx = 0, notes = [], streak = 0, lastParried = "hijaz";
-let curWorld = "hijaz", lastPc = null, lastPcAt = 0;
+const BPMS = [[112, "구간 Ⅰ"], [124, "구간 Ⅱ"], [136, "구간 Ⅲ"]];
+const LAYERS = [[0, "0~4", "킥 1·3 + 바닥음"], [5, "5~9", "+ 하이햇 · 세계 타악"], [10, "10~19", "+ 킥 4박 · 베이스"], [20, "20+", "+ 맞받는 선율 · 반짝이"]];
+const MUTES = [["lead", "앞 악기"], ["counter", "맞받는 선율"], ["perc", "세계 타악"], ["bed", "받침"], ["drone", "바닥음"], ["bass", "베이스"], ["kick", "킥"], ["hat", "하이햇"], ["fx", "반짝이 · 차오름"], ["parry", "막기 음"]];
+const AUTOS = [["manual", "직접"], ["perfect", "자동 완벽"], ["mixed", "자동 섞임 (완벽 · 막음 · 놓침)"]];
+
+let bpm = 124, sub = E.SUBDIV[0], streak = 0, shown = 0, autoMode = "perfect", preset = PRESETS[0];
+let ctx = null, G = null, mode = "", timer = 0, timers = [], nextBar = 0, barIdx = 0, notes = [], bars = [];
+let listenId = "gye", queued = null, lastBase = "gye", curW = E.WORLDS.gye, seq = [], resolved = new Map();
+let lastSemi = null, lastSemiAt = 0, shownW = null;
+const $ = id => document.getElementById(id);
 
 function at(t, fn) { timers.push(setTimeout(fn, Math.max(0, (t - ctx.currentTime) * 1000))); }
-function showWorld(id, turnText) {
-  const w = E.WORLDS[id]; curWorld = id;
+function baseOf(w) { return w.mirror ? w.base.id : w.id; }
+function worldOf(id) { return id === "echo" ? E.echoOf(lastBase) : E.WORLDS[id]; }
+function scaleHTML(sc) { return sc.map(pc => pc === 0 || pc === 7 ? `<span class="cg">${E.NAMES[pc]}</span>` : E.NAMES[pc]).join(" "); }
+function show(w, turn) {
+  shownW = w;
   document.documentElement.style.setProperty("--world", w.color);
-  document.getElementById("world").innerHTML = w.name + " · " + w.where + "<small>" + (w.leadName || "") + (w.counterName ? " · 부선율 " + w.counterName : "") + " · 타악기 " + w.percName + " · " + bpm + " BPM</small>";
-  if (turnText !== undefined) document.getElementById("turn").textContent = turnText;
+  $("world").innerHTML = w.name + "<small>" + w.where + "</small>";
+  $("scale").innerHTML = scaleHTML(w.scale);
+  $("inst").textContent = `앞 ${w.leadName} · 맞받는 ${w.counterName} · 타악 ${w.percName} · 받침 ${w.bedName} · 반짝이 ${w.sparkName}`;
+  if (turn !== undefined) $("turn").textContent = turn;
 }
-function meters(l) { ["m1", "m2", "m3"].forEach((id, i) => document.getElementById(id).classList.toggle("on", l > i)); }
-function level() { return streak >= 9 ? 3 : streak >= 6 ? 2 : streak >= 3 ? 1 : 0; }
+function showLayer(L) { document.querySelectorAll("#layers button").forEach((b, i) => b.classList.toggle("lit", i === L)); }
+function showStreak() { $("streak").textContent = shown; }
 
 function stopAll() {
-  clearInterval(timer); timer = null; timers.forEach(clearTimeout); timers = [];
-  if (ctx) { const c = ctx; setTimeout(() => c.close(), 50); }
-  ctx = null; G = null; mode = ""; notes = [];
-  document.querySelectorAll(".go").forEach(b => b.classList.remove("playing"));
-  document.getElementById("judge").textContent = ""; document.getElementById("turn").textContent = "—"; document.getElementById("streak").textContent = "";
-  document.querySelectorAll(".timeline span").forEach(s => s.classList.remove("now"));
-  meters(0);
+  clearInterval(timer); timer = 0; timers.forEach(clearTimeout); timers = [];
+  if (ctx) { const c = ctx; setTimeout(() => c.close(), 80); }
+  ctx = null; G = null; mode = ""; notes = []; bars = []; queued = null;
+  $("go").classList.remove("playing"); $("go").textContent = "▶ 한 판 시작";
+  $("turn").textContent = "—"; $("queued").textContent = ""; $("judge").textContent = "";
+  document.querySelectorAll(".seq span").forEach(s => s.classList.remove("now"));
+  document.querySelectorAll(".wcard").forEach(c => c.setAttribute("aria-pressed", "false"));
 }
 function fresh() {
   ctx = new (window.AudioContext || window.webkitAudioContext)();
   G = E.build(ctx, bpm);
-  document.querySelectorAll("#mutes input").forEach(cb => E.setMute(G, cb.dataset.bus, !cb.checked));
-}
-
-// ── 1단계: 한 곡 ──
-function playTrack() {
-  if (mode === "track") { stopAll(); return; }
-  stopAll(); bpm = 128; fresh(); mode = "track";
-  document.getElementById("go1").classList.add("playing");
-  const t0 = ctx.currentTime + 0.15, end = E.scheduleTrack(G, t0);
-  const spans = document.querySelectorAll(".timeline span");
-  E.SECTIONS.forEach((sc, i) => at(sc.t, () => {
-    spans.forEach((s, k) => s.classList.toggle("now", k === i));
-    if (sc.world !== "mix") showWorld(sc.world, sc.part); else { showWorld("mix", sc.part); }
-    meters(sc.part === "앞 절반" ? 1 : sc.part === "드럼 빔" ? 0 : 3);
-  }));
-  at(end, () => stopAll());
-}
-
-// ── 2단계: 한 판 ──
-function enemyNotes(e, t) {
-  let d = 2, r = e.seed;
-  return diff.pos.map(p => {
-    r = (r * 1103515245 + 12345) & 0x7fffffff;
-    d = Math.max(0, Math.min(7, d + [-2, -1, 1, 2][r % 4]));
-    return { time: t + p * G.s16, deg: d, world: e.world, done: false };
-  });
-}
-function scheduleBar(b, t) {
-  const slot = Math.floor((b % 8) / 2), half = b % 2, mine = slot === 3, L = level();
-  const wid = mine ? lastParried : ENEMIES[slot].world, w = E.WORLDS[wid];
-  E.groove(G, t, L >= 2 ? "B" : "A", L >= 1 ? 1 : 0);
-  if (half === 0) { E.pad(G, w, t, 2, 1.0); if (L < 2) E.drone(G, t, 2); }
-  if (L >= 2) E.riff(G, w, t);
-  if (L >= 1) E.ost(G, t, 0.9);
-  if (mine && half === 1) { E.perc(G, E.WORLDS[ENEMIES[0].world], t, true); E.riser(G, t + G.bar / 2, G.bar / 2, 0.25); }
-  else E.perc(G, w, t, false);
-  if (!mine && half === 0) E.melody(G, w, t, 0, 0.42);
-  if (!mine && half === 1) notes.push(...enemyNotes(ENEMIES[slot], t));
-  if (mine) E.counterLine(G, w, t, half, 0.55);
-  if (L >= 3) { if (!mine) E.counterLine(G, w, t, half, 0.5); E.sparkle(G, w, t, 0.3); }
-  if (half === 0) at(t, () => showWorld(wid, mine ? "내 차례 (마지막 막은 나라)" : ENEMIES[slot].name + (half ? "" : " · 먼저 부름 → 공격")));
-  at(t, () => meters(L));
+  document.querySelectorAll("#mutes input").forEach(cb => { if (!cb.checked) E.setMute(G, cb.dataset.bus, true); });
+  nextBar = ctx.currentTime + 0.12; barIdx = 0; resolved = new Map();
+  timer = setInterval(tick, 25);
 }
 function tick() {
-  while (nextBar < ctx.currentTime + 0.3) { scheduleBar(barIdx, nextBar); nextBar += G.bar; barIdx++; }
+  while (nextBar < ctx.currentTime + 0.35) { (mode === "battle" ? battleBar : listenBar)(barIdx, nextBar); nextBar += G.bar; barIdx++; }
   const now = ctx.currentTime;
-  for (const n of notes) {
-    if (n.done) continue;
-    if (document.getElementById("auto").checked && now >= n.time - 0.03) judge(n, 0);
-    else if (now > n.time + 0.15) judge(n, 1);
-  }
-  notes = notes.filter(n => !n.done || n.time > now - 1);
+  if (mode === "battle" && autoMode === "manual") for (const n of notes) if (!n.done && now > n.time + 0.15) judge(n, 1);
+  notes = notes.filter(n => n.time > now - 1.5);
+  bars = bars.filter(b => b.t > now - 2 * G.bar);
 }
-function playBattle() {
-  if (mode === "battle") { stopAll(); return; }
-  stopAll(); fresh(); mode = "battle"; streak = 0; barIdx = 0; nextBar = ctx.currentTime + 0.15;
-  document.getElementById("go2").classList.add("playing");
-  document.getElementById("streak").textContent = "연속 0";
-  timer = setInterval(tick, 25);
+
+// ── 막기 노트 ──
+function addNotes(w, half, t) {
+  const pos = sub.bars[half], ps = E.groupPitches(w, pos.length, half ? "C" : "G");
+  pos.forEach((p, i) => {
+    const n = { time: t + p * G.beat, semi: ps[i], w: w, done: false, end: i === pos.length - 1 };
+    notes.push(n);
+    if (mode === "listen" || autoMode !== "manual") autoJudge(n);
+  });
+}
+function autoJudge(n) {
+  let r = "perfect";
+  if (mode === "battle" && autoMode === "mixed") { const x = Math.random(); r = x < 0.1 ? "miss" : x < 0.3 ? "block" : "perfect"; }
+  n.done = true; n.auto = true;
+  if (r === "miss") E.thud(G, n.time + 0.12);
+  else E.parry(G, n.w, r === "block" ? n.time + 0.08 : n.time, n.semi, r);
+  if (mode === "battle") streak = r === "miss" ? 0 : streak + 1;
+  const s = streak;
+  at(n.time, () => { flash(n, r); if (mode === "battle") { shown = s; showStreak(); } });
 }
 function judge(n, d) {
   n.done = true;
-  const w = E.WORLDS[n.world], j = document.getElementById("judge"), a = Math.abs(d);
-  if (a <= 0.065) { streak++; lastParried = n.world; E.parryVoice(G, w, Math.max(ctx.currentTime, n.time), 72 + E.deg(w.scale, n.deg), 0.5); j.textContent = "완벽!"; }
-  else if (a <= 0.13) { streak++; lastParried = n.world; E.parryVoice(G, w, ctx.currentTime, 72 + E.deg(w.scale, n.deg), 0.28); j.textContent = "막음"; }
-  else { streak = 0; E.thud(G, ctx.currentTime); j.textContent = "놓침"; }
-  const m = 72 + E.deg(w.scale, n.deg); lastPc = m % 12; lastPcAt = performance.now();
-  document.getElementById("streak").textContent = "연속 " + streak;
+  const a = Math.abs(d), now = ctx.currentTime;
+  let r = "miss";
+  if (a <= 0.065) { r = "perfect"; E.parry(G, n.w, Math.max(now, n.time), n.semi, r); }
+  else if (a <= 0.13) { r = "block"; E.parry(G, n.w, now, n.semi, r); }
+  else E.thud(G, now);
+  streak = r === "miss" ? 0 : streak + 1; shown = streak; showStreak();
+  flash(n, r);
+}
+function flash(n, r) {
+  const j = $("judge");
+  j.textContent = { perfect: "완벽", block: "막음", miss: "놓침" }[r]; j.className = "judge " + r;
+  if (r !== "miss") { lastSemi = n.semi; lastSemiAt = performance.now(); }
 }
 function press() {
-  if (mode !== "battle" || !ctx) return;
+  if (mode !== "battle" || autoMode !== "manual" || !ctx) return;
   const now = ctx.currentTime; let best = null;
   for (const n of notes) if (!n.done && Math.abs(n.time - now) < 0.2 && (!best || Math.abs(n.time - now) < Math.abs(best.time - now))) best = n;
   if (best) judge(best, now - best.time);
 }
 
+// ── 세계 듣기: 2마디씩 되풀이, 고른 세계는 다음 2마디 경계로 ──
+function listenBar(b, t) {
+  const half = b % 2;
+  if (half === 0 && queued) { curW = worldOf(queued); if (queued !== "echo") lastBase = queued; queued = null; }
+  const mine = $("lm").checked, fill = half === 1 && queued ? worldOf(queued) : null, L = E.layer(streak), w = curW;
+  E.bar(G, { w: w, kind: mine ? "mine" : "enemy", half: half, L: L, fill: fill }, t);
+  if (!mine && $("lp").checked) addNotes(w, half, t);
+  bars.push({ t: t, w: w, fill: fill });
+  at(t, () => { show(w, mine ? "내 차례 소리" : "듣기 · " + sub.name); showLayer(L); if (half === 0) $("queued").textContent = queued ? "다음 → " + worldOf(queued).name : ""; });
+  if (fill) at(t + 3 * G.beat, () => { $("queued").textContent = "넘어가기 예고 → " + fill.name; document.documentElement.style.setProperty("--next", fill.color); });
+}
+function listen(id) {
+  if (mode === "listen" && ctx && id === (curW.mirror ? "echo" : curW.id) && !queued) return;
+  document.querySelectorAll(".wcard").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.id === id)));
+  if (mode === "listen" && ctx) {
+    queued = id; $("queued").textContent = "다음 → " + worldOf(id).name;
+    document.documentElement.style.setProperty("--next", worldOf(id).color);
+    return;
+  }
+  stopAll(); mode = "listen";
+  document.querySelectorAll(".wcard").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.id === id)));
+  curW = worldOf(id); if (id !== "echo") lastBase = id;
+  fresh(); show(curW, "듣기");
+}
+
+// ── 한 판: 내 차례 → 적 셋, 되풀이 ──
+function resolve(k) {
+  if (resolved.has(k)) return resolved.get(k);
+  const s = seq[k % seq.length];
+  let w;
+  if (s.kind === "mine") w = k > 0 ? resolve(k - 1) : E.WORLDS[(seq.find(q => q.kind === "enemy" && q.wid !== "echo") || { wid: "gye" }).wid];
+  else if (s.wid === "echo") w = E.echoOf(baseOf(resolve(k - 1)));
+  else w = E.WORLDS[s.wid];
+  resolved.set(k, w);
+  return w;
+}
+function battleBar(b, t) {
+  const k = Math.floor(b / 2), half = b % 2, s = seq[k % seq.length], w = resolve(k), L = E.layer(streak);
+  const nx = seq[(k + 1) % seq.length], fill = half === 1 && nx.kind === "enemy" ? resolve(k + 1) : null;
+  E.bar(G, { w: w, kind: s.kind, half: half, L: L, fill: fill }, t);
+  if (s.kind === "enemy") addNotes(w, half, t);
+  bars.push({ t: t, w: w, fill: fill });
+  at(t, () => {
+    show(w, s.kind === "enemy" ? "적 차례 · " + FOE[s.foe] : "내 차례");
+    showLayer(L);
+    if (half === 0) { $("queued").textContent = ""; document.querySelectorAll(".seq span").forEach((e, i) => e.classList.toggle("now", i === k % seq.length)); }
+  });
+  if (fill) at(t + 3 * G.beat, () => { $("queued").textContent = "넘어가기 예고 → " + fill.name; document.documentElement.style.setProperty("--next", fill.color); });
+}
+function battle() {
+  if (mode === "battle") { stopAll(); return; }
+  stopAll(); mode = "battle"; shown = streak; showStreak();
+  seq = [{ kind: "mine" }].concat(preset.foes.map(f => ({ kind: "enemy", foe: f, wid: E.ENEMY_WORLD[f] })));
+  $("go").classList.add("playing"); $("go").textContent = "■ 한 판 멈춤";
+  fresh();
+}
+function drawSeq() {
+  const box = $("seq"); box.innerHTML = "";
+  const items = [{ kind: "mine" }].concat(preset.foes.map(f => ({ kind: "enemy", foe: f, wid: E.ENEMY_WORLD[f] })));
+  let prev = items.find(q => q.kind === "enemy" && q.wid !== "echo") || { wid: "gye" }, prevId = prev.wid;
+  items.forEach((it, i) => {
+    const s = document.createElement("span");
+    let w;
+    if (it.kind === "mine") { w = E.WORLDS[prevId]; s.innerHTML = `내 차례<small>받침만</small>`; }
+    else { w = it.wid === "echo" ? E.echoOf(prevId) : E.WORLDS[it.wid]; if (it.wid !== "echo") prevId = it.wid; s.innerHTML = `${FOE[it.foe]}<small>${w.name}${w.mirror ? " (" + w.base.name + " 흉내)" : ""}</small>`; }
+    s.style.setProperty("--c", w.color); box.appendChild(s);
+  });
+}
+
 // ── 화면 ──
-E.WORLDS.mix = E.WORLDS.mix || { name: "다섯 섞임", where: "모든 나라", scale: [0, 1, 2, 3, 4, 5, 7, 8, 9, 10], color: "#ffffff", leadName: "다섯 악기", counterName: "", percName: "모두" };
-document.getElementById("go1").onclick = playTrack;
-document.getElementById("go2").onclick = playBattle;
-document.getElementById("hit").onclick = press;
-window.addEventListener("keydown", e => { if (e.code === "Space" && !(e.target instanceof HTMLInputElement)) { e.preventDefault(); press(); } });
-const tl = document.getElementById("timeline");
-["히자즈", "도리안", "궁조", "인", "데궁", "드럼 빔", "히자즈", "도리안", "궁조", "인", "데궁", "다섯 섞임", "끝"].forEach((nm, i) => {
-  const s = document.createElement("span"); s.textContent = (i >= 6 && i <= 10 ? "B · " : i < 5 ? "A · " : "") + nm; tl.appendChild(s);
+const cards = $("cards");
+E.ORDER.concat(["echo"]).forEach((id, i) => {
+  const w = id === "echo" ? { name: "메아리", where: "바로 앞 세계 흉내", color: "#cfc9dc", scale: null, leadName: "앞 세계 악기가 8분 늦게 따라 부름", counterName: "", percName: "", bedName: "" } : E.WORLDS[id];
+  const foes = Object.keys(E.ENEMY_WORLD).filter(k => E.ENEMY_WORLD[k] === id).map(k => FOE[k]).join(" · ");
+  const b = document.createElement("button"); b.type = "button"; b.className = "wcard"; b.dataset.id = id; b.style.setProperty("--c", w.color);
+  b.setAttribute("aria-pressed", "false");
+  b.innerHTML = `<span class="wn"><small>${id === "echo" ? "*" : i + 1}</small>${w.name}</span><span class="ww">${w.where}</span>` +
+    (w.scale ? `<span class="ws">${scaleHTML(w.scale)}</span><span class="wi">${w.leadName} · ${w.counterName} · ${w.percName}</span>` : `<span class="ws">고른 앞 세계 음계 그대로</span><span class="wi">${w.leadName}</span>`) +
+    `<span class="wf">${foes}</span>`;
+  b.onclick = () => listen(id);
+  cards.appendChild(b);
 });
-const mb = document.getElementById("mutes");
+const mb = $("mutes");
 MUTES.forEach(([bus, nm]) => {
   const l = document.createElement("label"); l.className = "toggle";
   l.innerHTML = `<input type="checkbox" checked data-bus="${bus}" id="mute-${bus}"><span>${nm}</span>`;
   l.querySelector("input").onchange = e => { if (G) E.setMute(G, bus, !e.target.checked); };
   mb.appendChild(l);
 });
-const dbox = document.getElementById("diffs");
-DIFFS.forEach(dd => {
-  const b = document.createElement("button"); b.type = "button"; b.textContent = dd.name; b.setAttribute("aria-pressed", String(dd === diff));
-  b.onclick = () => { diff = dd; dbox.querySelectorAll("button").forEach(o => o.setAttribute("aria-pressed", String(o === b))); };
-  dbox.appendChild(b);
+LAYERS.forEach(([v, a, d], i) => {
+  const b = document.createElement("button"); b.type = "button"; b.innerHTML = `연속 ${a}<span>${d}</span>`;
+  b.onclick = () => { streak = v; shown = v; showStreak(); if (!ctx) showLayer(i); };
+  $("layers").appendChild(b);
 });
-const bbox = document.getElementById("bpms");
-[[100, "구간 Ⅰ · 100"], [115, "구간 Ⅱ · 115"], [128, "영상과 같은 128"]].forEach(([v, label]) => {
-  const b = document.createElement("button"); b.type = "button"; b.textContent = label + " BPM"; b.setAttribute("aria-pressed", String(v === bpm));
-  b.onclick = () => { bpm = v; bbox.querySelectorAll("button").forEach(o => o.setAttribute("aria-pressed", String(o === b))); if (mode === "battle") { stopAll(); playBattle(); } };
-  bbox.appendChild(b);
+showLayer(0);
+BPMS.forEach(([v, nm]) => {
+  const b = document.createElement("button"); b.type = "button"; b.textContent = `${nm} · ${v}`; b.setAttribute("aria-pressed", String(v === bpm));
+  b.onclick = () => {
+    bpm = v; document.querySelectorAll("#bpms button").forEach(o => o.setAttribute("aria-pressed", String(o === b)));
+    if (mode === "battle") { stopAll(); battle(); } else if (mode === "listen") { const id = curW.mirror ? "echo" : curW.id; stopAll(); listen(id); }
+  };
+  $("bpms").appendChild(b);
 });
-const rows = document.getElementById("maprows");
-E.ORDER.forEach(id => {
-  const w = E.WORLDS[id], tr = document.createElement("tr");
-  tr.innerHTML = `<td><span class="dot" style="background:${w.color}"></span>${w.name} · ${w.where}</td><td>${w.leadName} · ${w.counterName} · ${w.percName}</td><td>${GENRE[id]}</td>`;
+PRESETS.forEach(p => {
+  const b = document.createElement("button"); b.type = "button"; b.textContent = p.name; b.setAttribute("aria-pressed", String(p === preset));
+  b.onclick = () => { preset = p; document.querySelectorAll("#presets button").forEach(o => o.setAttribute("aria-pressed", String(o === b))); drawSeq(); if (mode === "battle") { stopAll(); battle(); } };
+  $("presets").appendChild(b);
+});
+drawSeq();
+AUTOS.forEach(([v, nm]) => {
+  const b = document.createElement("button"); b.type = "button"; b.textContent = nm; b.setAttribute("aria-pressed", String(v === autoMode));
+  b.onclick = () => { autoMode = v; document.querySelectorAll("#autos button").forEach(o => o.setAttribute("aria-pressed", String(o === b))); };
+  $("autos").appendChild(b);
+});
+E.SUBDIV.forEach(sd => {
+  const b = document.createElement("button"); b.type = "button"; b.className = "scard"; b.setAttribute("aria-pressed", String(sd === sub));
+  b.innerHTML = `<span class="sn">${sd.name}</span><span class="sd">${sd.desc}</span><canvas width="300" height="58"></canvas>`;
+  drawSub(b.querySelector("canvas"), sd);
+  b.onclick = () => {
+    sub = sd; document.querySelectorAll(".scard").forEach(o => o.setAttribute("aria-pressed", String(o === b)));
+    if (mode !== "battle") { $("lp").checked = true; $("lm").checked = false; if (mode !== "listen") listen(curW.mirror ? "echo" : curW.id); }
+  };
+  $("subs").appendChild(b);
+});
+const rows = $("maprows");
+E.ORDER.concat(["echo"]).forEach(id => {
+  const w = id === "echo" ? { name: "메아리", where: "바로 앞 세계 흉내", color: "#cfc9dc" } : E.WORLDS[id], tr = document.createElement("tr");
+  const foes = Object.keys(E.ENEMY_WORLD).filter(k => E.ENEMY_WORLD[k] === id).map(k => `${FOE[k]} <span style="color:var(--dim)">${k}</span>`).join("<br>");
+  tr.innerHTML = `<td><span class="dot" style="background:${w.color}"></span>${w.name} · ${w.where}</td><td>${GENRE[id]}</td><td>${foes}</td>`;
   rows.appendChild(tr);
 });
+$("go").onclick = battle;
+$("hit").onclick = press;
+$("stop").onclick = stopAll;
+window.addEventListener("keydown", e => { if (e.code === "Space" && mode === "battle" && !(e.target instanceof HTMLInputElement)) { e.preventDefault(); press(); } });
 
-const rc = document.getElementById("ring"), rg = rc.getContext("2d"), RW = rc.width, RC = RW / 2, RR = 34;
-const lc = document.getElementById("lane"), lg = lc.getContext("2d");
+// 박 쪼개기 칸 그림: 두 마디 · 16분 눈금 · 셋잇단 자리는 점선
+function drawSub(cv, sd) {
+  const g = cv.getContext("2d"), W = cv.width, H = cv.height, x0 = 4, bw = (W - 8) / 8;
+  g.fillStyle = "#0e0c15"; g.fillRect(0, 0, W, H);
+  for (let k = 0; k <= 32; k++) { g.fillStyle = k % 16 === 0 ? "#6b5f8a" : k % 4 === 0 ? "#3a3450" : "#221e30"; g.fillRect(Math.round(x0 + k * bw / 4), k % 4 ? 22 : 12, 1, k % 4 ? 18 : 34); }
+  sd.bars.forEach((pos, h) => pos.forEach((p, i) => {
+    const x = Math.round(x0 + (h * 4 + p) * bw), end = i === pos.length - 1, trip = Math.abs(p * 3 - Math.round(p * 3)) < 1e-6 && Math.abs(p * 4 - Math.round(p * 4)) > 1e-6;
+    g.fillStyle = end ? "#e8c46a" : trip ? "#b28cff" : "#ece6d6";
+    g.fillRect(x - 2, 26, 5, 5);
+    if (end) { g.strokeStyle = "#e8c46a"; g.lineWidth = 1; g.strokeRect(x - 4.5, 23.5, 10, 10); g.font = "11px sans-serif"; g.fillText(h ? "도" : "솔", x - 5, 54); }
+  }));
+}
+
+// 12음 고리 · 다가오는 노트 · 박 칸
+const rc = $("ring"), rg = rc.getContext("2d"), RW = rc.width, RC = RW / 2, RR = 22;
+const lc = $("lane"), lg = lc.getContext("2d");
+function fitLane() { lc.width = Math.max(160, Math.round(lc.clientWidth / 2)); }
+window.addEventListener("resize", fitLane); fitLane();
 function px(c, x, y, s, col) { c.fillStyle = col; c.fillRect(Math.round(x - s / 2), Math.round(y - s / 2), s, s); }
 function pos(pc, r) { const a = -Math.PI / 2 + pc * Math.PI / 6; return [RC + Math.cos(a) * r, RC + Math.sin(a) * r]; }
-function draw(now) {
-  const w = E.WORLDS[curWorld], col = w.color, sc = w.scale;
+function semiY(s, H) { return H - 6 - (s + 7) / 28 * (H - 12); }
+function draw(nowMs) {
+  const w = shownW || E.WORLDS.gye, col = shownW ? w.color : "#6b5f8a", sc = w.scale;
   rg.fillStyle = "#1c1928"; rg.fillRect(0, 0, RW, RW);
-  for (let r = RR + 6; r <= RR + 8; r++) for (let k = 0; k < 360; k += 1.5) { const a = k * Math.PI / 180; px(rg, RC + Math.cos(a) * r, RC + Math.sin(a) * r, 1, r === RR + 6 ? "#6b5426" : "#a9873a"); }
+  for (let k = 0; k < 360; k += 2) { const a = k * Math.PI / 180; px(rg, RC + Math.cos(a) * (RR + 6), RC + Math.sin(a) * (RR + 6), 1, "#6b5426"); }
   const pts = sc.map(pc => pos(pc, RR));
   rg.globalAlpha = 0.25; rg.fillStyle = col; rg.beginPath(); pts.forEach(([x, y], i) => i ? rg.lineTo(x, y) : rg.moveTo(x, y)); rg.closePath(); rg.fill(); rg.globalAlpha = 1;
-  rg.strokeStyle = col; rg.lineWidth = 1; rg.beginPath(); pts.forEach(([x, y], i) => i ? rg.lineTo(Math.round(x) + 0.5, Math.round(y) + 0.5) : rg.moveTo(Math.round(x) + 0.5, Math.round(y) + 0.5)); rg.closePath(); rg.stroke();
   for (let pc = 0; pc < 12; pc++) { const [x, y] = pos(pc, RR), lit = sc.includes(pc); px(rg, x, y, lit ? 4 : 2, pc === 0 || pc === 7 ? "#e8c46a" : lit ? col : "#3a3450"); }
-  if (lastPc !== null && now - lastPcAt < 400) { const [x, y] = pos(lastPc, RR); px(rg, x, y, 7, "#ffffff"); }
-  px(rg, RC, RC, 6, col);
-  const LW = lc.width, LH = lc.height, hx = 24;
+  if (lastSemi !== null && nowMs - lastSemiAt < 450) { const [x, y] = pos(((lastSemi % 12) + 12) % 12, RR); px(rg, x, y, 7, "#ffffff"); }
+  const LW = lc.width, LH = lc.height, hx = 22, sp = 120;
   lg.fillStyle = "#0e0c15"; lg.fillRect(0, 0, LW, LH);
-  for (let y = 0; y < LH; y += 2) px(lg, hx, y, 1, "#e8c46a");
-  if (ctx && mode === "battle") {
+  for (const s of [-5, 0, 7, 12, 19]) for (let x = 0; x < LW; x += 3) px(lg, x, semiY(s, LH), 1, s % 12 === 0 ? "#6b5426" : "#3b3460");
+  const beatsEl = $("beats").children;
+  if (ctx && G) {
     const t = ctx.currentTime;
+    for (const b of bars) for (let k = 0; k < 4; k++) { const x = hx + (b.t + k * G.beat - t) * sp; if (x > 0 && x < LW) for (let y = 0; y < LH; y += 2) px(lg, x, y, 1, k ? "#221e30" : "#3a3450"); }
     for (const n of notes) {
-      if (n.done) continue;
-      const x = hx + (n.time - t) * 150;
-      if (x < -6 || x > LW + 6) continue;
-      lg.fillStyle = E.WORLDS[n.world].color; lg.fillRect(Math.round(x - 3), LH / 2 - 6, 6, 12);
+      const x = hx + (n.time - t) * sp;
+      if (x < -8 || x > LW + 8 || (n.done && !n.auto)) continue;
+      const y = semiY(n.semi, LH), c = n.w.color;
+      if (n.auto && x < hx - 2) continue;
+      lg.fillStyle = c; lg.fillRect(Math.round(x - 3), Math.round(y - 3), 6, 6);
+      if (n.end) { lg.strokeStyle = "#e8c46a"; lg.lineWidth = 1; lg.strokeRect(Math.round(x - 5) + 0.5, Math.round(y - 5) + 0.5, 10, 10); }
     }
-  }
+    let cur = null;
+    for (const b of bars) if (b.t <= t) cur = b;
+    const k = cur ? Math.floor((t - cur.t) / G.beat) : -1;
+    for (let i = 0; i < 4; i++) { beatsEl[i].className = i === k ? (cur.fill && i === 3 ? "fill" : "on") : ""; }
+  } else for (let i = 0; i < 4; i++) beatsEl[i].className = "";
+  for (let y = 0; y < LH; y += 2) px(lg, hx, y, 1, "#e8c46a");
   requestAnimationFrame(draw);
 }
 requestAnimationFrame(draw);
