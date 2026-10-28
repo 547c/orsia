@@ -81,6 +81,10 @@ func _process(delta: float) -> void:
 		if not n.closed and _t >= float(n.at):
 			n.closed = true
 			closed.emit(i)
+			# 터지는 박에 비켜나 있으면 그 박에 소리(판정은 GRACE 뒤)
+			if n.grade == "" and not (danger(n) as Array).has(cell):
+				n.rang = true
+				struck.emit(i, 0)
 		if n.grade == "":
 			if n.sub == "chase" and (n.tiles as Array).is_empty() and _t >= lock_t(n):
 				n.tiles = [cell]
@@ -91,6 +95,8 @@ func _process(delta: float) -> void:
 					_blasts.append({"v": v, "t": _t, "c": C_CHASE if n.sub == "chase" else C_WARN})
 				if hit:
 					_hurt_t = _t
+				elif not bool(n.get("rang", false)):
+					struck.emit(i, 0)
 				_judge(i, "miss" if hit else "perfect", 0.0)
 		if n.grade == "" or _t - float(n.judged_t) < 0.45:
 			done = false

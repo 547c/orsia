@@ -115,9 +115,15 @@ func _process(delta: float) -> void:
 		if not n.closed and _t >= float(n.at):
 			n.closed = true
 			closed.emit(i)
+			# 닿는 박에 방패가 맞는 쪽이면 그 박에 소리(판정은 GRACE 뒤)
+			if n.grade == "" and face == int(n.lane):
+				n.rang = true
+				struck.emit(i, 0)
 		if n.grade == "" and _t >= float(n.at) + GRACE:
 			var ok := face == int(n.lane)
 			if ok:
+				if not bool(n.get("rang", false)):
+					struck.emit(i, 0)
 				_block_t = _t
 				_shatter(n)
 			else:

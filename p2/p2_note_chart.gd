@@ -15,6 +15,8 @@ extends Node2D
 
 signal closed(i: int)
 signal judged(i: int, grade: String, dt: float)
+# 노트 소리가 날 순간: 쳐 낸 그때(길게 · 따라가기 · 두 번은 첫 누름에, 막기 · 피하기는 닿는 박에). n = 같은 노트 안 몇째 타(연타 · 두 번의 뒤 타는 1부터)
+signal struck(i: int, n: int)
 signal cue(key: String, step: int, vol: float)
 signal timing(d: float, grade: String)
 signal held(id: Variant, down: bool, label: String)
@@ -347,7 +349,7 @@ func _press(at: Vector2) -> bool:
 		var n: Dictionary = notes[i]
 		if n.grade == "" and n.kind == "d" and float(n.second) >= 0.0:
 			if at.distance_to(n.pos) <= radius * 1.6:
-				_judge(i, n.start if _t - float(n.second) >= 0.04 else _drop(n.start), _t - float(n.at))
+				_second(i)
 				return true
 	var i := _current()
 	if i < 0 or at.distance_to(notes[i].pos) > radius * 1.4:
@@ -361,7 +363,7 @@ func press_now() -> void:
 	for i in range(notes.size()):
 		var n: Dictionary = notes[i]
 		if n.grade == "" and n.kind == "d" and float(n.second) >= 0.0:
-			_judge(i, n.start if _t - float(n.second) >= 0.04 else _drop(n.start), _t - float(n.at))
+			_second(i)
 			return
 	var i := _current()
 	if i >= 0:
@@ -381,6 +383,15 @@ func _drop(g: String) -> String:
 	return "good" if g == "perfect" else "miss"
 
 
+# 두 번 노트의 두 번째 누름
+func _second(i: int) -> void:
+	var n: Dictionary = notes[i]
+	var g: String = n.start if _t - float(n.second) >= 0.04 else _drop(n.start)
+	if g != "miss":
+		struck.emit(i, 1)
+	_judge(i, g, _t - float(n.at))
+
+
 func _hit(i: int) -> void:
 	var n: Dictionary = notes[i]
 	var d := _t - float(n.at) - offset
@@ -396,6 +407,7 @@ func _hit(i: int) -> void:
 	if g == "miss":
 		_judge(i, g, d)
 		return
+	struck.emit(i, 0)
 	match String(n.kind):
 		"h", "s":
 			n.start = g

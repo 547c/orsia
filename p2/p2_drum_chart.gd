@@ -116,6 +116,7 @@ func _strike(side: String) -> void:
 		if n.drum == "roll":
 			if _t >= float(n.at) - good_early and _t <= float(n.at) + float(n.hold) + offset:
 				n.rolls = int(n.rolls) + 1
+				struck.emit(i, int(n.rolls) - 1)
 				_pops.append({"t": _t, "c": C_ROLL})
 				return
 			if _t < float(n.at) - good_early:
@@ -139,6 +140,8 @@ func press_now() -> void:
 		return
 	var n: Dictionary = notes[i]
 	if n.drum == "roll":
+		if int(n.rolls) == 0:
+			struck.emit(i, 0)
 		n.rolls = roll_need(n)
 		return
 	_strike(String(n.drum))

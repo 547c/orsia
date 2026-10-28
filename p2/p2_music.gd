@@ -55,13 +55,12 @@ var _events: Array = []
 var _shots: Array = []
 var _pool: Array[AudioStreamPlayer] = []
 var _next_shot := 0
-var _lp: AudioEffectLowPassFilter
 var _fill := {}
 var _end := {}
 var _tones := {}
-var _thud: AudioStream
 var _crack: AudioStream
 var _released := false
+var _again_t := -1.0
 
 
 static func world_of(role: String) -> String:
@@ -121,7 +120,6 @@ func setup(roles: Array, sector: String, fx: String) -> void:
 			var sm := int(semi)
 			bank[sm] = load("%s%s/tone/perfect_%s.ogg" % [DIR, w, ("m%d" % -sm) if sm < 0 else str(sm)])
 		_tones[w] = bank
-	_thud = load(DIR + "common/thud.ogg")
 	_crack = load(DIR + "common/crack.ogg")
 	_player = AudioStreamPlayer.new()
 	_player.stream = _sync
@@ -141,7 +139,7 @@ func setup(roles: Array, sector: String, fx: String) -> void:
 		_pool.append(p)
 
 
-# 전투 음악 버스(이 전투만): 휘청용 저역 통과 · 겹을 더해도 넘치지 않게 압축 · 한계. 음악 버스로 보내 음소거 설정을 따른다
+# 전투 음악 버스(이 전투만): 겹을 더해도 넘치지 않게 압축 · 한계. 음악 버스로 보내 음소거 설정을 따른다
 func _make_bus() -> void:
 	_bus = "P2Music%d" % get_instance_id()
 	AudioServer.add_bus()
@@ -149,9 +147,6 @@ func _make_bus() -> void:
 	AudioServer.set_bus_name(b, _bus)
 	var music := String(MusicManager.MUSIC_BUS_NAME)
 	AudioServer.set_bus_send(b, music if AudioServer.get_bus_index(music) >= 0 else "Master")
-	_lp = AudioEffectLowPassFilter.new()
-	_lp.cutoff_hz = 20000.0
-	AudioServer.add_bus_effect(b, _lp)
 	var comp := AudioEffectCompressor.new()
 	comp.threshold = -14.0
 	comp.ratio = 2.5
@@ -356,22 +351,28 @@ func step(n: int) -> void:
 	if not P2MusicMeta.WORLDS.has(_world):
 		return
 	var ts: Array = P2MusicMeta.WORLDS[_world].tones
-	tone(_world, int(ts[posmod(n, ts.size())]), "perfect", clock())
+	tone(_world, int(ts[posmod(n, ts.size())]), clock())
 
 
-# 막기 판정 소리: 완벽 · 막음 모두 그 노트 선율 음 한 옥타브 위(일찍 눌렀으면 노트 박 at에 맞춰), 놓침만 음 없는 둔탁한 소리
-func tone(world: String, semi: int, grade: String, at: float) -> void:
-	var g := linear_to_db(maxf(P2Beat.gain, 0.001))
-	if grade == "miss":
-		_shot(_thud, P2MusicMeta.PRE, clock(), g, fx_bus)
-		return
+# 노트를 쳐 낸 소리: 그 노트 선율 음 한 옥타브 위(일찍 쳤으면 노트 박 at에 맞춰). 놓치면 아무 소리 없이 내 음만 빠진다
+func tone(world: String, semi: int, at: float) -> void:
 	var bank: Dictionary = _tones.get(world, {})
-	var s: AudioStream = bank.get(semi, bank.get(0))
-	_shot(s, P2MusicMeta.PRE, maxf(at, clock()), g + TONE_DB, fx_bus)
+	_shot(bank.get(semi, bank.get(0)), P2MusicMeta.PRE, maxf(at, clock()), linear_to_db(maxf(P2Beat.gain, 0.001)) + TONE_DB, fx_bus)
+
+
+# 연타 · 두 번의 뒤 타: 같은 음을 다음 16분 칸에 작게(한 칸에 하나, 노트 박 at 뒤에만)
+func tone_again(world: String, semi: int, at: float) -> void:
+	var q := beat / 4.0
+	var t := ceilf(maxf(clock(), at + q * 0.5) / q) * q
+	if t < _again_t + q * 0.5:
+		return
+	_again_t = t
+	var bank: Dictionary = _tones.get(world, {})
+	_shot(bank.get(semi, bank.get(0)), P2MusicMeta.PRE, t, linear_to_db(maxf(P2Beat.gain, 0.001)) + TONE_DB - 6.0, fx_bus)
 
 
 # 연속(전투 콤보)이 바뀜. 이으면 쌓기 · 회복(4번 연달아면 금이 아물고 꺼진 겹 하나가 다음 마디에 돌아옴).
-# 끊기면 금: 처음엔 음악이 휘청만, 금 간 채 또 끊기면 맨 위 겹 하나가 테이프 멈추듯 처지며 꺼짐. 돌아온 · 꺼진 겹 이름을 돌려준다
+# 끊기면 금: 처음엔 금만(노래는 그대로, 연속 5 이상이 끊기면 금 가는 소리), 금 간 채 또 끊기면 맨 위 겹 하나가 테이프 멈추듯 처지며 꺼짐. 돌아온 · 꺼진 겹 이름을 돌려준다
 func combo(ok: bool, before: int, now: int) -> Dictionary:
 	var out := {}
 	if _mode in ["rest", "off"]:
@@ -406,7 +407,6 @@ func combo(ok: bool, before: int, now: int) -> Dictionary:
 		out["cut"] = String(p[2])
 	else:
 		cracks = mini(cracks, 1)
-		_stumble()
 	return out
 
 
@@ -430,20 +430,6 @@ func _tape_stop(stems: Array) -> void:
 		tw.tween_property(p, "volume_db", p.volume_db - 30.0, 0.42).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 		tw.chain().tween_callback(p.queue_free)
 	_retarget(0.05)
-
-
-# 한 번 놓침: 음악 전체가 잠깐 먹먹해졌다 돌아옴(겹은 그대로)
-func _stumble() -> void:
-	var tw := create_tween()
-	tw.tween_method(_set_cutoff, 14.3, 9.35, 0.05)
-	tw.tween_method(_set_cutoff, 9.35, 14.3, 0.45)
-	var tv := create_tween()
-	tv.tween_property(_player, "volume_db", VOLUME_DB - 4.0, 0.04)
-	tv.tween_property(_player, "volume_db", VOLUME_DB, 0.41)
-
-
-func _set_cutoff(x: float) -> void:
-	_lp.cutoff_hz = pow(2.0, x)
 
 
 # 전투 끝: 이기면 다음 마디 첫 박에 끝맺음(솔 → 도)과 함께 리듬이 빠지고 받침만, 지면 모든 소리가 테이프 멈추듯 처진다

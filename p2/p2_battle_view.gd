@@ -3570,8 +3570,8 @@ func _arcane_sprite(key: String, pos: Vector2, px: float, by_width := false) -> 
 	return sp
 
 
-# 세계 음악 전투의 악보 동안: 음높이가 있는 효과음은 음계와 부딪혀 빼고, 막기 · 휘두르기는 막기 음 뒤로 물린다
-const MUSIC_SFX := {"crit_ring": -80.0, "block": -9.0, "enemy_swing": -7.0, "swing": -6.0}
+# 세계 음악 전투의 악보 동안: 음높이가 있는 효과음과 막기 철컥은 빼고(막은 소리는 막기 음이 맡는다), 휘두르기는 막기 음 뒤로 물린다
+const MUSIC_SFX := {"crit_ring": -80.0, "block": -80.0, "enemy_swing": -7.0, "swing": -6.0}
 
 
 func _sfx(key: String, pitch := 1.0, volume_offset := 0.0) -> void:
@@ -8331,14 +8331,14 @@ func _parry_chart(index: int, hits: Array, simple := false) -> P2NoteChart:
 		first -= float(pat[0].beats[0]) * beat
 		chart.follow(_music.clock, at - first)
 		chart.set_meta("world", world)
-		chart.set_meta("semis", notes.map(func(q): return int(q.get("semi", 0))))
+		chart.struck.connect(_on_note_struck.bind(chart))
 		var force: Array = []
 		for g in pat:
 			for st in ["counter", "perc"]:
 				if (g.srcs as Array).has(st) and not force.has(st):
 					force.append(st)
 		_music.enemy(world, at, force)
-		chart.cue.connect(_on_music_cue)
+		chart.cue.connect(_on_music_cue.bind(chart))
 	else:
 		chart.cue.connect(_on_cue)
 	chart.set_meta("center", c)
@@ -8436,11 +8436,24 @@ func _on_cue(key: String, step: int, vol: float) -> void:
 			_mana_label.create_tween().tween_property(_mana_label, "scale", Vector2.ONE, 0.18).set_ease(Tween.EASE_OUT)
 
 
-func _on_music_cue(key: String, step: int, vol: float) -> void:
+# 세계 음악 전투의 악보 단서: 킥은 화면 맥박만, 부름은 그 노트 선율 음으로. 예전 반주 · 누를 때 쿵 · 딱 소리는 음악과 겹쳐 내지 않는다
+func _on_music_cue(key: String, step: int, vol: float, chart: P2NoteChart) -> void:
 	if key == "kick":
 		_on_cue(key, step, vol)
-	elif key != "hat" and key != "snare" and _beat != null:
-		_beat.play(key, step, vol)
+	elif key == "chime" and is_instance_valid(chart) and step < chart.notes.size():
+		var n: Dictionary = chart.notes[step]
+		_music.tone(String(chart.get_meta("world")), int(n.get("semi", 0)), chart.t0 + float(n.at) - chart.call)
+
+
+# 세계 음악 전투: 노트를 쳐 낸 순간 그 노트 선율 음(일찍 쳤으면 노트 박에). 연타 · 두 번의 뒤 타는 16분 칸에 맞춰 작게
+func _on_note_struck(i: int, k: int, chart: P2NoteChart) -> void:
+	if _music == null or not is_instance_valid(chart) or not chart.has_meta("world"):
+		return
+	var n: Dictionary = chart.notes[i]
+	if k == 0:
+		_music.tone(String(chart.get_meta("world")), int(n.get("semi", 0)), chart.t0 + float(n.at))
+	else:
+		_music.tone_again(String(chart.get_meta("world")), int(n.get("semi", 0)), chart.t0 + float(n.at))
 
 
 func _wire_chart(chart: P2NoteChart) -> void:
@@ -8754,11 +8767,8 @@ func _on_note_judged(i: int, grade: String, dt: float, chart: P2NoteChart) -> vo
 	var kind := String(chart.notes[i].kind)
 	if grade == "miss" and kind != "x":
 		_miss_kind[kind] = int(_miss_kind.get(kind, 0)) + 1
-	if _music != null and chart.has_meta("world"):
-		var semis: Array = chart.get_meta("semis", [])
-		if kind != "x" or grade == "miss":
-			_music.tone(String(chart.get_meta("world")), int(semis[i]) if i < semis.size() else 0, grade, chart.t0 + float(chart.notes[i].at))
-	elif _beat != null:
+	# 세계 음악 전투는 판정 때 소리를 내지 않는다(쳐 낸 순간 _on_note_struck이 노트 박에 막기 음)
+	if not (_music != null and chart.has_meta("world")) and _beat != null:
 		if grade == "perfect":
 			_beat.play("chime", i)
 		elif grade == "good":

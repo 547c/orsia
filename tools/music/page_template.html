@@ -184,7 +184,7 @@ canvas#lane { width: 100%; height: 132px; image-rendering: pixelated; display: b
   <section class="step" aria-labelledby="s2">
     <h2 id="s2">한 판: 적 차례대로</h2>
     <p class="note">내 차례 2마디 뒤에 적 셋이 2마디씩 공격합니다. 막을 때마다 막기 음이 그 세계 동기를 따라가고, 앞 마디 묶음은 <b>솔</b>, 뒷 마디 묶음은 <b>도</b>로 끝납니다. 리듬 칸은 적 등급에 맞춰 마디마다 섞여 나옵니다.</p>
-    <p class="note"><b>연속과 음악은 따로 갑니다.</b> 놓치면 연속은 바로 0이 되지만 음악은 잠깐 휘청할 뿐입니다(금). 금 간 채로 또 놓치면 맨 위 겹 하나가 테이프 멈추듯 처지며 꺼집니다. 4번 연달아 막으면 금이 아물고, 꺼진 겹은 4번마다 하나씩 다음 마디에 돌아옵니다. 겹은 연속 5 · 10 · 20에서 새로 쌓입니다.</p>
+    <p class="note"><b>연속과 음악은 따로 갑니다.</b> 놓치면 연속은 바로 0이 되고 내 막기 음만 빠질 뿐, 노래는 그대로입니다(금). 금 간 채로 또 놓치면 맨 위 겹 하나가 테이프 멈추듯 처지며 꺼집니다. 4번 연달아 막으면 금이 아물고, 꺼진 겹은 4번마다 하나씩 다음 마디에 돌아옵니다. 겹은 연속 5 · 10 · 20에서 새로 쌓입니다.</p>
     <div class="row" id="presets"><span class="label">적 순서</span></div>
     <div class="seq" id="seq"></div>
     <canvas id="lane" width="320" height="66" aria-label="다가오는 노트, 높이는 음 높이, 금색 선은 도와 솔"></canvas>
@@ -282,7 +282,7 @@ function hit(grow) {
 function miss(t) {
   const big = H.combo >= 5, left = H.earned - H.cut;
   H.combo = 0; H.run = 0; H.cracks++;
-  E.thud(G, t); if (big) E.crack(G, t);
+  if (big) E.crack(G, t);
   if (H.cracks >= 2 && left > 0) {
     H.cut++; H.cracks = 0;
     const p = E.PARTS[H.earned - H.cut];
@@ -290,8 +290,7 @@ function miss(t) {
     return { big: big, msgs: [["cut", "부서짐 → " + p[1] + " 꺼짐"]] };
   }
   H.cracks = Math.min(H.cracks, 1);
-  E.stumble(G, t);
-  return { big: big, msgs: [["miss", (big ? "연속 부서짐 · 휘청" : "놓침 · 휘청") + (left > 0 ? " — 금 간 채로 또 놓치면 한 겹 꺼짐" : "")]] };
+  return { big: big, msgs: [["miss", (big ? "연속 부서짐" : "놓침") + (left > 0 ? " — 금 간 채로 또 놓치면 한 겹 꺼짐" : "")]] };
 }
 function showHeat(s, out) {
   const b = $("streak");
@@ -347,7 +346,7 @@ function autoJudge(n) {
   n.done = true; n.auto = true;
   let out;
   if (r === "miss") out = miss(n.time + 0.12);
-  else { E.parry(G, n.w, r === "block" ? n.time + 0.08 : n.time, n.semi, r); out = hit(mode === "battle"); }
+  else { E.parry(G, n.w, r === "block" ? n.time + 0.08 : n.time, n.semi, "perfect"); out = hit(mode === "battle"); }
   const snap = Object.assign({}, H);
   at(n.time, () => { flash(n, r); showHeat(snap, out); });
 }
@@ -356,7 +355,7 @@ function judge(n, d) {
   const a = Math.abs(d), now = ctx.currentTime;
   let r = "miss", out;
   if (a <= 0.065) { r = "perfect"; E.parry(G, n.w, Math.max(now, n.time), n.semi, r); out = hit(true); }
-  else if (a <= 0.13) { r = "block"; E.parry(G, n.w, now, n.semi, r); out = hit(true); }
+  else if (a <= 0.13) { r = "block"; E.parry(G, n.w, now, n.semi, "perfect"); out = hit(true); }
   else out = miss(now);
   flash(n, r); showHeat(H, out);
 }
