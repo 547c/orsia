@@ -7633,6 +7633,8 @@ func _parry_pattern(index: int, hits: Array, simple := false) -> Array:
 	var heavy_at := roundi(10.0 * battle.hit_mult)
 	if role == "maek_summoner_low" and int(hits[0]) >= heavy_at:
 		ph = {}
+	if _music != null and ph.is_empty():
+		return _cell_pattern(index, hits, simple, tier)
 	if not ph.is_empty():
 		var notes: Array = (ph.notes as Array).duplicate(true)
 		if int(_phrase_seen.get(role + String(ph.name), 0)) >= 2:
@@ -7698,6 +7700,66 @@ func _parry_pattern(index: int, hits: Array, simple := false) -> Array:
 			if not (bg.cells as Array).is_empty():
 				(bg.cells as Array).remove_at(drop)
 	return out
+
+
+# 세계 음악 전투의 악보 계획: 타격 묶음마다 한 마디, 노트 자리는 박 쪼개기 칸(P2MusicMeta.CELLS)을 적 등급 중심으로 섞어 뽑는다
+# (묶음끼리 같은 칸은 연달아 안 나옴). 롱·따라가기는 묶음 끝에만, 앞뒤가 좁은 자리의 특수 노트는 짧은 노트로. 같은 차례·같은 적이면 늘 같다
+func _cell_pattern(index: int, hits: Array, simple: bool, tier: int) -> Array:
+	var role: String = battle.roles[index]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([battle.seed_used, battle.turn_number, index, hits.size(), "cells"])
+	var shift := battle.pattern_level + (1 if battle.affix(index) == "rhythm" else 0)
+	var mix: Dictionary = P2MusicMeta.MIX[["normal", "deep", "elite", "boss"][clampi(tier + maxi(shift, 0), 0, 3)]]
+	var pool: Array = NOTE_POOL.get(role, ["t"])
+	var heavy_at := roundi(10.0 * battle.hit_mult)
+	var out: Array = []
+	var prev := ""
+	var sum := 0.0
+	for k in mix:
+		sum += float(mix[k])
+	for hi in range(hits.size()):
+		var beats: Array = []
+		for _tries in range(4):
+			var lv := String(mix.keys().back())
+			var x := rng.randf() * sum
+			for k in mix:
+				x -= float(mix[k])
+				if x < 0.0:
+					lv = String(k)
+					break
+			var cells: Array = P2MusicMeta.CELLS[lv]
+			var ci := rng.randi() % cells.size()
+			beats = (cells[ci] as Array).duplicate()
+			if "%s%d" % [lv, ci] != prev:
+				prev = "%s%d" % [lv, ci]
+				break
+		if (simple or shift < 0) and beats.size() > 2:
+			beats.remove_at(beats.size() - 2)
+		var heavy := int(hits[hi]) >= heavy_at
+		var kinds: Array = []
+		for k in range(beats.size()):
+			var after := (float(beats[k + 1]) if k + 1 < beats.size() else 4.0) - float(beats[k])
+			var before := float(beats[k]) - (float(beats[k - 1]) if k > 0 else -1.0)
+			var kind := String(pool[0]) if hi == 0 and k == 0 else String(pool[rng.randi() % pool.size()])
+			if kind in ["h", "s"] or (kind in ["d", "f", "x"] and (after < 1.0 or before < 0.5)) or (simple and kind != "t"):
+				kind = "t"
+			kinds.append(kind)
+		if heavy:
+			kinds[kinds.size() - 1] = "h" if tier < 2 or rng.randf() < 0.5 else "s"
+		if kinds.back() == "x":
+			kinds[kinds.size() - 1] = "t"
+		out.append({"kinds": kinds, "cells": [], "gaps": [], "beats": beats, "crush": heavy and tier >= 2, "phrase": ""})
+	return out
+
+
+# 다음 노트 시각: 박 칸 계획(beats)이면 묶음마다 다음 마디 첫 박(origin = 첫 묶음 마디 첫 박)에서 칸 자리대로, 아니면 앞 노트에서 반 박 간격만큼
+func _next_t(g: Dictionary, k: int, t: float, beat: float, origin: float) -> float:
+	if not g.has("beats"):
+		return t + int(g.gaps[k]) * beat / 2.0
+	if k == 0:
+		var bar := beat * 4.0
+		g["bar_at"] = origin + ceilf((t - origin) / bar - 0.001) * bar
+	return maxf(t, float(g.bar_at) + float(g.beats[k]) * beat)
 
 
 # 원거리 적(사수·맥 귀족)의 공격은 언다인식 화살 막기(P2ArrowChart). 리듬(간격·강타·보스 문장 칸)은 같은 계획에서 받고,
@@ -7772,6 +7834,7 @@ func _drum_notes(index: int, pat: Array, tier: int, beat: float, ap: float, call
 	var notes: Array = []
 	var groups: Array = []
 	var t := beat * 2.0 + (call - beat if call > 0.0 else 0.0)
+	var origin := t
 	var last := ""
 	var same := 0
 	for g in pat:
@@ -7779,7 +7842,7 @@ func _drum_notes(index: int, pat: Array, tier: int, beat: float, ap: float, call
 		var gk: Array = g.kinds
 		for k in range(gk.size()):
 			var kind := String(gk[k])
-			t += int(g.gaps[k]) * half
+			t = _next_t(g, k, t, beat, origin)
 			var heavy := bool(g.crush) and k == gk.size() - 1
 			if kind in ["h", "s"] and not heavy:
 				var hold := beat * 1.5 if tier >= 2 else beat
@@ -7820,6 +7883,7 @@ func _dodge_notes(index: int, pat: Array, beat: float, ap: float, call: float) -
 	var notes: Array = []
 	var groups: Array = []
 	var t := beat * 2.0 + (call - beat if call > 0.0 else 0.0)
+	var origin := t
 	var prev := ""
 	var line := func(row: bool, i: int) -> Array:
 		return [0, 1, 2].map(func(j): return Vector2i(j, i) if row else Vector2i(i, j))
@@ -7828,7 +7892,7 @@ func _dodge_notes(index: int, pat: Array, beat: float, ap: float, call: float) -
 		var gk: Array = g.kinds
 		for k in range(gk.size()):
 			var kind := String(gk[k])
-			t += int(g.gaps[k]) * half
+			t = _next_t(g, k, t, beat, origin)
 			var strikes: Array = []
 			if bool(g.crush) and k == gk.size() - 1:
 				var safe := Vector2i(rng.randi() % 3, rng.randi() % 3)
@@ -7880,11 +7944,12 @@ func _echo_notes(pat: Array, beat: float, ap: float, call: float) -> Array:
 	var notes: Array = []
 	var groups: Array = []
 	var t := beat * 2.0 + call - beat
+	var origin := t
 	for g in pat:
 		var ids: Array = []
 		var gk: Array = g.kinds
 		for k in range(gk.size()):
-			t += int(g.gaps[k]) * half
+			t = _next_t(g, k, t, beat, origin)
 			for s in range(2 if String(gk[k]) == "d" else 1):
 				if s > 0:
 					t += half
@@ -7939,6 +8004,7 @@ func _arrow_notes(index: int, pat: Array, tier: int, beat: float, ap: float, cal
 	var notes: Array = []
 	var groups: Array = []
 	var t := beat * 2.0 + (call - beat if call > 0.0 else 0.0)
+	var origin := t
 	var last := -1
 	var same := 0
 	for g in pat:
@@ -7946,7 +8012,7 @@ func _arrow_notes(index: int, pat: Array, tier: int, beat: float, ap: float, cal
 		var styles := _arrow_styles(g, tier)
 		var gk: Array = g.kinds
 		for k in range(gk.size()):
-			t += int(g.gaps[k]) * half
+			t = _next_t(g, k, t, beat, origin)
 			var shots: Array = styles[k]
 			for s in range(shots.size()):
 				if s > 0:
@@ -8003,6 +8069,7 @@ func _parry_chart(index: int, hits: Array, simple := false) -> P2NoteChart:
 	var groups: Array = []
 	var multi := pat.size() > 1 or (pat[0].kinds as Array).size() > 1
 	var t := beat * 2.0 + (call - beat if phrase != "" else 0.0)
+	var origin := t
 	var last := Vector2i(99, 99)
 	var recent: Array = []
 	var fresh: Array = []
@@ -8020,7 +8087,7 @@ func _parry_chart(index: int, hits: Array, simple := false) -> P2NoteChart:
 			var ids: Array = []
 			for k in range((g.kinds as Array).size()):
 				var kind := String(g.kinds[k])
-				t += int(g.gaps[k]) * half
+				t = _next_t(g, k, t, beat, origin)
 				var cell := Vector2i(0, 0)
 				if not (g.cells as Array).is_empty():
 					cell = g.cells[k]
@@ -8119,6 +8186,9 @@ func _parry_chart(index: int, hits: Array, simple := false) -> P2NoteChart:
 			first = float(notes[0].at)
 			for nt in notes:
 				first = minf(first, float(nt.at))
+		# 박 칸 계획이면 첫 노트가 마디 첫 박이 아닐 수 있다(엇박 칸): 마디 첫 박을 음악 마디에 맞춘다
+		if (pat[0] as Dictionary).has("beats"):
+			first -= float(pat[0].beats[0]) * beat
 		var at := _music.entry(0.6 + first)
 		chart.follow(_music.clock, at - first)
 		chart.set_meta("world", world)

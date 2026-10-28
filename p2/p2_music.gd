@@ -35,7 +35,7 @@ var run := 0
 var _bus := ""
 var _worlds: Array = []
 var _world := ""
-# mine 내 차례(받침 + 가벼운 타악) · enemy 적 차례 · rest 이긴 뒤 · off 진 뒤
+# mine 내 차례(받침 + 가벼운 타악 + 얇은 그루브: 킥 1·3 · 하이햇 · 앞 악기 작게) · enemy 적 차례 · rest 이긴 뒤 · off 진 뒤
 var _mode := "mine"
 var _next := ""
 var _hush := false
@@ -187,10 +187,9 @@ func clock() -> float:
 	return mixed() - AudioServer.get_output_latency()
 
 
-# 적 공격 첫 노트 자리: 지금부터 lead초 넘게 남은 가장 가까운 반 마디 칸
+# 적 공격 첫 마디 첫 박 자리: 지금부터 lead초 넘게 남은 가장 가까운 마디 첫 박
 func entry(lead: float) -> float:
-	var half := beat * 2.0
-	return ceilf((clock() + lead) / half) * half
+	return ceilf((clock() + lead) / bar) * bar
 
 
 func _process(delta: float) -> void:
@@ -273,16 +272,17 @@ func _retarget(secs: float) -> void:
 	for w in _worlds:
 		var here: bool = w == _world
 		var fight := here and _mode == "enemy"
+		var calm := here and _mode == "mine" and not _hush
 		var bed := 0.0
 		if here:
 			bed = float({"mine": 0.9, "enemy": 0.55 + 0.15 * lv, "rest": 0.6}.get(_mode, 0.0))
 		_vol(w, "bed", bed, secs)
-		_vol(w, "light", 1.0 if here and _mode == "mine" and not _hush else 0.0, secs)
-		_vol(w, "kick", 1.0 if fight and not _hush else 0.0, secs)
-		_vol(w, "lead", 1.0 if fight and not _hush else 0.0, secs)
+		_vol(w, "light", 1.0 if calm else 0.0, secs)
+		_vol(w, "kick", 1.0 if fight and not _hush else (0.6 if calm else 0.0), secs)
+		_vol(w, "lead", 1.0 if fight and not _hush else (0.35 if calm else 0.0), secs)
 		for p in PARTS:
 			var nm := String(p[0])
-			_vol(w, nm, 1.0 if fight and not _hush and on.has(nm) else 0.0, secs)
+			_vol(w, nm, 1.0 if fight and not _hush and on.has(nm) else (0.5 if calm and nm == "hat" else 0.0), secs)
 	var dv := 0.0
 	match _mode:
 		"mine":
@@ -330,7 +330,7 @@ func enemy(world: String, at: float) -> void:
 		_retarget(0.03))
 
 
-# 내 차례: 다음 박에서 앞 악기 · 겹이 빠지고 받침 + 가벼운 타악만
+# 내 차례: 다음 박에서 겹이 빠지고 받침 · 가벼운 타악 위에 얇은 그루브만
 func mine() -> void:
 	if _mode in ["mine", "rest", "off"]:
 		return

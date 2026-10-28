@@ -1,5 +1,6 @@
 // 게임용 소리 굽기: engine.js를 헤드리스 크로미움에서 오프라인 렌더링해 assets/music/ 에 ogg로, p2/p2_music_meta.gd를 만든다.
 // node tools/music/bake.js [세계들=gye] [빠르기들=112,124,136]   (playwright · ffmpeg 필요)
+// node tools/music/bake.js meta   소리는 그대로 두고 p2_music_meta.gd(리듬 칸 · 섞는 비율)만 다시
 // 겹(E.STEMS)은 8마디 고리(변주 0~3을 두 마디씩): 끝을 넘는 꼬리는 앞으로 접어 이음매가 없다
 const { chromium } = require("playwright");
 const fs = require("fs");
@@ -9,7 +10,8 @@ const { execFileSync } = require("child_process");
 const ROOT = path.resolve(__dirname, "../..");
 const OUT = path.join(ROOT, "assets/music");
 const SR = 44100, PRE = 0.06, BARS = 8, TAIL = 3.0;
-const worlds = (process.argv[2] || "gye").split(",");
+const metaOnly = process.argv[2] === "meta";
+const worlds = metaOnly ? [] : (process.argv[2] || "gye").split(",");
 const bpms = (process.argv[3] || "112,124,136").split(",").map(Number);
 
 function writeOgg(file, L, R) {
@@ -89,12 +91,15 @@ function xfadeLoop(ch, start, len, xf) {
       log(f, writeOgg(f, L, R));
     }
   }
-  let [L, R] = await render(24, 124, "E.droneTo(G, 0, 1);");
-  let f = path.join(OUT, "common", "drone.ogg"); log(f, writeOgg(f, xfadeLoop(L, 4, 16, 1.5), xfadeLoop(R, 4, 16, 1.5)));
-  for (const nm of ["thud", "crack"]) {
-    [L, R] = await render(PRE + 0.9, 124, `E.${nm}(G, ${PRE});`);
-    f = path.join(OUT, "common", nm + ".ogg"); log(f, writeOgg(f, L, R));
+  if (!metaOnly) {
+    let [L, R] = await render(24, 124, "E.droneTo(G, 0, 1);");
+    let f = path.join(OUT, "common", "drone.ogg"); log(f, writeOgg(f, xfadeLoop(L, 4, 16, 1.5), xfadeLoop(R, 4, 16, 1.5)));
+    for (const nm of ["thud", "crack"]) {
+      [L, R] = await render(PRE + 0.9, 124, `E.${nm}(G, ${PRE});`);
+      f = path.join(OUT, "common", nm + ".ogg"); log(f, writeOgg(f, L, R));
+    }
   }
+  const lv = await pg.evaluate(() => ({ cells: Object.fromEntries(E.LEVELS.map(l => [l.id, l.cells])), mix: E.MIX, stems: E.STEMS }));
   await br.close();
 
   // 이미 구운 세계는 남기고 이번 것만 덮어씀
@@ -108,7 +113,10 @@ function xfadeLoop(ch, start, len, xf) {
 
 const PRE := ${PRE}
 const BARS := ${BARS}
-const STEMS := ${JSON.stringify(info[0].stems).replace(/,/g, ", ")}
+const STEMS := ${JSON.stringify(lv.stems).replace(/,/g, ", ")}
+# 박 쪼개기: 등급마다 한 마디짜리 리듬 칸(박 단위 자리) · 적 등급 → 섞는 비율
+const CELLS := ${JSON.stringify(lv.cells).replace(/,/g, ", ").replace(/:/g, ": ")}
+const MIX := ${JSON.stringify(lv.mix).replace(/,/g, ", ").replace(/:/g, ": ")}
 const WORLDS := {
 ${body}
 }
