@@ -3570,9 +3570,17 @@ func _arcane_sprite(key: String, pos: Vector2, px: float, by_width := false) -> 
 	return sp
 
 
+# 세계 음악 전투의 악보 동안: 음높이가 있는 효과음은 음계와 부딪혀 빼고, 막기 · 휘두르기는 막기 음 뒤로 물린다
+const MUSIC_SFX := {"crit_ring": -80.0, "block": -9.0, "enemy_swing": -7.0, "swing": -6.0}
+
+
 func _sfx(key: String, pitch := 1.0, volume_offset := 0.0) -> void:
 	if not SFX.has(key):
 		return
+	if _music != null and _rhythm_open > 0 and MUSIC_SFX.has(key):
+		if float(MUSIC_SFX[key]) <= -60.0:
+			return
+		volume_offset += float(MUSIC_SFX[key])
 	var now := Time.get_ticks_msec()
 	if now - int(_sfx_last.get(key, -1000)) < 45:
 		return

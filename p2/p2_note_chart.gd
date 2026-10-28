@@ -30,6 +30,8 @@ const HOLD_SLACK := 0.08
 const DOUBLE_WIN := 0.28
 const FLEE_R := 86.0
 static var offset := 0.0
+# 듣기 점검용 자동 막기(P2Music의 F7): 노트가 닫히는 순간 저절로 누른다
+static var auto := false
 static var hit_keys: Array = []
 const COLOR := {"t": Color("#bfe9e2"), "h": Color("#ff9a3a"), "d": Color("#ff6fcf"), "s": Color("#6fe07a"), "f": Color("#b48cff"), "x": Color("#ff4a3a")}
 const LABEL := {"h": "길게", "d": "두 번", "s": "따라가기", "f": "도망", "x": "누르지 마"}
@@ -111,6 +113,8 @@ func _advance(delta: float) -> float:
 		var now := float(clock.call()) - t0
 		var dt := maxf(0.0, now - _t)
 		_t = maxf(_t, now)
+		if auto:
+			_auto_press()
 		return dt
 	var d := 0.0 if _focus_lost else delta
 	_t += d
@@ -121,6 +125,24 @@ func _advance(delta: float) -> float:
 func _catch_up() -> void:
 	if clock.is_valid():
 		_t = maxf(_t, float(clock.call()) - t0)
+
+
+func _auto_press() -> void:
+	for i in range(notes.size()):
+		var n: Dictionary = notes[i]
+		if n.grade != "" or n.kind == "x":
+			continue
+		if n.holding:
+			if n.kind == "s":
+				_cursor = ball(i)
+			continue
+		if n.kind == "d" and float(n.second) >= 0.0:
+			if _t - float(n.second) >= 0.06:
+				press_now()
+			return
+		if n.start == "" and _t >= float(n.at) + offset:
+			press_now()
+		return
 
 
 func remaining() -> float:

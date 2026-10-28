@@ -370,7 +370,7 @@ func step(n: int) -> void:
 	tone(_world, int(ts[posmod(n, ts.size())]), "perfect", clock())
 
 
-# 막기 판정 소리: 완벽은 노트 박(at)에 온음, 막음은 지금 작고 짧게, 놓침은 음 없는 둔탁한 소리
+# 막기 판정 소리: 완벽은 온음, 막음은 작고 짧게(둘 다 일찍 눌렀으면 노트 박 at에 맞춰), 놓침은 음 없는 둔탁한 소리
 func tone(world: String, semi: int, grade: String, at: float) -> void:
 	var g := linear_to_db(maxf(P2Beat.gain, 0.001))
 	if grade == "miss":
@@ -379,7 +379,7 @@ func tone(world: String, semi: int, grade: String, at: float) -> void:
 	var kind := "perfect" if grade == "perfect" else "block"
 	var bank: Dictionary = (_tones.get(world, {}) as Dictionary).get(kind, {})
 	var s: AudioStream = bank.get(semi, bank.get(0))
-	_shot(s, P2MusicMeta.PRE, maxf(at, clock()) if kind == "perfect" else clock(), g + TONE_DB, fx_bus)
+	_shot(s, P2MusicMeta.PRE, maxf(at, clock()), g + TONE_DB, fx_bus)
 
 
 # 연속(전투 콤보)이 바뀜. 이으면 쌓기 · 회복(4번 연달아면 금이 아물고 꺼진 겹 하나가 다음 마디에 돌아옴).
@@ -484,6 +484,14 @@ func release(fade: float) -> void:
 	tw.tween_property(_player, "volume_db", -60.0, fade)
 	tw.tween_property(_drone, "volume_db", -60.0, fade)
 	tw.chain().tween_callback(queue_free)
+
+
+# 듣기 점검: F7로 자동 막기를 켜고 끔(악보가 박에 맞춰 저절로 완벽). 음악과 막기 음이 박에 붙는지 귀로 확인하는 용도
+func _unhandled_key_input(event: InputEvent) -> void:
+	var k := event as InputEventKey
+	if k != null and k.pressed and not k.echo and k.keycode == KEY_F7:
+		P2NoteChart.auto = not P2NoteChart.auto
+		print("자동 막기: ", "켬" if P2NoteChart.auto else "끔")
 
 
 func _notification(what: int) -> void:
