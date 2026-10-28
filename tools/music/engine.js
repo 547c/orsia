@@ -155,17 +155,19 @@ window.E = (function () {
   function vary(v, k) { return v * (1 - k + rnd() * 2 * k); }
   function sw(G, w, s) { return s % 2 === 1 ? (w.swing || 0) * G.s16 : 0; }
 
-  E.build = function (c, bpm) {
+  // bake: 굽기용(겹마다 따로 렌더해 게임에서 더하므로 압축 · 깎기 없이 선형으로, 여유 있게 작게)
+  E.build = function (c, bpm, bake) {
     const G = { c: c, bpm: bpm || 124, ks: {}, ducks: [], buses: {}, waves: {}, width: 0.5 };
     G.beat = 60 / G.bpm; G.s16 = G.beat / 4; G.bar = G.beat * 4;
-    G.master = c.createGain(); G.master.gain.value = 0.56;
+    G.master = c.createGain(); G.master.gain.value = bake ? 0.42 : 0.56;
     const tilt = c.createBiquadFilter(); tilt.type = "highshelf"; tilt.frequency.value = 6500; tilt.gain.value = -2.5;
     const comp = c.createDynamicsCompressor(); comp.threshold.value = -15; comp.knee.value = 10; comp.ratio.value = 2.5; comp.attack.value = 0.012; comp.release.value = 0.22;
     const clip = c.createWaveShaper(), cv = new Float32Array(2048);
     for (let i = 0; i < 2048; i++) { const x = i / 1023.5 - 1; cv[i] = Math.tanh(1.15 * x) / Math.tanh(1.15); }
     clip.curve = cv;
     const out = c.createGain(); out.gain.value = 0.92;
-    G.master.connect(tilt); tilt.connect(comp); comp.connect(clip); clip.connect(out); out.connect(c.destination);
+    if (bake) { G.master.connect(tilt); tilt.connect(out); } else { G.master.connect(tilt); tilt.connect(comp); comp.connect(clip); clip.connect(out); }
+    out.connect(c.destination);
     // 울림: 짧은 초기 반사 + 2.4초 꼬리(뒤로 갈수록 어두워짐), 좌우 따로
     const sr = c.sampleRate, len = Math.floor(sr * 2.4), ir = c.createBuffer(2, len, sr);
     for (let ch = 0; ch < 2; ch++) {
@@ -889,10 +891,47 @@ window.E = (function () {
     if (sp.fill) { E.fill(G, sp.fill, t + 3 * G.beat); E.riser(G, sp.fill, t + 3 * G.beat, G.beat); }
   };
 
+  // 게임용 겹(STEMS) 두 마디: 변주 v. 하이햇은 기본 8분만, 킥 4박 겹은 2 · 4박 킥과 열린 하이햇 · 16분 잔박을 함께 가짐
+  E.STEMS = ["bed", "light", "kick", "lead", "hat", "perc", "kick4", "bass", "counter", "spark"];
+  E.stem = function (G, w, name, t, v) {
+    for (let h = 0; h < 2; h++) {
+      const tb = t + h * G.bar;
+      switch (name) {
+        case "bed": if (h === 0) E.bed(G, w, tb, 2 * G.bar, 1); break;
+        case "light": E.perc(G, w, tb, { light: true }); break;
+        case "kick": for (const b of [0, 2]) kick(G, tb + b * G.beat, b === 0 ? 0.9 : vary(0.76, 0.06), G.kick); break;
+        case "lead": E.lead(G, w, tb, h, 4, 0, v); break;
+        case "hat": E.hats(G, w, tb, 1, 4); break;
+        case "perc": E.perc(G, w, tb, { tail: h === 1 && v % 2 === 1 }); break;
+        case "kick4":
+          for (const b of [1, 3]) kick(G, tb + b * G.beat, vary(0.76, 0.06), G.kick4);
+          for (let s = 1; s < 16; s++) {
+            const ts = tb + s * G.s16 + sw(G, w, s) + hum(6), acc = vary(1, 0.15);
+            if (s % 4 === 2) hat(G, ts, 0.09 * acc, true);
+            else if (s % 2 === 1) hat(G, ts, 0.03 * acc, false);
+          }
+          break;
+        case "bass": E.riff(G, w, tb, 4, v); break;
+        case "counter": E.counter(G, w, tb, h, 4); break;
+        case "spark": E.sparkle(G, w, tb, 4); break;
+      }
+    }
+  };
+  // 전투 끝맺음(이김): 한 박 앞 꾸밈음(솔)에서 첫 박 도로. 앞 악기 두 옥타브 · 맞받는 악기 · 낮은 북 · 종
+  E.ending = function (G, w, t) {
+    E.inst(G, w, w.lead, t - G.beat / 2, 67, 0.5, G.beat / 2, G.lead);
+    E.inst(G, w, w.lead, t, 60, 0.7, G.bar, G.lead);
+    E.inst(G, w, w.lead, t + 0.012, 72, 0.6, G.bar, G.lead);
+    E.inst(G, w, w.counter, t + G.beat / 4, 84, 0.45, G.beat * 2, G.counter);
+    kick(G, t, 0.9, G.kick);
+    drum(G, t, G.perc, 70, 40, 0.3, 0.6, 1.2);
+    partials(G, t, hz(96), G.fx, [[1, 1, 2.2], [2.4, 0.3, 1.2], [4.1, 0.12, 0.5]], 0.12, 0.004);
+  };
+
   // 오프라인 굽기: schedule(G, t0)로 짠 것을 그대로 렌더링해 AudioBuffer로
-  E.render = function (seconds, bpm, schedule, sr) {
+  E.render = function (seconds, bpm, schedule, sr, bake) {
     const oc = new OfflineAudioContext(2, Math.ceil(seconds * (sr || 44100)), sr || 44100);
-    const G = E.build(oc, bpm);
+    const G = E.build(oc, bpm, bake);
     schedule(G, 0.05);
     return oc.startRendering();
   };

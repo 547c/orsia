@@ -57,8 +57,7 @@ func end_time() -> float:
 
 
 func _process(delta: float) -> void:
-	var dt := 0.0 if _focus_lost else delta
-	_t += dt
+	var dt := _advance(delta)
 	while not _cues.is_empty() and float(_cues[0].t) - _lat <= _t:
 		var c: Dictionary = _cues.pop_front()
 		cue.emit(String(c.key), int(c.step), float(c.vol))
@@ -84,6 +83,7 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	_catch_up()
 	if event is InputEventMouseButton and event.pressed:
 		var mb := (event as InputEventMouseButton).button_index
 		if mb == MOUSE_BUTTON_LEFT or mb == MOUSE_BUTTON_RIGHT:

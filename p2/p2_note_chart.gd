@@ -10,7 +10,8 @@ extends Node2D
 # 겹치면 앞 번호가 위에 또렷하고, 뒤 번호는 앞 노트가 끝날 때까지 흐리다.
 # 박자: beat가 있으면 시작부터 끝까지 반주(박마다 킥, 반 박마다 하이햇, 2·4박 스네어)를 cue로 내보낸다. 노트는 이 박자 위에 놓인다.
 # 부름(call): 노트마다 at - call 시각에 같은 자리에서 빛과 음이 먼저 울린다(보스가 리듬을 보여 주고 플레이어가 따라 친다). 그때는 누를 수 없다.
-# 시계는 이 노드의 _process로만 간다: 일시정지·창 포커스가 빠지면 같이 멈춘다. 세계 슬로모션과 무관하게 일정하다
+# 시계는 이 노드의 _process로만 간다: 일시정지·창 포커스가 빠지면 같이 멈춘다. 세계 슬로모션과 무관하게 일정하다.
+# 박자 시계(follow)가 있으면 시간은 전투 음악 재생 위치를 따른다(노트가 음악 박에서 어긋나지 않게, 멈춤은 음악 쪽이 맡음)
 
 signal closed(i: int)
 signal judged(i: int, grade: String, dt: float)
@@ -52,6 +53,8 @@ var beat := 0.0
 # 히든 모드: 다가오는 고리·완벽 띠가 접근 시간의 40~60% 사이에 사라진다
 var hidden_mod := false
 var call := 0.0
+var clock := Callable()
+var t0 := 0.0
 var _cues: Array = []
 var _t := 0.0
 var _cursor := Vector2(-9999, -9999)
@@ -94,6 +97,34 @@ func _ready() -> void:
 	_c = P2Pixel.attach(self, _paint)
 	if _cursor.x < -9000.0:
 		_cursor = get_local_mouse_position()
+
+
+func follow(c: Callable, start: float) -> void:
+	clock = c
+	t0 = start
+	_t = float(c.call()) - start
+
+
+# 이번 프레임만큼 시간을 보내고 흐른 시간을 돌려줌
+func _advance(delta: float) -> float:
+	if clock.is_valid():
+		var now := float(clock.call()) - t0
+		var dt := maxf(0.0, now - _t)
+		_t = maxf(_t, now)
+		return dt
+	var d := 0.0 if _focus_lost else delta
+	_t += d
+	return d
+
+
+# 누른 순간의 시간(박자 시계가 있으면 프레임을 기다리지 않고 바로 읽음)
+func _catch_up() -> void:
+	if clock.is_valid():
+		_t = maxf(_t, float(clock.call()) - t0)
+
+
+func remaining() -> float:
+	return end_time() - _t
 
 
 # 누르기 키: 키보드 아무 키(되풀이 제외). Esc·Tab·F1~F12·Shift·Ctrl·Alt·Win·잠금 키는 원래 쓰임대로 둔다
@@ -179,8 +210,7 @@ func _notification(what: int) -> void:
 
 
 func _process(delta: float) -> void:
-	var dt := 0.0 if _focus_lost else delta
-	_t += dt
+	var dt := _advance(delta)
 	while not _cues.is_empty() and float(_cues[0].t) - _lat <= _t:
 		var c: Dictionary = _cues.pop_front()
 		cue.emit(String(c.key), int(c.step), float(c.vol))
@@ -245,6 +275,7 @@ func _flee(n: Dictionary) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	_catch_up()
 	if is_hit_key(event):
 		var id := key_id(event as InputEventKey)
 		if event.pressed:

@@ -857,6 +857,8 @@ var _barrier: P2Barrier
 var _seen_notes := {}
 var _phrase_seen := {}
 var _beat: P2Beat
+# 세계 음악(박자 시계). 구운 세계의 적만 나오는 전투에서만 켜지고, 아니면 예전처럼 배경음악 + 박자 반주
+var _music: P2Music
 # 카메라 = 기본(긴장 줌·쏠림) + 흔들림. 흔들림·새 연출은 _cam_raw만 움직이고 기본 위에 얹힌다
 var _cam_raw_off := Vector2.ZERO
 var _cam_raw_z := 1.0
@@ -980,7 +982,18 @@ func setup(m: RunModel, b: P2Battle, g: P2Ui.SaveGate = null) -> void:
 	_show = P2BattleShow.new()
 	add_child(_show)
 	_show.setup(self)
-	MusicManager.play("Decisive Battle 1 - Don't Be Afraid" if _is_boss() else "Battle 1")
+	var sector := String(_run_info.get("sector", "normal"))
+	if feel_on("parry") and not b.mods.has("dt") and P2Music.supports(b.roles, sector):
+		_music = P2Music.new()
+		_music.setup(b.roles, sector, FX_BUS)
+		get_tree().root.add_child.call_deferred(_music)
+		_music.start.call_deferred()
+		tree_exiting.connect(func() -> void:
+			if is_instance_valid(_music):
+				_music.release(1.4))
+		MusicManager.stop()
+	else:
+		MusicManager.play("Decisive Battle 1 - Don't Be Afraid" if _is_boss() else "Battle 1")
 	_sync_shown_from_battle()
 	_spawn_enemies()
 	_build_enemy_panels()
@@ -7297,7 +7310,9 @@ func _slash_input(card: Card, target: int) -> Dictionary:
 		_sfx("swing", 1.25 + 0.08 * n)
 		if i >= 0 and i < pts.size():
 			_charge_step(ch, pts[i], n, pts.size())
-		if _beat != null:
+		if _music != null:
+			_music.step(n - 1)
+		elif _beat != null:
 			_beat.play("chime", n - 1))
 	pad.tick.connect(func(_i: int) -> void:
 		if _beat != null:
@@ -7967,7 +7982,7 @@ func _parry_chart(index: int, hits: Array, simple := false) -> P2NoteChart:
 	var pat := _parry_pattern(index, hits, simple)
 	var tier := _parry_tier(index)
 	# 더블타임: 악보 전체가 25% 빠름. 난이도는 고리가 줄어드는 시간(노트 속도)만 바꾼다
-	var beat := 60.0 / float(PARRY_BPM[tier]) * (0.8 if battle.mods.has("dt") else 1.0)
+	var beat := _music.beat if _music != null else 60.0 / float(PARRY_BPM[tier]) * (0.8 if battle.mods.has("dt") else 1.0)
 	var half := beat / 2.0
 	var ap := beat * 1.2 * _approach_k * battle.approach_mult * (P2Catalog.AFFIX_SWIFT if battle.affix(index) == "swift" else 1.0)
 	var rng := RandomNumberGenerator.new()
@@ -8096,7 +8111,22 @@ func _parry_chart(index: int, hits: Array, simple := false) -> P2NoteChart:
 	chart.set_meta("got", {})
 	chart.judged.connect(_on_note_judged.bind(chart))
 	_wire_chart(chart)
-	chart.cue.connect(_on_cue)
+	if _music != null:
+		# 첫 노트는 음악의 반 마디 칸에(붉은 예고가 끝난 뒤), 그 한 박 전에 이 적 세계의 필인
+		var world := P2Music.world_of(battle.roles[index])
+		var first := beat * 2.0
+		if not notes.is_empty():
+			first = float(notes[0].at)
+			for nt in notes:
+				first = minf(first, float(nt.at))
+		var at := _music.entry(0.6 + first)
+		chart.follow(_music.clock, at - first)
+		chart.set_meta("world", world)
+		chart.set_meta("semis", _music.pitches(world, groups, notes.size()))
+		_music.enemy(world, at)
+		chart.cue.connect(_on_music_cue)
+	else:
+		chart.cue.connect(_on_cue)
 	chart.set_meta("center", c)
 	_ui.add_child(chart)
 	var again := ""
@@ -8173,7 +8203,7 @@ func _zone_cue(chart: P2NoteChart) -> void:
 # 킥마다 화면 가장자리·주인공·맥 숫자가 살짝 뛴다(배경과 다른 적은 시간이 멈춘 주변이라 뛰지 않음)
 func _on_cue(key: String, step: int, vol: float) -> void:
 	var st := int(_rs.streak)
-	if _beat != null:
+	if _beat != null and not (_music != null and key == "kick"):
 		_beat.play(key, step, vol)
 		if key == "kick":
 			_beat_n += 1
@@ -8190,6 +8220,13 @@ func _on_cue(key: String, step: int, vol: float) -> void:
 			_mana_label.pivot_offset = _mana_label.size / 2.0
 			_mana_label.scale = Vector2.ONE * 1.1
 			_mana_label.create_tween().tween_property(_mana_label, "scale", Vector2.ONE, 0.18).set_ease(Tween.EASE_OUT)
+
+
+func _on_music_cue(key: String, step: int, vol: float) -> void:
+	if key == "kick":
+		_on_cue(key, step, vol)
+	elif key != "hat" and key != "snare" and _beat != null:
+		_beat.play(key, step, vol)
 
 
 func _wire_chart(chart: P2NoteChart) -> void:
@@ -8404,7 +8441,7 @@ func _fade_intents(a: float) -> void:
 # 배경음악을 낮추고 먹먹하게(저역 통과) 해 박자 반주가 앞에 서게 한다. 음악 버스에 효과 두 개를 이 전투 동안만 끼운다(음량 설정은 그대로)
 func _music_duck(on: bool) -> void:
 	var bus := AudioServer.get_bus_index(MusicManager.MUSIC_BUS_NAME)
-	if bus < 0 or not is_inside_tree():
+	if bus < 0 or not is_inside_tree() or _music != null:
 		return
 	if _duck_lp == null:
 		_duck_lp = AudioEffectLowPassFilter.new()
@@ -8435,6 +8472,7 @@ func _unduck_bus() -> void:
 
 
 func _combo_hit(ok: bool) -> void:
+	var before := int(_rs.streak)
 	_rs.streak = int(_rs.streak) + 1 if ok else 0
 	_rs.best = maxi(int(_rs.best), int(_rs.streak))
 	# 연속 회복: 5마다 체력 +1 (한 전투 최대 +5, 규칙은 전투 모델)
@@ -8447,6 +8485,13 @@ func _combo_hit(ok: bool) -> void:
 			_sfx("heal", 1.25, -6.0)
 			if _combo != null:
 				_combo.healed()
+	if _music != null:
+		# 겹이 꺼지거나 돌아오는 순간을 연속 숫자 곁에 짧게
+		var ch := _music.combo(ok, before, int(_rs.streak))
+		if ch.has("cut"):
+			_float_number(tr("♪ %s 꺼짐") % String(ch.cut), _player_body() + Vector2(-30, -150), Color("#e58b97"), F, 22.0, 0.9)
+		elif ch.has("back"):
+			_float_number(tr("♪ %s 돌아옴") % String(ch.back), _player_body() + Vector2(-30, -150), C_GOLD, F, 22.0, 0.9)
 	if not _juice:
 		return
 	if _combo == null:
@@ -8456,7 +8501,7 @@ func _combo_hit(ok: bool) -> void:
 		_ui.move_child(_combo, _overlay.get_index())
 	if ok:
 		_combo.add()
-		if _combo.count % 5 == 0 and _beat != null:
+		if _combo.count % 5 == 0 and _beat != null and _music == null:
 			_beat.play("chime", 7, 2.0)
 		if _combo.count % 10 == 0:
 			_combo_burst(_combo.count)
@@ -8495,7 +8540,11 @@ func _on_note_judged(i: int, grade: String, dt: float, chart: P2NoteChart) -> vo
 	var kind := String(chart.notes[i].kind)
 	if grade == "miss" and kind != "x":
 		_miss_kind[kind] = int(_miss_kind.get(kind, 0)) + 1
-	if _beat != null:
+	if _music != null and chart.has_meta("world"):
+		var semis: Array = chart.get_meta("semis", [])
+		if kind != "x" or grade == "miss":
+			_music.tone(String(chart.get_meta("world")), int(semis[i]) if i < semis.size() else 0, grade, chart.t0 + float(chart.notes[i].at))
+	elif _beat != null:
 		if grade == "perfect":
 			_beat.play("chime", i)
 		elif grade == "good":
@@ -10727,6 +10776,8 @@ func _run_enemy_phase(t0: int) -> void:
 	_sync_shown_from_battle()
 	_render_all()
 	_focus_attacker(-1)
+	if _music != null:
+		_music.mine()
 	await _wait(0.32)
 	await _camera_settled()
 	_state = UI.PLAYER
@@ -10835,10 +10886,13 @@ func _anim_enemy_action(index: int, events: Array) -> void:
 	var chart: P2NoteChart = _parry_chart(index, pend[0].hits, events.any(func(e): return String(e.kind) == "suppressed")) if not pend.is_empty() else null
 	if chart != null:
 		await _zone_cue(chart)
+		if _music != null:
+			# 반 마디 칸을 기다린 만큼 달려들기를 늦춘다(첫 노트까지 남은 거리는 예전과 같게)
+			await _chart_until(chart, 0, 1.4)
 	var rush := 0.0
 	if chart != null:
 		_slowmo(true, [sprite], _player_body() + Vector2(94, -6))
-		_tension(true, chart.get_meta("center"), chart.end_time())
+		_tension(true, chart.get_meta("center"), chart.remaining())
 		if _juice and not _reduce_motion:
 			rush = clampf(chart.time_until(0) - 0.3, 0.16, 1.1)
 	var caster := (battle.is_summoner(index) or bool(_ea_or(String(sprite.get_meta("art", ""))).get("cast_art", false))) and _art_acts(sprite)
@@ -11085,6 +11139,8 @@ func _on_battle_over() -> void:
 	_close_popups()
 	_set_prompt("")
 	var won := int(GameState.get_flag("player_hp")) > 0
+	if _music != null:
+		_music.finish(won)
 	await _wait(0.45)
 	if won:
 		_sfx("victory")
