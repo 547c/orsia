@@ -2,7 +2,7 @@ class_name P2Music
 extends Node
 
 # 전투 음악(일곱 세계). 세계마다 구운 8마디 겹 고리를 AudioStreamSynchronized 하나로 늘 함께 돌리고, 음량만 바꿔 세계와 겹을 고른다.
-# 그 재생 위치가 박자 시계(clock)라 막기 악보도 이 시계로 가고, 적 공격 첫 노트는 반 마디 칸에 떨어진다(그 한 박 전에 새 세계 필인).
+# 그 재생 위치가 박자 시계(clock)라 막기 악보도 이 시계로 간다. 적 공격 노트는 그 마디에 연주되는 선율 음 그대로(P2MusicMeta 악보, 그 한 박 전에 새 세계 필인).
 # 소리는 tools/music/bake.js로 굽는다(구운 세계는 P2MusicMeta). 겹 쌓기 · 부서짐 규칙은 tools/music 시험 페이지와 같다.
 # 모든 시각 인자는 들리는 시각(clock 기준)이고, 안에서는 출력 지연을 더한 섞는 시각으로 바꿔 맞춘다
 
@@ -39,6 +39,7 @@ var _world := ""
 var _mode := "mine"
 var _next := ""
 var _hush := false
+var _force: Array = []
 var _sync: AudioStreamSynchronized
 var _player: AudioStreamPlayer
 var _drone: AudioStreamPlayer
@@ -60,7 +61,6 @@ var _end := {}
 var _tones := {}
 var _thud: AudioStream
 var _crack: AudioStream
-var _cad := 0
 var _released := false
 
 
@@ -117,12 +117,9 @@ func setup(roles: Array, sector: String, fx: String) -> void:
 		_fill[w] = load(_path(w, bpm, "fill"))
 		_end[w] = load(_path(w, bpm, "end"))
 		var bank := {}
-		for kind in ["perfect", "block"]:
-			var m := {}
-			for semi in P2MusicMeta.WORLDS[w].tones:
-				var sm := int(semi)
-				m[sm] = load("%s%s/tone/%s_%s.ogg" % [DIR, w, kind, ("m%d" % -sm) if sm < 0 else str(sm)])
-			bank[kind] = m
+		for semi in P2MusicMeta.WORLDS[w].tones:
+			var sm := int(semi)
+			bank[sm] = load("%s%s/tone/perfect_%s.ogg" % [DIR, w, ("m%d" % -sm) if sm < 0 else str(sm)])
 		_tones[w] = bank
 	_thud = load(DIR + "common/thud.ogg")
 	_crack = load(DIR + "common/crack.ogg")
@@ -190,6 +187,11 @@ func clock() -> float:
 # 적 공격 첫 마디 첫 박 자리: 지금부터 lead초 넘게 남은 가장 가까운 마디 첫 박
 func entry(lead: float) -> float:
 	return ceilf((clock() + lead) / bar) * bar
+
+
+# 들리는 시각 t가 든 마디가 8마디 고리의 몇째 마디인지(악보 charts[등급][이 값])
+func slot_of(t: float) -> int:
+	return posmod(roundi(t / bar), P2MusicMeta.BARS)
 
 
 func _process(delta: float) -> void:
@@ -279,10 +281,13 @@ func _retarget(secs: float) -> void:
 		_vol(w, "bed", bed, secs)
 		_vol(w, "light", 1.0 if calm else 0.0, secs)
 		_vol(w, "kick", 1.0 if fight and not _hush else (0.6 if calm else 0.0), secs)
-		_vol(w, "lead", 1.0 if fight and not _hush else (0.35 if calm else 0.0), secs)
+		_vol(w, "lead", 0.85 if fight and not _hush else (0.35 if calm else 0.0), secs)
 		for p in PARTS:
 			var nm := String(p[0])
-			_vol(w, nm, 1.0 if fight and not _hush and on.has(nm) else (0.5 if calm and nm == "hat" else 0.0), secs)
+			var v := 0.5 if calm and nm == "hat" else 0.0
+			if fight and not _hush:
+				v = 1.0 if on.has(nm) else (0.7 if _force.has(nm) else 0.0)
+			_vol(w, nm, v, secs)
 	var dv := 0.0
 	match _mode:
 		"mine":
@@ -309,12 +314,15 @@ func _clear_events() -> void:
 
 
 # 적 차례: entry(들리는 시각)에 그 세계가 들어온다. 세계가 바뀌거나 내 차례에서 넘어오면 한 박 전에 필인 + 차오름(그 박은 비움).
-# 같은 세계가 이어지면(이미 그 세계로 가는 중이어도) 그대로 둔다
-func enemy(world: String, at: float) -> void:
+# 같은 세계가 이어지면(이미 그 세계로 가는 중이어도) 그대로 둔다. force = 악보에 그 겹 음이 있어 아직 못 얹었어도 이 공격 동안 들려줄 겹
+func enemy(world: String, at: float, force: Array = []) -> void:
 	if not _idx.has(world + "/bed") or _mode in ["rest", "off"]:
 		return
 	var going := _next if _next != "" else (_world if _mode == "enemy" else "")
 	if world == going:
+		_at(at, func() -> void:
+			_force = force
+			_retarget(0.15))
 		return
 	_clear_events()
 	_next = world
@@ -327,6 +335,7 @@ func enemy(world: String, at: float) -> void:
 		_mode = "enemy"
 		_hush = false
 		_next = ""
+		_force = force
 		_retarget(0.03))
 
 
@@ -338,28 +347,8 @@ func mine() -> void:
 	_at(ceilf(clock() / beat + 0.05) * beat, func() -> void:
 		_mode = "mine"
 		_hush = false
+		_force = []
 		_retarget(0.2))
-
-
-# 막기 음 높이: 묶음(타격)마다 세계 동기를 따라가고 끝음은 솔 · 도를 번갈아(짧은 묶음은 동기 꼬리부터)
-func pitches(world: String, groups: Array, count: int) -> Array:
-	var out: Array = []
-	out.resize(count)
-	out.fill(0)
-	if not P2MusicMeta.WORLDS.has(world):
-		return out
-	var m: Dictionary = P2MusicMeta.WORLDS[world]
-	for g in groups:
-		var ids: Array = g
-		var motif: Array = m.motif_g if _cad % 2 == 0 else m.motif_c
-		_cad += 1
-		var body := motif.slice(0, motif.size() - 1)
-		var n := ids.size()
-		for k in range(n):
-			var semi := int(motif.back()) if k == n - 1 else int(body[posmod(body.size() - (n - 1) + k, body.size())])
-			if int(ids[k]) < count:
-				out[int(ids[k])] = semi
-	return out
 
 
 # 긋기 점마다(내 차례): 지금 세계 막기 음을 아래부터 차례로
@@ -370,14 +359,13 @@ func step(n: int) -> void:
 	tone(_world, int(ts[posmod(n, ts.size())]), "perfect", clock())
 
 
-# 막기 판정 소리: 완벽 · 막음 모두 같은 온음(일찍 눌렀으면 노트 박 at에 맞춰), 놓침만 음 없는 둔탁한 소리
+# 막기 판정 소리: 완벽 · 막음 모두 그 노트 선율 음 한 옥타브 위(일찍 눌렀으면 노트 박 at에 맞춰), 놓침만 음 없는 둔탁한 소리
 func tone(world: String, semi: int, grade: String, at: float) -> void:
 	var g := linear_to_db(maxf(P2Beat.gain, 0.001))
 	if grade == "miss":
 		_shot(_thud, P2MusicMeta.PRE, clock(), g, fx_bus)
 		return
-	var kind := "perfect"
-	var bank: Dictionary = (_tones.get(world, {}) as Dictionary).get(kind, {})
+	var bank: Dictionary = _tones.get(world, {})
 	var s: AudioStream = bank.get(semi, bank.get(0))
 	_shot(s, P2MusicMeta.PRE, maxf(at, clock()), g + TONE_DB, fx_bus)
 

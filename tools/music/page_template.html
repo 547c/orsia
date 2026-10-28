@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
-/* 게임 화면처럼 어두운 한 가지 모습: 위 고정 띠(지금 세계 · 박 · 연속 · 겹) · 아래 세계 카드 · 한 판 · 박 쪼개기 · 적 표 */
+/* 게임 화면처럼 어두운 한 가지 모습: 위 고정 띠(지금 세계 · 박 · 연속 · 겹) · 아래 세계 카드 · 한 판 · 악보 · 적 표 */
 :root {
   --bg: #12101a;
   --panel: #1c1928;
@@ -120,16 +120,14 @@ canvas#lane { width: 100%; height: 132px; image-rendering: pixelated; display: b
 .judge.block { color: var(--fg); }
 .judge.miss { color: var(--hurt); }
 
-.subs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
-@media (max-width: 980px) { .subs { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 640px) { .subs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 420px) { .subs { grid-template-columns: 1fr; } }
+.subs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 640px) { .subs { grid-template-columns: 1fr; } }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--dim); }
+.legend i { display: inline-block; width: 9px; height: 9px; margin-right: 5px; vertical-align: -1px; }
 .scard { display: grid; gap: 6px; padding: 10px; min-width: 0; align-content: start; }
 .scard .sn { font: 20px/1 var(--font-display); }
 .scard .sd { font-size: 12px; color: var(--dim); }
-.scard .mix { font-size: 12px; color: var(--fg); line-height: 1.5; }
-.scard .mix span { color: var(--dim); }
-.scard canvas { width: 100%; height: auto; aspect-ratio: 300 / 100; max-width: 100%; image-rendering: pixelated; display: block; background: #0e0c15; }
+.scard canvas { width: 100%; height: auto; aspect-ratio: 320 / 120; max-width: 100%; image-rendering: pixelated; display: block; background: #0e0c15; }
 .scard[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); background: #2a2540; }
 .scard.used { box-shadow: inset 0 0 0 2px var(--world); }
 
@@ -199,8 +197,9 @@ canvas#lane { width: 100%; height: 132px; image-rendering: pixelated; display: b
   </section>
 
   <section class="step" aria-labelledby="s3">
-    <h2 id="s3">박 쪼개기</h2>
-    <p class="note">등급마다 한 마디짜리 리듬 칸이 넷 있습니다. <b>섞기</b>를 고르면 한 판에서는 적 등급에 맞춰 마디마다 칸을 뽑고, 같은 칸은 연달아 나오지 않습니다. 등급 하나를 고르면 그 등급 칸만 씁니다. 지금 울리는 칸의 등급에 테두리가 켜집니다.</p>
+    <h2 id="s3">악보: 음악이 곧 노트</h2>
+    <p class="note">적 공격 노트는 그 마디에 음악이 실제로 연주하는 음입니다. 앞 악기 선율이 뼈대이고, 등급이 오를수록 잔음 → 맞받는 선율 → 킥 → 세계 타악이 더해집니다. 8마디 고리라 같은 마디에서는 늘 같은 노트가 오고, 내 차례에도 앞 악기가 작게 같은 선율을 들려줍니다. 게임도 이 악보를 그대로 씁니다. 등급을 누르면 <b>세계 듣기</b>에서 그 등급 노트가 나오고, 한 판에서는 적 등급대로 나옵니다. 아래 그림은 지금 세계의 8마디(가로 = 시각, 세로 = 음 높이)입니다.</p>
+    <div class="legend"><span><i style="background:#ece6d6"></i>앞 악기</span><span><i style="background:#b28cff"></i>맞받는 선율</span><span><i style="background:#6b5f8a"></i>킥</span><span><i style="background:#e8c46a"></i>세계 타악</span></div>
     <div class="subs" id="subs"></div>
   </section>
 
@@ -239,15 +238,17 @@ const BPMS = [[112, "구간 Ⅰ"], [124, "구간 Ⅱ"], [136, "구간 Ⅲ"]];
 const SETS = [0, 5, 10, 20];
 const MUTES = [["lead", "앞 악기"], ["counter", "맞받는 선율"], ["perc", "세계 타악"], ["bed", "받침"], ["drone", "바닥음"], ["bass", "베이스"], ["kick", "킥"], ["hat", "하이햇"], ["fx", "반짝이 · 차오름"], ["parry", "막기 음"]];
 const AUTOS = [["manual", "직접"], ["perfect", "자동 완벽"], ["mixed", "자동 섞임 (완벽 · 막음 · 놓침)"]];
-const LISTEN_MIX = { normal: 2, deep: 2, elite: 2, boss: 1 };
-const LVNAME = Object.fromEntries(E.LEVELS.map(l => [l.id, l.name]));
+const TIERS = [["normal", "일반", "앞 악기 긴 음 위주"], ["deep", "심층", "앞 악기 선율 전부"], ["elite", "정예", "+ 맞받는 선율 · 킥"], ["boss", "보스", "+ 세계 타악"]];
+const LVNAME = Object.fromEntries(TIERS.map(l => [l[0], l[1]]));
+const TIER_OF = Object.fromEntries(TIERS.map((l, i) => [l[0], i]));
+const SRC_COL = { lead: "#ece6d6", counter: "#b28cff", kick: "#6b5f8a", perc: "#e8c46a" };
 
-let bpm = 124, subSel = "mix", autoMode = "perfect", preset = PRESETS[0];
+let bpm = 124, listenTier = 1, autoMode = "perfect", preset = PRESETS[0];
 // 연속(combo)은 놓치면 0. 음악 겹은 earned(쌓은 수) − cut(위에서 꺼진 수). cracks: 금, run: 놓침 뒤 연달아 막은 수
 const H = { combo: 0, earned: 0, cut: 0, cracks: 0, run: 0 };
 let ctx = null, G = null, mode = "", timer = 0, timers = [], nextBar = 0, barIdx = 0, notes = [], bars = [];
-let queued = null, lastBase = "gye", curW = E.WORLDS.gye, seq = [], resolved = new Map(), segVar = new Map(), seen = new Map(), lastCell = null;
-let lastSemi = null, lastSemiAt = 0, shownW = null;
+let queued = null, lastBase = "gye", curW = E.WORLDS.gye, seq = [], resolved = new Map(), segVar = new Map(), seen = new Map();
+let lastSemi = null, lastSemiAt = 0, shownW = null, chartW = null, playSlot = -1;
 const $ = id => document.getElementById(id);
 
 function at(t, fn) { timers.push(setTimeout(fn, Math.max(0, (t - ctx.currentTime) * 1000))); }
@@ -257,6 +258,7 @@ function worldOf(id) { return id === "echo" ? E.echoOf(lastBase) : E.WORLDS[id];
 function scaleHTML(sc) { return sc.map(pc => pc === 0 || pc === 7 ? `<span class="cg">${E.NAMES[pc]}</span>` : E.NAMES[pc]).join(" "); }
 function show(w, turn) {
   shownW = w;
+  if (w !== chartW) drawCharts(w);
   document.documentElement.style.setProperty("--world", w.color);
   $("world").innerHTML = w.name + "<small>" + w.where + "</small>";
   $("scale").innerHTML = scaleHTML(w.scale);
@@ -318,7 +320,7 @@ function fresh() {
   ctx = new (window.AudioContext || window.webkitAudioContext)();
   G = E.build(ctx, bpm);
   document.querySelectorAll("#mutes input").forEach(cb => { if (!cb.checked) E.setMute(G, cb.dataset.bus, true); });
-  nextBar = ctx.currentTime + 0.12; barIdx = 0; resolved = new Map(); segVar = new Map(); seen = new Map(); lastCell = null;
+  nextBar = ctx.currentTime + 0.12; barIdx = 0; resolved = new Map(); segVar = new Map(); seen = new Map();
   timer = setInterval(tick, 25);
 }
 function tick() {
@@ -329,12 +331,12 @@ function tick() {
   bars = bars.filter(b => b.t > now - 2 * G.bar);
 }
 
-// ── 막기 노트 ──
-function pickFor(mix) { lastCell = E.pickCell(subSel === "mix" ? mix : { [subSel]: 1 }, lastCell); return lastCell; }
-function addNotes(w, pos, half, t) {
-  const ps = E.groupPitches(w, pos.length, half ? "C" : "G");
-  pos.forEach((p, i) => {
-    const n = { time: t + p * G.beat, semi: ps[i], w: w, done: false, end: i === pos.length - 1 };
+// ── 막기 노트: 그 마디 악보(E.chartBar) 그대로. 필인 마디는 마지막 박을 비운다 ──
+function chartOf(w, slot, tier, fill) { return E.chartBar(w, slot, tier).filter(n => !fill || n.b < 3); }
+function withForced(on, ch) { return on.concat(["counter", "perc"].filter(p => !on.includes(p) && ch.some(n => n.src === p))); }
+function addNotes(w, ch, t) {
+  ch.forEach((c, i) => {
+    const n = { time: t + c.b * G.beat, semi: c.semi, src: c.src, w: w, done: false, end: i === ch.length - 1 };
     notes.push(n);
     if (mode === "listen" || autoMode !== "manual") autoJudge(n);
   });
@@ -375,7 +377,11 @@ function slip() {
   const j = $("judge"); j.textContent = "놓침"; j.className = "judge miss";
   showHeat(H, out);
 }
-function markCell(cell) { document.querySelectorAll(".scard").forEach(c => c.classList.toggle("used", !!cell && c.dataset.id === cell.lv)); }
+function markTier(tier, slot) {
+  document.querySelectorAll(".scard").forEach(c => c.classList.toggle("used", tier !== null && c.dataset.id === TIERS[tier][0]));
+  const ps = tier === null ? -1 : slot;
+  if (ps !== playSlot) { playSlot = ps; if (chartW) drawCharts(chartW); }
+}
 
 // ── 세계 듣기: 2마디씩 되풀이, 고른 세계는 다음 2마디 경계로 ──
 function listenBar(b, t) {
@@ -383,11 +389,11 @@ function listenBar(b, t) {
   if (half === 0 && queued) { curW = worldOf(queued); if (queued !== "echo") lastBase = queued; queued = null; }
   if (half === 0) seen.set(keyOf(curW), (seen.get(keyOf(curW)) || 0) + 1);
   const w = curW, vari = (seen.get(keyOf(w)) - 1) % 4, mine = $("lm").checked, fill = half === 1 && queued ? worldOf(queued) : null;
-  E.bar(G, { w: w, kind: mine ? "mine" : "enemy", half: half, on: partsOn(), vari: vari, fill: fill }, t);
-  let cell = null;
-  if (!mine && $("lp").checked) { cell = pickFor(LISTEN_MIX); addNotes(w, cell.pos, half, t); }
+  const notesOn = !mine && $("lp").checked, ch = notesOn ? chartOf(w, vari * 2 + half, listenTier, fill) : [];
+  E.bar(G, { w: w, kind: mine ? "mine" : "enemy", half: half, on: withForced(partsOn(), ch), vari: vari, fill: fill }, t);
+  addNotes(w, ch, t);
   bars.push({ t: t, w: w, fill: fill });
-  at(t, () => { show(w, mine ? "내 차례 소리" : "듣기 · 변주 " + E.VARIS[vari]); markCell(cell); if (half === 0) $("queued").textContent = queued ? "다음 → " + worldOf(queued).name : ""; });
+  at(t, () => { show(w, mine ? "내 차례 소리" : "듣기 · 변주 " + E.VARIS[vari]); markTier(notesOn ? listenTier : null, vari * 2 + half); if (half === 0) $("queued").textContent = queued ? "다음 → " + worldOf(queued).name : ""; });
   if (fill) at(t + 3 * G.beat, () => { $("queued").textContent = "넘어가기 예고 → " + fill.name; document.documentElement.style.setProperty("--next", fill.color); });
 }
 function listen(id) {
@@ -420,13 +426,13 @@ function battleBar(b, t) {
   const k = Math.floor(b / 2), half = b % 2, s = seq[k % seq.length], w = resolve(k);
   if (half === 0 && s.kind === "enemy") { seen.set(keyOf(w), (seen.get(keyOf(w)) || 0) + 1); segVar.set(k, (seen.get(keyOf(w)) - 1) % 4); }
   const vari = segVar.get(k) || 0, nx = seq[(k + 1) % seq.length], fill = half === 1 && nx.kind === "enemy" ? resolve(k + 1) : null;
-  E.bar(G, { w: w, kind: s.kind, half: half, on: partsOn(), vari: vari, fill: fill }, t);
-  let cell = null;
-  if (s.kind === "enemy") { cell = pickFor(E.MIX[FOE_LV[s.foe]]); addNotes(w, cell.pos, half, t); }
+  const tier = s.kind === "enemy" ? TIER_OF[FOE_LV[s.foe]] : null, ch = tier === null ? [] : chartOf(w, vari * 2 + half, tier, fill);
+  E.bar(G, { w: w, kind: s.kind, half: half, on: withForced(partsOn(), ch), vari: vari, fill: fill }, t);
+  addNotes(w, ch, t);
   bars.push({ t: t, w: w, fill: fill });
   at(t, () => {
     show(w, s.kind === "enemy" ? `적 차례 · ${FOE[s.foe]} · 변주 ${E.VARIS[vari]}` : "내 차례");
-    markCell(cell);
+    markTier(tier, vari * 2 + half);
     if (half === 0) { $("queued").textContent = ""; document.querySelectorAll(".seq span").forEach((e, i) => e.classList.toggle("cur", i === k % seq.length)); }
   });
   if (fill) at(t + 3 * G.beat, () => { $("queued").textContent = "넘어가기 예고 → " + fill.name; document.documentElement.style.setProperty("--next", fill.color); });
@@ -499,23 +505,14 @@ AUTOS.forEach(([v, nm]) => {
   b.onclick = () => { autoMode = v; document.querySelectorAll("#autos button").forEach(o => o.setAttribute("aria-pressed", String(o === b))); };
   $("autos").appendChild(b);
 });
-function selectSub(id, b) {
-  subSel = id; document.querySelectorAll(".scard").forEach(o => o.setAttribute("aria-pressed", String(o === b)));
+function selectTier(i, b) {
+  listenTier = i; document.querySelectorAll(".scard").forEach(o => o.setAttribute("aria-pressed", String(o === b)));
   if (mode !== "battle") { $("lp").checked = true; $("lm").checked = false; if (mode !== "listen") listen(curW.mirror ? "echo" : curW.id); }
 }
-{
-  const b = document.createElement("button"); b.type = "button"; b.className = "scard"; b.dataset.id = "mix"; b.setAttribute("aria-pressed", "true");
-  const lv = id => Object.entries(E.MIX[id]).map(([k, v]) => `${LVNAME[k]} ${v}`).join(" · ");
-  b.innerHTML = `<span class="sn">섞기</span><span class="sd">적 등급대로 마디마다 뽑음</span><span class="mix">` +
-    E.LEVELS.map(l => `${l.name} 적 <span>${lv(l.id)}</span>`).join("<br>") + `</span>`;
-  b.onclick = () => selectSub("mix", b);
-  $("subs").appendChild(b);
-}
-E.LEVELS.forEach(lv => {
-  const b = document.createElement("button"); b.type = "button"; b.className = "scard"; b.dataset.id = lv.id; b.setAttribute("aria-pressed", "false");
-  b.innerHTML = `<span class="sn">${lv.name}</span><span class="sd">${lv.desc}</span><canvas width="300" height="100"></canvas>`;
-  drawCells(b.querySelector("canvas"), lv.cells);
-  b.onclick = () => selectSub(lv.id, b);
+TIERS.forEach(([id, nm, desc], i) => {
+  const b = document.createElement("button"); b.type = "button"; b.className = "scard"; b.dataset.id = id; b.setAttribute("aria-pressed", String(i === listenTier));
+  b.innerHTML = `<span class="sn">${nm}</span><span class="sd">${desc} · <span class="cnt"></span></span><canvas width="320" height="120"></canvas>`;
+  b.onclick = () => selectTier(i, b);
   $("subs").appendChild(b);
 });
 const rows = $("maprows");
@@ -531,24 +528,29 @@ $("slip").onclick = slip;
 $("stop").onclick = stopAll;
 window.addEventListener("keydown", e => { if (e.code === "Space" && mode === "battle" && !(e.target instanceof HTMLInputElement)) { e.preventDefault(); press(); } });
 showHeat(H);
+drawCharts(E.WORLDS.gye);
 
-// 리듬 칸 그림: 칸 넷을 두 줄로(줄마다 두 마디) · 16분 눈금 · 셋잇단 자리는 보라 · 마디 끝음은 금색 테두리
-function drawCells(cv, cells) {
-  const g = cv.getContext("2d"), W = cv.width, x0 = 6, bw = (W - 12) / 8;
-  g.fillStyle = "#0e0c15"; g.fillRect(0, 0, W, cv.height);
-  for (let r = 0; r < 2; r++) {
-    const y = 12 + r * 48;
-    for (let k = 0; k <= 32; k++) { g.fillStyle = k % 16 === 0 ? "#6b5f8a" : k % 4 === 0 ? "#3a3450" : "#221e30"; g.fillRect(Math.round(x0 + k * bw / 4), y + (k % 4 ? 8 : 0), 1, k % 4 ? 18 : 34); }
-    for (let h = 0; h < 2; h++) {
-      const pos = cells[r * 2 + h];
-      pos.forEach((p, i) => {
-        const x = Math.round(x0 + (h * 4 + p) * bw), end = i === pos.length - 1, trip = Math.abs(p * 3 - Math.round(p * 3)) < 1e-6 && Math.abs(p * 4 - Math.round(p * 4)) > 1e-6;
-        g.fillStyle = end ? "#e8c46a" : trip ? "#b28cff" : "#ece6d6";
-        g.fillRect(x - 2, y + 14, 5, 5);
-        if (end) { g.strokeStyle = "#e8c46a"; g.lineWidth = 1; g.strokeRect(x - 4.5, y + 11.5, 10, 10); }
-      });
+// 악보 그림: 8마디를 두 줄로(줄마다 네 마디) · 16분 눈금 · 세로는 음 높이, 소리 겹마다 색. 지금 울리는 마디는 밝게
+function drawCharts(w) {
+  chartW = w;
+  document.querySelectorAll(".scard").forEach((card, tier) => {
+    const cv = card.querySelector("canvas"), g = cv.getContext("2d"), W = cv.width, x0 = 6, bw = (W - 12) / 4, RH = 56;
+    g.fillStyle = "#0e0c15"; g.fillRect(0, 0, W, cv.height);
+    let total = 0;
+    for (let slot = 0; slot < 8; slot++) {
+      const r = slot >> 2, xb = x0 + (slot % 4) * bw, y0 = 4 + r * (RH + 4), ch = E.chartBar(w, slot, tier);
+      total += ch.length;
+      if (slot === playSlot && card.classList.contains("used")) { g.fillStyle = "#231e36"; g.fillRect(Math.round(xb), y0, Math.round(bw), RH); }
+      for (let k = 0; k <= 16; k++) { g.fillStyle = k % 16 === 0 ? "#6b5f8a" : k % 4 === 0 ? "#3a3450" : "#221e30"; g.fillRect(Math.round(xb + k * bw / 16), y0 + (k % 4 ? 10 : 0), 1, k % 4 ? RH - 20 : RH); }
+      for (const n of ch) {
+        const x = Math.round(xb + n.b * bw / 4), y = Math.round(y0 + RH - 6 - (Math.max(-9, Math.min(19, n.semi)) + 9) / 28 * (RH - 12));
+        g.fillStyle = SRC_COL[n.src] || "#ece6d6";
+        if (n.src === "lead" || n.src === "counter") g.fillRect(x - 1, y - 2, Math.max(4, Math.round(n.len * bw / 16) - 1), 4);
+        else g.fillRect(x - 2, n.src === "kick" ? y0 + RH - 6 : y0 + 3, 4, 4);
+      }
     }
-  }
+    card.querySelector(".cnt").textContent = `마디마다 ${Math.round(total / 8 * 10) / 10}개`;
+  });
 }
 
 // 12음 고리 · 다가오는 노트 · 박 칸
@@ -578,8 +580,8 @@ function draw(nowMs) {
       const x = hx + (n.time - t) * sp;
       if (x < -8 || x > LW + 8 || (n.done && !n.auto)) continue;
       if (n.auto && x < hx - 2) continue;
-      const y = semiY(n.semi, LH);
-      lg.fillStyle = n.w.color; lg.fillRect(Math.round(x - 3), Math.round(y - 3), 6, 6);
+      const y = n.src === "kick" ? LH - 8 : n.src === "perc" ? 8 : semiY(n.semi, LH), sz = n.src === "lead" ? 6 : 4;
+      lg.fillStyle = n.src === "lead" ? n.w.color : SRC_COL[n.src]; lg.fillRect(Math.round(x - sz / 2), Math.round(y - sz / 2), sz, sz);
       if (n.end) { lg.strokeStyle = "#e8c46a"; lg.lineWidth = 1; lg.strokeRect(Math.round(x - 5) + 0.5, Math.round(y - 5) + 0.5, 10, 10); }
     }
     let cur = null;

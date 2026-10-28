@@ -4,7 +4,6 @@ window.E = (function () {
   const E = {};
   E.NAMES = ["도", "레♭", "레", "미♭", "미", "파", "파#", "솔", "라♭", "라", "시♭", "시"];
   // mel: 앞 악기 2마디 [16분 자리, C4에서 반음, 길이] · ctr: 맞받는 선율 [자리, C5에서, 길이] · riff: 베이스 [자리, C2에서, 길이]
-  // motifG/C: 막기 음 동기(C5에서). 마지막이 묶음 끝(솔 또는 도), 짧은 묶음은 꼬리부터 씀
   E.WORLDS = {
     gye: {
       name: "계면", where: "한국", scale: [0, 3, 5, 7, 10], color: "#ec6a4f", orn: "gye",
@@ -15,7 +14,6 @@ window.E = (function () {
             [16, 0, 3], [19, 3, 1], [20, 5, 2], [22, 7, 2], [24, 5, 1], [25, 3, 3], [28, 0, 4]],
       ctr: [[2, 7, 6], [10, 10, 2], [12, 12, 4], [18, 10, 4], [22, 7, 3], [26, 3, 6]],
       riff: [[0, 0, 3], [3, 0, 1], [6, 7, 3], [9, 7, 1], [12, 10, 2], [14, 5, 2]],
-      motifG: [0, 3, 5, 7, 10, 7, 5, 3, 5, 7], motifC: [7, 10, 12, 10, 7, 5, 7, 5, 3, 0],
     },
     lyd: {
       name: "리디안", where: "유리 하늘", scale: [0, 2, 4, 6, 7, 9, 11], color: "#8fd8ff", orn: null,
@@ -25,7 +23,6 @@ window.E = (function () {
       mel: [[0, 4, 6], [6, 6, 2], [8, 7, 8], [16, 11, 4], [20, 9, 2], [22, 6, 2], [24, 7, 8]],
       ctr: [[2, 0, 2], [4, 7, 2], [7, 4, 1], [10, 11, 2], [14, 6, 2], [18, 0, 2], [20, 9, 2], [23, 7, 1], [26, 4, 2], [30, 2, 2]],
       riff: [[0, 0, 4], [6, 7, 2], [8, 0, 2], [11, 6, 1], [12, 7, 4]],
-      motifG: [0, 4, 7, 9, 11, 9, 7, 6, 7], motifC: [7, 9, 11, 14, 11, 9, 6, 7, 11, 12],
     },
     tez: {
       name: "테제타", where: "에티오피아", scale: [0, 2, 3, 7, 8], color: "#e2b04a", orn: null,
@@ -36,7 +33,6 @@ window.E = (function () {
             [16, 7, 2], [18, 3, 2], [20, 2, 1], [21, 3, 1], [22, 2, 2], [24, 0, 3], [27, -5, 1], [28, -4, 2], [30, -5, 2]],
       ctr: [[2, 3, 4], [6, 2, 2], [8, 0, 6], [18, 8, 4], [22, 7, 2], [24, 3, 4], [28, 2, 4]],
       riff: [[0, 0, 3], [3, 0, 1], [4, 7, 2], [6, 8, 2], [8, 7, 3], [11, 3, 1], [12, 0, 2], [14, -5, 2]],
-      motifG: [0, 2, 3, 7, 8, 7, 3, 2, 3, 8, 7], motifC: [7, 8, 12, 8, 7, 3, 7, 3, 2, 0],
     },
     bhv: {
       name: "바이라브", where: "인도", scale: [0, 1, 4, 5, 7, 8, 11], color: "#3fc9a0", orn: "bhv",
@@ -47,7 +43,6 @@ window.E = (function () {
             [16, 8, 4], [20, 7, 2], [22, 5, 1], [23, 4, 1], [24, 5, 2], [26, 1, 3], [29, 0, 3]],
       ctr: [[4, 1, 4], [8, 0, 4], [18, 8, 4], [22, 7, 6], [30, 11, 2]],
       riff: [[0, 0, 4], [4, 7, 2], [6, 8, 2], [8, 7, 4], [12, 1, 2], [14, 0, 2]],
-      motifG: [0, 1, 4, 5, 8, 5, 4, 5, 8, 7], motifC: [12, 11, 8, 7, 8, 7, 4, 5, 1, 0],
     },
     hun: {
       name: "헝가리 단조", where: "초원 너머", scale: [0, 2, 3, 6, 7, 8, 11], color: "#d0609f", orn: null, esztam: true,
@@ -58,7 +53,6 @@ window.E = (function () {
             [16, 2, 2], [18, 0, 2], [20, -1, 2], [22, -4, 2], [24, -5, 6], [30, -6, 2]],
       ctr: [[0, 7, 4], [4, 8, 2], [6, 11, 2], [8, 12, 6], [14, 11, 2], [16, 8, 4], [20, 7, 4], [24, 6, 4], [28, 7, 4]],
       riff: [[0, 0, 2], [4, 7, 2], [8, 0, 2], [12, -5, 2]],
-      motifG: [0, 3, 6, 8, 11, 8, 6, 3, 6, 8, 7], motifC: [14, 12, 11, 8, 6, 3, 6, 3, 2, 0],
     },
     mac: {
       name: "기계", where: "정거장", scale: [0, 2, 3, 5, 7, 8, 10], color: "#a7b6c8", orn: null,
@@ -69,7 +63,6 @@ window.E = (function () {
             [16, 7, 3], [19, 8, 1], [20, 7, 2], [22, 3, 2], [24, 0, 4], [28, -2, 2], [30, -5, 2]],
       ctr: [[2, 0, 2], [6, 3, 2], [10, 7, 2], [14, 5, 2], [18, 3, 2], [22, 0, 2], [26, 2, 2], [30, -2, 2]],
       riff: [[0, 0, 2], [2, 12, 1], [4, 0, 2], [6, 12, 1], [8, 8, 2], [10, 20, 1], [12, 7, 2], [14, 19, 1]],
-      motifG: [0, 3, 7, 3, 8, 3, 10, 3, 7], motifC: [0, 3, 7, 10, 8, 5, 2, 3, 2, 0],
     },
     core: {
       name: "핵", where: "균열 한가운데", scale: [0, 1, 3, 4, 6, 7, 9, 10], color: "#b28cff", orn: null,
@@ -79,7 +72,6 @@ window.E = (function () {
       mel: [[0, 0, 6], [6, 6, 2], [8, 3, 4], [12, 1, 4], [16, 4, 6], [22, 10, 2], [24, 9, 4], [28, 7, 4]],
       ctr: [[0, 6, 8], [8, 7, 8], [16, 3, 8], [24, 4, 8]],
       riff: [[0, 0, 6], [6, 6, 2], [8, 7, 6], [14, 1, 2]],
-      motifG: [0, 3, 6, 9, 10, 9, 6, 4, 6, 7], motifC: [10, 9, 6, 7, 4, 6, 3, 4, 1, 0],
     },
   };
   E.ORDER = ["gye", "lyd", "tez", "bhv", "hun", "mac", "core"];
@@ -112,39 +104,47 @@ window.E = (function () {
     maek_summoner_low: "echo", mimic_n: "echo", mimic_h: "echo", mimic_x: "echo",
   };
 
-  // 박 쪼개기: 등급마다 한 마디짜리 리듬 칸 넷(박 단위 자리). 묶음 하나가 한 마디이고 끝음은 솔(적 차례 앞 마디) · 도(뒷 마디)
-  E.LEVELS = [
-    { id: "normal", name: "일반", desc: "한 박 · 반 박", cells: [[0, 1, 2, 2.5, 3], [0, 0.5, 1, 2, 3], [0, 1, 1.5, 2, 3], [0, 1, 2, 3, 3.5]] },
-    { id: "deep", name: "심층", desc: "엇박", cells: [[0, 0.5, 1.5, 2.5, 3.5], [0, 0.75, 1.5, 2.25, 3], [0.5, 1, 1.5, 2.5, 3], [0, 1.5, 2, 2.75, 3.5]] },
-    { id: "elite", name: "정예", desc: "4쪼개기 · 셋잇단 조금", cells: [[0, 0.25, 0.5, 1, 1.5, 2, 2.25, 2.5, 3], [0, 0.5, 1, 4 / 3, 5 / 3, 2, 2.75, 3], [0, 0.25, 0.5, 0.75, 1, 2, 2.5, 3], [0, 1, 1.25, 1.5, 2, 7 / 3, 8 / 3, 3]] },
-    { id: "boss", name: "보스", desc: "4쪼개기 · 셋잇단 · 2:3", cells: [[0, 0.25, 0.5, 0.75, 1, 1.5, 2, 7 / 3, 8 / 3, 3, 3.5], [0, 2 / 3, 4 / 3, 2, 2.25, 2.5, 2.75, 3], [0, 0.75, 1.5, 2.25, 3, 3.25, 3.5], [0, 1 / 3, 2 / 3, 1, 1.5, 2, 2.5, 3, 3.25, 3.5, 3.75]] },
-  ];
-  // 적 등급 → 섞는 비율. 제 등급이 중심, 한 칸 아래는 숨 돌리기, 한 칸 위는 양념
-  E.MIX = {
-    normal: { normal: 3, deep: 1 }, deep: { normal: 1, deep: 2, elite: 1 },
-    elite: { deep: 1, elite: 2, boss: 1 }, boss: { deep: 1, elite: 2, boss: 3 },
-  };
-  E.pickCell = function (mix, avoid, r) {
-    r = r || Math.random;
-    const ids = Object.keys(mix), sum = ids.reduce((a, k) => a + mix[k], 0);
-    let pick = null;
-    for (let tries = 0; tries < 4; tries++) {
-      let x = r() * sum, id = ids[ids.length - 1];
-      for (const k of ids) if ((x -= mix[k]) < 0) { id = k; break; }
-      const lv = E.LEVELS.find(l => l.id === id), i = Math.floor(r() * lv.cells.length);
-      pick = { lv: id, i: i, pos: lv.cells[i] };
-      if (!avoid || avoid.lv !== id || avoid.i !== i) break;
-    }
-    return pick;
-  };
   // 연속으로 얹히는 겹(쌓이는 순서). 놓치면 위에서부터 하나씩 꺼지고, 다시 막아 내면 돌아옴
   E.PARTS = [["hat", "하이햇", 5], ["perc", "세계 타악", 5], ["kick4", "킥 4박", 10], ["bass", "베이스", 10], ["counter", "맞받는 선율", 20], ["spark", "반짝이", 20]];
   E.earnedFor = combo => E.PARTS.filter(p => combo >= p[2]).length;
-  E.groupPitches = function (w, n, cad) {
-    const M = cad === "G" ? w.motifG : w.motifC, body = M.slice(0, -1), L = body.length, out = [];
-    for (let k = 0; k < n - 1; k++) out.push(body[(((L - (n - 1) + k) % L) + L) % L]);
-    out.push(M[M.length - 1]);
-    return out;
+
+  // 음악에서 뽑은 막기 악보: 8마디 고리의 slot번째 마디(변주 slot>>1의 앞 · 뒤 마디)에서 실제로 울리는 소리를 노트로.
+  // 앞 악기 선율 음이 뼈대이고, tier(0 일반 · 1 심층 · 2 정예 · 3 보스)가 오를수록 짧은 꾸밈음 → 맞받는 선율 → 킥 → 세계 타악까지 더한다
+  // (등급마다 적어도 TIER_MIN개가 되도록 채움. 게임은 이 공격 동안 쓰인 겹을 켜서 노트마다 들리는 소리가 있게 한다).
+  // 노트마다 { b 박 자리, semi 막기 음(C5 기준 반음, 선율 음의 한 옥타브 위), len 16분 길이, src lead|counter|kick|perc }
+  E.TIER_MIN = [4, 6, 7, 9];
+  E.TIER_CAP = [6, 8, 10, 12];
+  E.chartBar = function (w, slot, tier) {
+    const v = slot >> 1, half = slot & 1, sw = w.swing || 0, at = s => (s + (s % 2 ? sw : 0)) / 4, lag = w.mirror ? 2 : 0;
+    const lead = [];
+    for (const [p, semi, len] of E.phrase(w, v)) {
+      if (Math.floor(p / 16) !== half || p % 16 + lag >= 16) continue;
+      let pitch = semi + (v === 3 && half === 0 ? 12 : 0);
+      while (pitch > 19) pitch -= 12;
+      lead.push({ b: at(p % 16 + lag), semi: pitch, len: len, src: "lead" });
+    }
+    const near = (list, b, d) => list.some(n => Math.abs(n.b - b) < d - 1e-6);
+    let out = [];
+    if (tier === 0) { for (const n of lead) if ((n.len >= 2 || !out.length) && !near(out, n.b, 0.5)) out.push(n); }
+    else out = lead.slice();
+    const add = (list, d, acc) => { for (const n of list) if ((n.acc || 1) >= acc && !near(out, n.b, d)) out.push(n); };
+    const short = () => out.length < E.TIER_MIN[tier];
+    if (tier >= 2 || short()) add(w.ctr.filter(([p]) => Math.floor(p / 16) === half).map(([p, semi, len]) => ({ b: at(p % 16), semi: semi, len: len, src: "counter" })), 0.45, 0);
+    if (tier >= 2 || short()) add([{ b: 0, semi: 0, len: 2, src: "kick" }, { b: 2, semi: -5, len: 2, src: "kick" }], 0.45, 0);
+    if (tier >= 3 || short()) {
+      const kit = KIT[w.perc], tail = half === 1 && v % 2 === 1, perc = [];
+      for (const [s, , a] of kit.pat) if (!(tail && s >= 12)) perc.push({ b: at(s), semi: a >= 0.7 ? 7 : 12, len: 1, src: "perc", acc: a });
+      if (tail) for (const [f, , a] of kit.fill) perc.push({ b: 3 + f, semi: 12, len: 1, src: "perc", acc: a });
+      add(perc, 0.24, short() ? 0.15 : 0.45);
+    }
+    out.sort((x, y) => x.b - y.b);
+    const weight = n => n.src === "kick" ? 3 : n.src === "perc" ? n.acc : (n.src === "counter" ? 0.8 : 1) + n.len / 4 + (Number.isInteger(n.b) ? 0.5 : 0);
+    while (out.length > E.TIER_CAP[tier]) {
+      let k = 1;
+      for (let i = 2; i < out.length; i++) if (weight(out[i]) < weight(out[k])) k = i;
+      out.splice(k, 1);
+    }
+    return out.map(n => ({ b: n.b, semi: n.semi, len: n.len, src: n.src }));
   };
 
   let seed = 12345;

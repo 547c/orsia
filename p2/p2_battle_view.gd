@@ -4552,7 +4552,7 @@ func _render_incoming() -> void:
 	(_incoming.get_meta("l2") as Label).add_theme_color_override("font_color", Color("#ff8a7a") if left > 0 else P2Ui.C_GOOD)
 	var extra: Array[String] = []
 	if notes > 0:
-		extra.append(tr("노트 %d") % notes)
+		extra.append((tr("노트 약 %d") if _music != null else tr("노트 %d")) % notes)
 	if crush > 0:
 		extra.append(tr("강타 %d") % crush)
 	extra.append_array(acts)
@@ -7633,7 +7633,7 @@ func _parry_tier(index: int) -> int:
 # 이번 행동의 악보 계획: 묶음(타격)마다 노트 종류 · 칸(문장만) · 앞 노트와의 반 박 간격 · 강타. 같은 차례·같은 적이면 늘 같다(예고 칸도 이걸 그린다).
 # 정예·보스의 고유 문장이 있으면 그것(처음 두 번은 같고 세 번째부터 한 군데 바뀜), 없으면 등급·고유 노트 묶음으로 만든다.
 # simple(억제됨): 특수 노트가 짧은 노트가 되고 노트 하나가 빠진다
-func _parry_pattern(index: int, hits: Array, simple := false) -> Array:
+func _parry_pattern(index: int, hits: Array, simple := false, slot := -1) -> Array:
 	var tier := _parry_tier(index)
 	var role: String = battle.roles[index]
 	var out: Array = []
@@ -7641,8 +7641,8 @@ func _parry_pattern(index: int, hits: Array, simple := false) -> Array:
 	var heavy_at := roundi(10.0 * battle.hit_mult)
 	if role == "maek_summoner_low" and int(hits[0]) >= heavy_at:
 		ph = {}
-	if _music != null and ph.is_empty():
-		return _cell_pattern(index, hits, simple, tier)
+	if _music != null:
+		return _music_pattern(index, hits, simple, tier, slot if slot >= 0 else posmod(hash([battle.turn_number, index]), P2MusicMeta.BARS))
 	if not ph.is_empty():
 		var notes: Array = (ph.notes as Array).duplicate(true)
 		if int(_phrase_seen.get(role + String(ph.name), 0)) >= 2:
@@ -7710,77 +7710,128 @@ func _parry_pattern(index: int, hits: Array, simple := false) -> Array:
 	return out
 
 
-# 세계 음악 전투의 악보 계획: 공격 하나가 적어도 두 마디(한 번 치면 그 묶음이 두 마디, 여러 번이면 타격마다 한 마디), 노트 자리는 박 쪼개기 칸(P2MusicMeta.CELLS)을 적 등급 중심으로 섞어 뽑는다
-# (묶음끼리 같은 칸은 연달아 안 나옴). 롱·따라가기는 묶음 끝에만, 앞뒤가 좁은 자리의 특수 노트는 짧은 노트로. 같은 차례·같은 적이면 늘 같다
-func _cell_pattern(index: int, hits: Array, simple: bool, tier: int) -> Array:
+# 세계 음악 전투의 악보 계획: 노트 = 그 마디에 음악이 실제로 연주하는 음(P2MusicMeta 악보: 앞 악기 선율, 등급이 오르면 맞받는 선율 · 킥 · 타악).
+# 한 번 치면 두 마디, 여러 번이면 타격마다 한 마디(slot = 첫 마디가 8마디 고리의 몇째인지). 적 고유 노트는 마디마다 하나까지 앞이 트인 선율 음에 얹고
+# 그 길이 안의 뒤 음은 덮는다. 페인트는 선율이 쉬는 자리에. 같은 차례·같은 적·같은 마디면 늘 같다
+const MUSIC_SPECIAL := {"osu": {"h": 1.0, "s": 1.0, "d": 0.5, "f": 0.0, "x": -1.0}, "drum": {"h": 1.0, "s": 1.0},
+	"dodge": {"d": 0.5, "h": 0.5, "s": 1.0, "f": 0.0, "x": 0.0}, "arrow": {"f": 0.0, "h": 0.0, "s": 0.0}, "echo": {"d": 0.5}}
+
+
+func _music_pattern(index: int, hits: Array, simple: bool, tier: int, slot: int) -> Array:
 	var role: String = battle.roles[index]
+	var genre := _genre_of(index)
 	var rng := RandomNumberGenerator.new()
-	rng.seed = hash([battle.seed_used, battle.turn_number, index, hits.size(), "cells"])
+	rng.seed = hash([battle.seed_used, battle.turn_number, index, hits.size(), slot, "music"])
 	var shift := battle.pattern_level + (1 if battle.affix(index) == "rhythm" else 0)
-	var mix: Dictionary = P2MusicMeta.MIX[["normal", "deep", "elite", "boss"][clampi(tier + maxi(shift, 0), 0, 3)]]
+	var charts: Array = P2MusicMeta.WORLDS[P2Music.world_of(role)].charts[clampi(tier + maxi(shift, 0), 0, 3)]
 	var pool: Array = NOTE_POOL.get(role, ["t"])
+	var occ: Dictionary = MUSIC_SPECIAL.get(genre, {})
+	var easy := simple or shift < 0
+	var specials: Array = pool.filter(func(k): return occ.has(k) and (not easy or k == "h"))
 	var heavy_at := roundi(10.0 * battle.hit_mult)
-	var out: Array = []
-	var prev := ""
-	var sum := 0.0
-	for k in mix:
-		sum += float(mix[k])
 	var span := 2 if hits.size() == 1 else 1
+	var hb := 1.5 if tier >= 2 else 1.0
+	var end := 4.0 * span
+	var out: Array = []
 	for hi in range(hits.size()):
-		var beats: Array = []
+		var ns: Array = []
 		for b in range(span):
-			beats.append_array(_pick_cell(mix, sum, rng, prev).map(func(x): return float(x) + 4.0 * b))
-			prev = String(_cell_key)
-		if (simple or shift < 0) and beats.size() > 2:
-			beats.remove_at(beats.size() - 2)
+			for n in charts[posmod(slot + hi * span + b, P2MusicMeta.BARS)]:
+				ns.append({"b": float(n[0]) + 4.0 * b, "semi": int(n[1]), "src": String(n[3]), "kind": "t", "hold": 0.0})
+		# 피하기는 반 박보다 촘촘한 음을 앞 음에 묶는다(줄을 옮길 틈)
+		if genre == "dodge":
+			var keep: Array = []
+			for n in ns:
+				if keep.is_empty() or float(n.b) - float(keep.back().b) > 0.49:
+					keep.append(n)
+			ns = keep
+		if easy and ns.size() > 2:
+			ns.remove_at(ns.size() - 2)
+		for b in range(span):
+			if specials.is_empty() or rng.randf() < (0.5 if String(pool[0]) == "t" else 0.15):
+				continue
+			var kind := String(specials[rng.randi() % specials.size()])
+			var cover := hb if kind in ["h", "s"] and genre in ["osu", "drum"] else float(occ[kind])
+			var cand: Array = []
+			if cover < 0.0:
+				for k in range(ns.size() - 1):
+					var mid := snappedf((float(ns[k].b) + float(ns[k + 1].b)) / 2.0, 0.5)
+					if floori(mid / 4.0) == b and mid - float(ns[k].b) >= 0.5 and float(ns[k + 1].b) - mid >= 0.5:
+						cand.append(k + 1)
+				if not cand.is_empty():
+					var ki := int(cand[rng.randi() % cand.size()])
+					ns.insert(ki, {"b": snappedf((float(ns[ki - 1].b) + float(ns[ki].b)) / 2.0, 0.5), "semi": 0, "src": "x", "kind": "x", "hold": 0.0})
+				continue
+			for k in range(ns.size()):
+				var a := float(ns[k].b)
+				if floori(a / 4.0) == b and String(ns[k].kind) == "t" and String(ns[k].src) in ["lead", "counter"] and (k == 0 or a - float(ns[k - 1].b) >= 0.5) and a + cover + 0.25 <= end:
+					cand.append(k)
+			if cand.is_empty():
+				continue
+			var ci := int(cand[rng.randi() % cand.size()])
+			var cn: Dictionary = ns[ci]
+			cn.kind = kind
+			if kind in ["h", "s"] and genre in ["osu", "drum"]:
+				cn.hold = cover
+			while cover > 0.0 and ci + 1 < ns.size() and float(ns[ci + 1].b) < float(cn.b) + cover + 0.5:
+				ns.remove_at(ci + 1)
 		var heavy := int(hits[hi]) >= heavy_at
-		var kinds: Array = []
-		for k in range(beats.size()):
-			var after := (float(beats[k + 1]) if k + 1 < beats.size() else 4.0 * span) - float(beats[k])
-			var before := float(beats[k]) - (float(beats[k - 1]) if k > 0 else -1.0)
-			var kind := String(pool[0]) if hi == 0 and k == 0 else String(pool[rng.randi() % pool.size()])
-			if kind in ["h", "s"] or (kind in ["d", "f", "x"] and (after < 1.0 or before < 0.5)) or (simple and kind != "t"):
-				kind = "t"
-			kinds.append(kind)
-		if heavy:
-			kinds[kinds.size() - 1] = "h" if tier < 2 or rng.randf() < 0.5 else "s"
-		if kinds.back() == "x":
-			kinds[kinds.size() - 1] = "t"
-		out.append({"kinds": kinds, "cells": [], "gaps": [], "beats": beats, "crush": heavy and tier >= 2, "phrase": ""})
+		var last: Dictionary = ns.back()
+		if heavy and genre in ["osu", "drum"] and String(last.kind) == "t" and float(last.b) + hb + 0.25 <= end:
+			last.kind = "h" if tier < 2 or rng.randf() < 0.5 else "s"
+			last.hold = hb
+		out.append({"kinds": ns.map(func(n): return String(n.kind)), "beats": ns.map(func(n): return float(n.b)), "semis": ns.map(func(n): return int(n.semi)),
+			"srcs": ns.map(func(n): return String(n.src)), "holds": ns.map(func(n): return float(n.hold)), "bar": hi * span,
+			"cells": [], "gaps": [], "crush": heavy and tier >= 2, "phrase": ""})
 	return out
 
 
-var _cell_key := ""
+# 이 공격 선율(앞 악기 · 맞받는 악기) 음 높이들, 낮은 것부터
+func _melody_semis(pat: Array) -> Array:
+	var out: Array = []
+	for g in pat:
+		if g.has("srcs"):
+			for k in range((g.srcs as Array).size()):
+				if String(g.srcs[k]) in ["lead", "counter"]:
+					out.append(int(g.semis[k]))
+	out.sort()
+	return out
 
 
-# 섞는 비율대로 등급을 뽑고 그 등급 칸 하나(바로 앞 칸 prev와는 다르게)
-func _pick_cell(mix: Dictionary, sum: float, rng: RandomNumberGenerator, prev: String) -> Array:
-	var pick: Array = []
-	for _tries in range(4):
-		var lv := String(mix.keys().back())
-		var x := rng.randf() * sum
-		for k in mix:
-			x -= float(mix[k])
-			if x < 0.0:
-				lv = String(k)
-				break
-		var cells: Array = P2MusicMeta.CELLS[lv]
-		var ci := rng.randi() % cells.size()
-		pick = cells[ci]
-		_cell_key = "%s%d" % [lv, ci]
-		if _cell_key != prev:
-			break
-	return pick
+# 세계 음악 전투의 고리 자리(악보처럼): 가로 = 마디 안 시각(짝수 마디는 왼→오, 홀수 마디는 오→왼), 세로 = 음 높이(킥은 아래 · 타악은 위)
+func _staff_spot(g: Dictionary, k: int, lo: int, hi: int) -> Vector2:
+	var b := float(g.beats[k])
+	var dir := 1.0 if (int(g.bar) + floori(b / 4.0)) % 2 == 0 else -1.0
+	var y := 0.0
+	match String(g.srcs[k]):
+		"kick":
+			y = 1.0
+		"perc":
+			y = -1.0
+		"lead", "counter":
+			if hi > lo:
+				y = 1.0 - 2.0 * float(int(g.semis[k]) - lo) / float(hi - lo)
+	return Vector2(lerpf(-2.0, 2.0, fposmod(b, 4.0) / 4.0) * dir, y)
 
 
-# 다음 노트 시각: 박 칸 계획(beats)이면 묶음마다 다음 마디 첫 박(origin = 첫 묶음 마디 첫 박)에서 칸 자리대로, 아니면 앞 노트에서 반 박 간격만큼
+# 북 색: 킥 = 둥(빨강) · 타악 = 딱(파랑) · 선율은 이 공격 선율 가운데 높이보다 낮으면 둥, 높으면 딱(같으면 정박 둥 · 엇박 딱)
+func _music_side(g: Dictionary, k: int, pivot: int) -> String:
+	match String(g.srcs[k]):
+		"kick":
+			return "don"
+		"perc":
+			return "ka"
+	var sm := int(g.semis[k])
+	if sm == pivot:
+		return "don" if is_zero_approx(fposmod(float(g.beats[k]), 1.0)) else "ka"
+	return "don" if sm < pivot else "ka"
+
+
+# 다음 노트 시각: 음악 악보(beats)면 묶음 마디(bar, origin = 첫 묶음 마디 첫 박) 안 박 자리대로, 아니면 앞 노트에서 반 박 간격만큼
 func _next_t(g: Dictionary, k: int, t: float, beat: float, origin: float) -> float:
 	if not g.has("beats"):
 		return t + int(g.gaps[k]) * beat / 2.0
-	if k == 0:
-		var bar := beat * 4.0
-		g["bar_at"] = origin + ceilf((t - origin) / bar - 0.001) * bar
-	return maxf(t, float(g.bar_at) + float(g.beats[k]) * beat)
+	return maxf(t, origin + (float(g.bar) * 4.0 + float(g.beats[k])) * beat)
 
 
 # 원거리 적(사수·맥 귀족)의 공격은 언다인식 화살 막기(P2ArrowChart). 리듬(간격·강타·보스 문장 칸)은 같은 계획에서 받고,
@@ -7826,9 +7877,12 @@ func _pip_kinds(genre: String, g: Dictionary, tier: int) -> Array:
 				out.append_array((shots as Array).map(func(q): return "a:" + String(q)))
 		"drum":
 			var n := 0
+			var mel := _melody_semis([g])
 			for k in g.kinds:
 				if String(k) in ["h", "s"]:
 					out.append("d:roll")
+				elif g.has("srcs"):
+					out.append("d:" + _music_side(g, n, int(mel[mel.size() / 2]) if not mel.is_empty() else 0))
 				else:
 					out.append("d:don" if n % 3 != 2 else "d:ka")
 				if String(k) == "d":
@@ -7846,7 +7900,7 @@ func _pip_kinds(genre: String, g: Dictionary, tier: int) -> Array:
 	return out
 
 
-# 북 장단: 첫 북은 둥, 그 뒤로 둥·딱을 섞되 같은 색 세 번 연속은 없음. 길게·따라가기 = 노랑 연타(그 길이),
+# 북 장단: 첫 북은 둥, 그 뒤로 둥·딱을 섞되 같은 색 세 번 연속은 없음(세계 음악 전투는 _music_side: 킥 둥 · 타악 딱 · 선율은 높이로). 길게·따라가기 = 노랑 연타(그 길이),
 # 두 번 = 반 박 뒤 반대 색 한 번 더, 강타 = 마지막 큰 북(정예·보스)
 func _drum_notes(index: int, pat: Array, tier: int, beat: float, ap: float, call: float) -> Array:
 	var half := beat / 2.0
@@ -7858,34 +7912,33 @@ func _drum_notes(index: int, pat: Array, tier: int, beat: float, ap: float, call
 	var origin := t
 	var last := ""
 	var same := 0
-	var prev_t := -99.0
+	var mel := _melody_semis(pat)
+	var pivot := int(mel[mel.size() / 2]) if not mel.is_empty() else 0
 	for g in pat:
 		var ids: Array = []
 		var gk: Array = g.kinds
 		for k in range(gk.size()):
 			var kind := String(gk[k])
 			t = _next_t(g, k, t, beat, origin)
-			var stream := _music != null and t - prev_t < beat * 0.6
-			prev_t = t
+			var semi := int(g.semis[k]) if g.has("semis") else 0
 			var heavy := bool(g.crush) and k == gk.size() - 1
 			if kind in ["h", "s"] and not heavy:
-				var hold := beat * 1.5 if tier >= 2 else beat
-				notes.append({"pos": Vector2.ZERO, "at": t, "approach": ap, "kind": "drum", "drum": "roll", "sub": "roll", "hold": hold, "num": 0})
+				var hold := float(g.holds[k]) * beat if g.has("holds") else (beat * 1.5 if tier >= 2 else beat)
+				notes.append({"pos": Vector2.ZERO, "at": t, "approach": ap, "kind": "drum", "drum": "roll", "sub": "roll", "hold": hold, "num": 0, "semi": semi})
 				ids.append(notes.size() - 1)
 				t += hold
 				last = ""
 				continue
 			var side := "don"
-			if last != "":
+			if g.has("srcs"):
+				side = _music_side(g, k, pivot)
+			elif last != "":
 				side = "ka" if rng.randf() < 0.45 else "don"
 				if side == last and same >= 1:
 					side = "ka" if side == "don" else "don"
-				# 세계 음악 전투의 연타(반 박보다 촘촘)는 헷갈리지 않게 같은 색으로 타다닥
-				if stream:
-					side = last
 			same = same + 1 if side == last else 0
 			last = side
-			var note := {"pos": Vector2.ZERO, "at": t, "approach": ap, "kind": "drum", "drum": side, "sub": side, "hold": 0.0, "num": 0}
+			var note := {"pos": Vector2.ZERO, "at": t, "approach": ap, "kind": "drum", "drum": side, "sub": side, "hold": 0.0, "num": 0, "semi": semi}
 			if heavy:
 				note.crush = true
 			notes.append(note)
@@ -7893,7 +7946,7 @@ func _drum_notes(index: int, pat: Array, tier: int, beat: float, ap: float, call
 			if kind == "d":
 				t += half
 				var other := "ka" if side == "don" else "don"
-				notes.append({"pos": Vector2.ZERO, "at": t, "approach": ap, "kind": "drum", "drum": other, "sub": other, "hold": 0.0, "num": 0})
+				notes.append({"pos": Vector2.ZERO, "at": t, "approach": ap, "kind": "drum", "drum": other, "sub": other, "hold": 0.0, "num": 0, "semi": semi})
 				ids.append(notes.size() - 1)
 				last = other
 				same = 0
@@ -7902,7 +7955,8 @@ func _drum_notes(index: int, pat: Array, tier: int, beat: float, ap: float, call
 
 
 # 박자 피하기: 짧게 = 가로·세로 한 줄(바로 앞 줄과 다르게) · 두 번 = 가로 한 줄, 반 박 뒤 세로 한 줄 · 길게 = 같은 줄이 반 박 간격 두 번 ·
-# 따라가기 = 세로줄이 반 박마다 한쪽 끝에서 쓸고 지나감 · 도망 = 나를 노림(보라) · 페인트 = 십자 · 강타 = 한 칸만 남기고 전부
+# 따라가기 = 세로줄이 반 박마다 한쪽 끝에서 쓸고 지나감 · 도망 = 나를 노림(보라) · 페인트 = 십자 · 강타 = 한 칸만 남기고 전부.
+# 세계 음악 전투의 짧게는 음 높이 줄(높은 음 = 윗줄 · 낮은 음 = 아랫줄), 킥 = 가운데 세로줄, 타악 = 양끝 세로줄 번갈아
 func _dodge_notes(index: int, pat: Array, beat: float, ap: float, call: float) -> Array:
 	var half := beat / 2.0
 	var rng := RandomNumberGenerator.new()
@@ -7914,12 +7968,15 @@ func _dodge_notes(index: int, pat: Array, beat: float, ap: float, call: float) -
 	var prev := ""
 	var line := func(row: bool, i: int) -> Array:
 		return [0, 1, 2].map(func(j): return Vector2i(j, i) if row else Vector2i(i, j))
+	var mel := _melody_semis(pat)
+	var side := 0
 	for g in pat:
 		var ids: Array = []
 		var gk: Array = g.kinds
 		for k in range(gk.size()):
 			var kind := String(gk[k])
 			t = _next_t(g, k, t, beat, origin)
+			var semi := int(g.semis[k]) if g.has("semis") else 0
 			var strikes: Array = []
 			if bool(g.crush) and k == gk.size() - 1:
 				var safe := Vector2i(rng.randi() % 3, rng.randi() % 3)
@@ -7934,7 +7991,7 @@ func _dodge_notes(index: int, pat: Array, beat: float, ap: float, call: float) -
 					"d":
 						strikes = [["row", line.call(true, rng.randi() % 3)], ["col", line.call(false, rng.randi() % 3)]]
 					"h":
-						var r1 := rng.randi() % 3
+						var r1 := _dodge_row(semi, mel) if g.has("srcs") else rng.randi() % 3
 						strikes = [["row", line.call(true, r1)], ["row", line.call(true, r1)]]
 					"s":
 						var lr := rng.randf() < 0.5
@@ -7947,22 +8004,42 @@ func _dodge_notes(index: int, pat: Array, beat: float, ap: float, call: float) -
 						var key := prev
 						var row := true
 						var i := 0
-						while key == prev:
-							row = rng.randf() < 0.5
-							i = rng.randi() % 3
-							key = "%s%d" % ["r" if row else "c", i]
+						if g.has("srcs"):
+							match String(g.srcs[k]):
+								"kick":
+									row = false
+									i = 1
+								"perc":
+									row = false
+									i = side
+									side = 2 - side
+								_:
+									i = _dodge_row(semi, mel)
+						else:
+							while key == prev:
+								row = rng.randf() < 0.5
+								i = rng.randi() % 3
+								key = "%s%d" % ["r" if row else "c", i]
 						prev = key
 						strikes = [["row" if row else "col", line.call(row, i)]]
 			for s in range(strikes.size()):
 				if s > 0:
 					t += half
-				var note := {"pos": Vector2.ZERO, "at": t, "approach": ap, "kind": "dodge", "sub": String(strikes[s][0]), "tiles": strikes[s][1], "hold": 0.0, "num": 0}
+				var note := {"pos": Vector2.ZERO, "at": t, "approach": ap, "kind": "dodge", "sub": String(strikes[s][0]), "tiles": strikes[s][1], "hold": 0.0, "num": 0, "semi": semi}
 				if String(strikes[s][0]) == "all":
 					note.crush = true
 				notes.append(note)
 				ids.append(notes.size() - 1)
 		groups.append(ids)
 	return [notes, groups]
+
+
+# 피하기 줄: 이 공격 선율 높이를 셋으로 나눠 높은 음 = 윗줄(0) · 낮은 음 = 아랫줄(2)
+static func _dodge_row(semi: int, mel: Array) -> int:
+	if mel.size() < 2 or int(mel.back()) == int(mel[0]):
+		return 1
+	var u := float(semi - int(mel[0])) / float(int(mel.back()) - int(mel[0]))
+	return 0 if u > 0.67 else (1 if u > 0.33 else 2)
 
 
 # 부름-응답: 같은 리듬(간격)으로 응답 노트만 둔다. 부름 소리·빛은 call초 앞에서 난다(P2NoteChart.arrange). 두 번 = 반 박 뒤 한 번 더
@@ -7980,7 +8057,7 @@ func _echo_notes(pat: Array, beat: float, ap: float, call: float) -> Array:
 			for s in range(2 if String(gk[k]) == "d" else 1):
 				if s > 0:
 					t += half
-				var note := {"pos": Vector2.ZERO, "at": t, "approach": ap, "kind": "echo", "sub": "", "hold": 0.0, "num": 0}
+				var note := {"pos": Vector2.ZERO, "at": t, "approach": ap, "kind": "echo", "sub": "", "hold": 0.0, "num": 0, "semi": int(g.semis[k]) if g.has("semis") else 0}
 				if bool(g.crush) and k == gk.size() - 1:
 					note.crush = true
 				notes.append(note)
@@ -8023,7 +8100,8 @@ static func _cell_dir(cell: Vector2i) -> int:
 	return 1
 
 
-# 방향: 보스 문장은 칸 쪽(늘 같은 무늬), 그 밖은 첫 화살이 적 쪽(오른쪽)에서 오고 그 뒤로 옆으로 돌기 · 반대로 뒤집기 · 같은 쪽 한 번 더(세 번 연속은 없음)
+# 방향: 보스 문장은 칸 쪽(늘 같은 무늬), 그 밖은 첫 화살이 적 쪽(오른쪽)에서 오고 그 뒤로 옆으로 돌기 · 반대로 뒤집기 · 같은 쪽 한 번 더(세 번 연속은 없음).
+# 세계 음악 전투는 선율 따라: 앞 선율 음보다 오르면 위 · 내리면 아래 · 같으면 그 방향 그대로(첫 음은 오른쪽), 킥 = 오른쪽 · 타악 = 왼쪽
 func _arrow_notes(index: int, pat: Array, tier: int, beat: float, ap: float, call: float) -> Array:
 	var half := beat / 2.0
 	var rng := RandomNumberGenerator.new()
@@ -8034,7 +8112,8 @@ func _arrow_notes(index: int, pat: Array, tier: int, beat: float, ap: float, cal
 	var origin := t
 	var last := -1
 	var same := 0
-	var prev_t := -99.0
+	var mel := -999
+	var mel_dir := 1
 	for g in pat:
 		var ids: Array = []
 		var styles := _arrow_styles(g, tier)
@@ -8042,16 +8121,26 @@ func _arrow_notes(index: int, pat: Array, tier: int, beat: float, ap: float, cal
 		for k in range(gk.size()):
 			t = _next_t(g, k, t, beat, origin)
 			var shots: Array = styles[k]
-			# 박 칸 계획은 칸 자리마다 화살 하나(여러 발은 다음 칸과 겹친다)
+			var semi := int(g.semis[k]) if g.has("semis") else 0
+			# 음악 악보는 음마다 화살 하나(여러 발은 다음 음과 겹친다)
 			if g.has("beats"):
 				shots = shots.slice(0, 1)
-			var stream := _music != null and t - prev_t < beat * 0.6
-			prev_t = t
 			for s in range(shots.size()):
 				if s > 0:
 					t += half
 				var dir := 1
-				if not (g.cells as Array).is_empty() and s == 0:
+				if g.has("srcs"):
+					match String(g.srcs[k]):
+						"kick":
+							dir = 1
+						"perc":
+							dir = 3
+						_:
+							if mel != -999:
+								mel_dir = 0 if semi > mel else (2 if semi < mel else mel_dir)
+							mel = semi
+							dir = mel_dir
+				elif not (g.cells as Array).is_empty() and s == 0:
 					dir = _cell_dir(g.cells[k])
 				elif last >= 0:
 					var r := rng.randf()
@@ -8063,13 +8152,10 @@ func _arrow_notes(index: int, pat: Array, tier: int, beat: float, ap: float, cal
 						dir = last
 					if dir == last and same >= 1:
 						dir = (last + 1) % 4
-					# 세계 음악 전투의 연타는 한 방향에서 우르르
-					if stream:
-						dir = last
 				same = same + 1 if dir == last else 0
 				last = dir
 				var note := {"pos": Vector2.ZERO, "at": t, "approach": ap * (0.62 if String(shots[s]) == "fast" else 1.0), "kind": "a",
-					"lane": dir, "arrow": String(shots[s]), "sub": String(shots[s]), "hold": 0.0, "num": 0}
+					"lane": dir, "arrow": String(shots[s]), "sub": String(shots[s]), "hold": 0.0, "num": 0, "semi": semi}
 				if bool(g.crush) and k == gk.size() - 1 and s == shots.size() - 1:
 					note.crush = true
 				notes.append(note)
@@ -8081,8 +8167,16 @@ func _arrow_notes(index: int, pat: Array, tier: int, beat: float, ap: float, cal
 # 악보를 전장 가운데 넓은 판(5열 × 3행 격자)에 박자 맞춰 놓는다. 첫 노트는 두 박 뒤(그 앞은 반주로 세기).
 # 문장은 먼저 같은 리듬을 빛·음으로 들려준 뒤(부름) 따라 친다. 악보는 화면 층(체력 막대 위, 카메라 흔들림과 무관)에 둔다
 func _parry_chart(index: int, hits: Array, simple := false) -> P2NoteChart:
-	var pat := _parry_pattern(index, hits, simple)
 	var tier := _parry_tier(index)
+	var genre := _genre_of(index)
+	# 세계 음악 전투: 첫 노트가 떨어질 마디(들리는 시각)를 먼저 잡고 그 마디부터 음악 악보를 읽는다(따라 치기는 부름 마디만큼 더 앞에서)
+	var at := 0.0
+	var slot := -1
+	if _music != null:
+		var bars := 2 if hits.size() == 1 else hits.size()
+		at = _music.entry(0.6 + _music.beat + (bars * _music.bar if genre == "echo" else 0.0))
+		slot = _music.slot_of(at)
+	var pat := _parry_pattern(index, hits, simple, slot)
 	# 더블타임: 악보 전체가 25% 빠름. 난이도는 고리가 줄어드는 시간(노트 속도)만 바꾼다
 	var beat := _music.beat if _music != null else 60.0 / float(PARRY_BPM[tier]) * (0.8 if battle.mods.has("dt") else 1.0)
 	var half := beat / 2.0
@@ -8098,19 +8192,18 @@ func _parry_chart(index: int, hits: Array, simple := false) -> P2NoteChart:
 		for q in g.gaps:
 			span += int(q) * half
 	var call := span + beat * 3.0 if phrase != "" else 0.0
-	var genre := _genre_of(index)
 	if genre == "echo":
 		call = span + beat * 3.0
+		if _music != null:
+			call = (2 if hits.size() == 1 else hits.size()) * beat * 4.0
 	var notes: Array = []
 	var groups: Array = []
 	var multi := pat.size() > 1 or (pat[0].kinds as Array).size() > 1
 	var t := beat * 2.0 + (call - beat if phrase != "" else 0.0)
 	var origin := t
 	var last := Vector2i(99, 99)
-	var prev_t := -99.0
-	var prev_pos := Vector2.ZERO
-	var flow := Vector2.ZERO
 	var recent: Array = []
+	var mel := _melody_semis(pat)
 	var fresh: Array = []
 	var alt := genre != "osu"
 	if alt:
@@ -8128,7 +8221,11 @@ func _parry_chart(index: int, hits: Array, simple := false) -> P2NoteChart:
 				var kind := String(g.kinds[k])
 				t = _next_t(g, k, t, beat, origin)
 				var cell := Vector2i(0, 0)
-				if not (g.cells as Array).is_empty():
+				var staff := Vector2.ZERO
+				if g.has("srcs"):
+					staff = _staff_spot(g, k, int(mel[0]) if not mel.is_empty() else 0, int(mel.back()) if not mel.is_empty() else 0)
+					cell = Vector2i(roundi(staff.x), roundi(staff.y))
+				elif not (g.cells as Array).is_empty():
 					cell = g.cells[k]
 				else:
 					# 앞 노트에서 한두 칸 떨어진 자리(너무 멀거나 겹치지 않게)
@@ -8137,36 +8234,26 @@ func _parry_chart(index: int, hits: Array, simple := false) -> P2NoteChart:
 						var d := absi(cell.x - last.x) + absi(cell.y - last.y)
 						if last.x == 99 or (d >= 1 and d <= 3 and not recent.has(cell)):
 							break
-				var pos := c + Vector2(cell) * CELL
-				# 세계 음악 전투의 연타(반 박보다 촘촘)는 멀리 흩지 않고 앞 노트 곁에 겹쳐 이어 붙인다(완만하게 휘는 줄)
-				if _music != null and t - prev_t < beat * 0.6:
-					if flow == Vector2.ZERO:
-						flow = (c - prev_pos).normalized().rotated(rng.randf_range(-1.2, 1.2)) if prev_pos.distance_to(c) > 1.0 else Vector2.RIGHT
-					flow = flow.rotated(rng.randf_range(-0.3, 0.3))
-					var np := prev_pos + flow * NOTE_R * 0.95
-					if not area.grow(-NOTE_R * 0.6).has_point(np):
-						flow = (c - prev_pos).normalized().rotated(rng.randf_range(-0.5, 0.5))
-						np = prev_pos + flow * NOTE_R * 0.95
-					pos = np
-					cell = Vector2i(clampi(roundi((pos.x - c.x) / CELL.x), -2, 2), clampi(roundi((pos.y - c.y) / CELL.y), -1, 1))
-				else:
-					flow = Vector2.ZERO
-				prev_t = t
-				prev_pos = pos
+				var pos := c + (staff if g.has("srcs") else Vector2(cell)) * CELL
 				last = cell
 				recent.append(cell)
 				if recent.size() > 3:
 					recent.pop_front()
-				var note := {"pos": pos, "at": t, "approach": ap * (1.6 if kind == "f" else 1.0), "kind": kind, "hold": 0.0, "num": notes.size() + 1 if multi else 0}
+				var note := {"pos": pos, "at": t, "approach": ap * (1.6 if kind == "f" else 1.0), "kind": kind, "hold": 0.0, "num": notes.size() + 1 if multi else 0,
+					"semi": int(g.semis[k]) if g.has("semis") else 0}
 				if battle.is_spawn_slot(index) or String(battle.roles[index]) == "maek_spawn_low":
 					note.bomb = true
 					if not _seen_notes.has("bomb"):
 						fresh.append("bomb")
 						_seen_notes["bomb"] = true
 				if kind == "h" or kind == "s":
-					note.hold = (beat * 1.5 if tier >= 2 else beat)
+					note.hold = float(g.holds[k]) * beat if g.has("holds") else (beat * 1.5 if tier >= 2 else beat)
 				if kind == "s":
 					var dx := CELL.x if cell.x <= 0 else -CELL.x
+					# 음악 악보는 마디 흐르는 쪽으로 그 길이만큼
+					if g.has("holds"):
+						dx = CELL.x * float(g.holds[k]) * (1.0 if (int(g.bar) + floori(float(g.beats[k]) / 4.0)) % 2 == 0 else -1.0)
+						dx = clampf(pos.x + dx, area.position.x + NOTE_R, area.end.x - NOTE_R) - pos.x
 					note.to = pos + Vector2(dx, 0)
 				if bool(g.crush) and k == (g.kinds as Array).size() - 1:
 					note.crush = true
@@ -8240,26 +8327,17 @@ func _parry_chart(index: int, hits: Array, simple := false) -> P2NoteChart:
 			first = float(notes[0].at)
 			for nt in notes:
 				first = minf(first, float(nt.at))
-		# 박 칸 계획이면 첫 노트가 마디 첫 박이 아닐 수 있다(엇박 칸): 마디 첫 박을 음악 마디에 맞춘다
-		if (pat[0] as Dictionary).has("beats"):
-			first -= float(pat[0].beats[0]) * beat
-		var at := _music.entry(0.6 + beat)
+		# 악보 첫 음이 마디 첫 박이 아닐 수 있다(엇박): 첫 마디 첫 박을 음악 마디(at)에 맞춘다
+		first -= float(pat[0].beats[0]) * beat
 		chart.follow(_music.clock, at - first)
 		chart.set_meta("world", world)
-		var phrases: Array = []
-		for gr in groups:
-			var by_bar := {}
-			for x in gr:
-				var bi := floori((float(notes[int(x)].at) - first) / (beat * 4.0) + 0.001)
-				if not by_bar.has(bi):
-					by_bar[bi] = []
-				(by_bar[bi] as Array).append(x)
-			var keys := by_bar.keys()
-			keys.sort()
-			for bi in keys:
-				phrases.append(by_bar[bi])
-		chart.set_meta("semis", _music.pitches(world, phrases, notes.size()))
-		_music.enemy(world, at)
+		chart.set_meta("semis", notes.map(func(q): return int(q.get("semi", 0))))
+		var force: Array = []
+		for g in pat:
+			for st in ["counter", "perc"]:
+				if (g.srcs as Array).has(st) and not force.has(st):
+					force.append(st)
+		_music.enemy(world, at, force)
 		chart.cue.connect(_on_music_cue)
 	else:
 		chart.cue.connect(_on_cue)
@@ -8981,7 +9059,7 @@ func _intent_pips(intent: Control, i: int, act: Dictionary) -> void:
 				var half := raw - maxi(1, raw / 2)
 				var blk := int(_shown.block)
 				tip += tr("\n강한 공격 %d → 완벽히 막아도 %d → 방어 %d로 받고 → 체력 −%d") % [raw, half, blk, maxi(0, half - blk)]
-		tip = _pip_legend(_genre_of(i)) + "\n\n" + tr("이번에 %d개") % kinds.size() + (tr(" · 이 적만의 박자 「%s」") % String(pat[0].phrase) if String(pat[0].phrase) != "" else "") + (tr(" · 억제로 쉬워짐") if simple else "") + tip
+		tip = _pip_legend(_genre_of(i)) + "\n\n" + (tr("이번에 약 %d개") if _music != null else tr("이번에 %d개")) % kinds.size() + (tr(" · 이 적만의 박자 「%s」") % String(pat[0].phrase) if String(pat[0].phrase) != "" else "") + (tr(" · 억제로 쉬워짐") if simple else "") + tip
 		intent.tooltip_text = String(intent.tooltip_text).get_slice("\n\n", 0) + "\n\n" + tip
 	pips.size.x = maxf(48.0, intent.size.x)
 	pips.set_meta("kinds", kinds)
