@@ -647,15 +647,20 @@ func _draw_burst(n: Dictionary, u: float) -> void:
 	var fade := 1.0 - u
 	var feint: bool = n.kind == "x"
 	var kind := String(n.kind)
-	match String(n.grade):
+	var g := String(n.grade)
+	# 박자 시계 악보(세계 음악)에서는 막음도 완벽처럼 터진다(색과 글자만 파랑)
+	if g == "good" and clock.is_valid():
+		g = "perfect"
+	var col := C_GOOD if String(n.grade) == "good" else C_PERFECT
+	match g:
 		"perfect":
 			if u < 0.3:
 				_c.draw_colored_polygon(_body(kind, p, radius * (1.0 + u), n), Color(1, 1, 1, 0.85 * (1.0 - u / 0.3)))
-			_ring(kind, p, radius * lerpf(1.0, 2.0, u), n, Color(C_PERFECT, fade), lerpf(5.0, 1.0, u))
+			_ring(kind, p, radius * lerpf(1.0, 2.0, u), n, Color(col, fade), lerpf(5.0, 1.0, u))
 			for i in range(8):
 				var dir := Vector2.RIGHT.rotated(TAU * (i + 0.5) / 8.0)
-				_c.draw_line(p + dir * radius * lerpf(1.1, 1.7, u), p + dir * radius * lerpf(1.4, 2.3, u), Color(C_PERFECT, fade), P2Pixel.w(3.0), false)
-			_label(p, "참음!" if feint else "완벽!", C_PERFECT, u)
+				_c.draw_line(p + dir * radius * lerpf(1.1, 1.7, u), p + dir * radius * lerpf(1.4, 2.3, u), Color(col, fade), P2Pixel.w(3.0), false)
+			_label(p, "막음" if String(n.grade) == "good" else ("참음!" if feint else "완벽!"), col, u)
 		"good":
 			_ring(kind, p, radius * lerpf(1.0, 1.5, u), n, Color(C_GOOD, fade), 3.0)
 			_label(p, "막음", C_GOOD, u)

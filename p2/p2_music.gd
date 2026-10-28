@@ -370,13 +370,13 @@ func step(n: int) -> void:
 	tone(_world, int(ts[posmod(n, ts.size())]), "perfect", clock())
 
 
-# 막기 판정 소리: 완벽은 온음, 막음은 작고 짧게(둘 다 일찍 눌렀으면 노트 박 at에 맞춰), 놓침은 음 없는 둔탁한 소리
+# 막기 판정 소리: 완벽 · 막음 모두 같은 온음(일찍 눌렀으면 노트 박 at에 맞춰), 놓침만 음 없는 둔탁한 소리
 func tone(world: String, semi: int, grade: String, at: float) -> void:
 	var g := linear_to_db(maxf(P2Beat.gain, 0.001))
 	if grade == "miss":
 		_shot(_thud, P2MusicMeta.PRE, clock(), g, fx_bus)
 		return
-	var kind := "perfect" if grade == "perfect" else "block"
+	var kind := "perfect"
 	var bank: Dictionary = (_tones.get(world, {}) as Dictionary).get(kind, {})
 	var s: AudioStream = bank.get(semi, bank.get(0))
 	_shot(s, P2MusicMeta.PRE, maxf(at, clock()), g + TONE_DB, fx_bus)

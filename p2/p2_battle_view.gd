@@ -8190,7 +8190,7 @@ func _parry_chart(index: int, hits: Array, simple := false) -> P2NoteChart:
 	chart.setup(notes, NOTE_R, _ui_tex("status_shield", 4), battle.get_pending_defense() > 0)
 	chart.bounds = area
 	# 입문 판정 × 난이도·하드록 판정 (너무 넓거나 좁지 않게)
-	chart.ease(clampf(_ease_k() * battle.judge_mult * (1.35 if _music != null else 1.0), 0.5, 2.0))
+	chart.ease(clampf(_ease_k() * battle.judge_mult * (1.5 if _music != null else 1.0), 0.5, 2.2))
 	chart.hidden_mod = battle.mods.has("hd")
 	chart.beat = beat
 	chart.call = call
@@ -8662,14 +8662,15 @@ func _on_note_judged(i: int, grade: String, dt: float, chart: P2NoteChart) -> vo
 		else:
 			_sfx("deny", 1.0)
 		return
-	match grade:
+	# 세계 음악 전투에서는 막음도 완벽과 같은 손맛(파랑 불꽃만 다름)
+	match "perfect" if grade == "good" and _music != null else grade:
 		"perfect":
 			_pp_pose(Vector2(0.95, 1.05), 7.0, 0.04, 0.04, 0.2)
 			_sfx("crit_ring", 1.15)
 			_sfx("block", 1.3)
 			_actor_flash(_player, Color.WHITE, 0.35, 0.02, 0.08)
 			if _juice:
-				_sparks(at, Vector2.RIGHT, 1.1, 10, [C_CRIT, Color.WHITE], true)
+				_sparks(at, Vector2.RIGHT, 1.1, 10, [C_BLOCK if grade == "good" else C_CRIT, Color.WHITE], true)
 		"good":
 			_sfx("block", 1.05)
 			if _juice:
@@ -8752,16 +8753,18 @@ func _group_grade(grades: Array, crush := false) -> Dictionary:
 	return {"grade": "good" if frac > 0.0 else "miss", "frac": frac}
 
 
-# 세계 음악 전투의 묶음 판정(노트가 많으니 너그럽게): 놓친 노트 없이 85% 넘게 완벽이면 완벽(강타는 절반),
-# 아니면 막은 몫(완벽 1 · 막음 0.75)을 0.85로 나눈 만큼 막는다(최대 95%)
+# 세계 음악 전투의 묶음 판정(노트가 많으니 너그럽게): 놓친 노트가 없으면 다 막는다(막음도 완벽과 같은 대우, 강타는 절반).
+# 완벽 보상(필살기 · 철벽 박자 등)은 85% 넘게 완벽일 때만. 놓친 게 있으면 막은 몫을 0.85로 나눈 만큼(최대 95%)
 func _cell_grade(grades: Array, crush := false) -> Dictionary:
 	var score := 0.0
 	var perfect := 0
 	for g in grades:
 		score += 1.0 if g == "perfect" else (0.75 if g == "good" else 0.0)
 		perfect += 1 if g == "perfect" else 0
-	if not grades.has("miss") and perfect >= 0.85 * grades.size():
-		return {"grade": "good", "frac": 0.5} if crush else {"grade": "perfect", "frac": 1.0}
+	if not grades.has("miss"):
+		if crush:
+			return {"grade": "good", "frac": 0.5}
+		return {"grade": "perfect", "frac": 1.0} if perfect >= 0.85 * grades.size() else {"grade": "good", "frac": 1.0}
 	var frac := minf(0.95, score / grades.size() / 0.85) * (0.5 if crush else 1.0)
 	return {"grade": "good" if frac > 0.0 else "miss", "frac": frac}
 
