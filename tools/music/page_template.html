@@ -182,7 +182,7 @@ canvas#lane { width: 100%; height: 132px; image-rendering: pixelated; display: b
 
   <section class="step" aria-labelledby="s2">
     <h2 id="s2">한 판: 적 차례대로</h2>
-    <p class="note">내 차례 2마디 뒤에 적 셋이 2마디씩 공격합니다. 노트는 그 마디 음악 악보(적 등급대로)이고, 막으면 그 음이 한 옥타브 위로 울립니다.</p>
+    <p class="note">게임 적 차례와 같은 틀입니다. 내 차례 2마디 뒤에 적마다 4마디: 문장 첫머리부터 3마디 노트, 마지막 1마디는 넘어가기(세계가 바뀌면 그 마디 끝 박에 필인)입니다. 노트는 그 마디 음악 악보(적 등급대로)이고 막으면 그 음이 울립니다. 북 적은 북 장단(킥 · 낮은 북 빨강, 높은 북 파랑, 꼬리 필인 노랑 길게), 화살 · 피하기 적은 손이 따라갈 만큼 솎은 박(낮은 등급 한 박 · 높으면 반 박)입니다.</p>
     <p class="note"><b>겹은 전투 진행을 따라 쌓입니다.</b> 적 체력을 깎을수록(여기서는 한 바퀴마다 25%) 하이햇 → 세계 타악 → 킥 4박 → 베이스 → 맞받는 선율 → 반짝이가 다음 마디부터 하나씩 더해져, 막바지에는 전부 울립니다. 다 깎으면 끝맺음과 함께 잔잔해지고 다음 전투는 잔잔하게 시작합니다. 놓치면 연속만 0이 되고 내 막기 음만 빠질 뿐, 노래는 그대로입니다(연속 5 이상이 끊기면 금 가는 소리).</p>
     <div class="row" id="presets"><span class="label">적 순서</span></div>
     <div class="seq" id="seq"></div>
@@ -240,7 +240,12 @@ const AUTOS = [["manual", "직접"], ["perfect", "자동 완벽"], ["mixed", "�
 const TIERS = [["normal", "일반", "앞 악기 긴 음 위주"], ["deep", "심층", "앞 악기 선율 전부"], ["elite", "정예", "+ 맞받는 선율 · 킥"], ["boss", "보스", "+ 세계 타악"]];
 const LVNAME = Object.fromEntries(TIERS.map(l => [l[0], l[1]]));
 const TIER_OF = Object.fromEntries(TIERS.map((l, i) => [l[0], i]));
-const SRC_COL = { lead: "#ece6d6", counter: "#b28cff", kick: "#6b5f8a", perc: "#e8c46a" };
+const SRC_COL = { lead: "#ece6d6", counter: "#b28cff", kick: "#6b5f8a", kick4: "#6b5f8a", perc: "#e8c46a", roll: "#ffcf3a", rollhit: "#ffcf3a" };
+// 적 → 막기 장르(게임 P2Catalog parry). 최종 보스는 바퀴마다 돌아가며
+const FOE_GENRE = { scout: "osu", scout_h: "osu", archer: "arrow", archer_h: "arrow", breaker: "drum", guard_h: "drum", elite: "drum", maek_elite_low: "drum", leader: "drum",
+  hexer: "dodge", poisoner: "dodge", shieldbearer: "osu", banner: "osu", boss: "osu", hard_boss: "osu", maek_noble_mid: "arrow", ruins_boss: "osu", cannon: "dodge", curse: "osu",
+  x_boss: "medley", maek_summoner_low: "osu", mimic_n: "osu", mimic_h: "osu", mimic_x: "osu" };
+const GENRE_NAME = { osu: "고리", arrow: "화살", drum: "북", dodge: "피하기" };
 
 let bpm = 124, listenTier = 1, autoMode = "perfect", preset = PRESETS[0];
 // 연속(combo)은 놓치면 0이 될 뿐 음악과 무관. 음악 겹은 전투 진행(prog, 적 체력을 깎은 비율)대로 earned개
@@ -319,7 +324,10 @@ function tick() {
 
 // ── 막기 노트: 그 마디 악보(E.chartBar) 그대로. 필인 마디는 마지막 박을 비운다 ──
 function chartOf(w, slot, tier, fill) { return E.chartBar(w, slot, tier).filter(n => !fill || n.b < 3); }
-function withForced(on, ch) { return on.concat(["counter", "perc"].filter(p => !on.includes(p) && ch.some(n => n.src === p))); }
+function withForced(on, ch) {
+  const used = new Set(ch.map(n => n.src === "roll" || n.src === "rollhit" ? "perc" : n.src));
+  return on.concat(["counter", "perc", "kick4"].filter(p => !on.includes(p) && used.has(p)));
+}
 function addNotes(w, ch, t) {
   ch.forEach((c, i) => {
     const n = { time: t + c.b * G.beat, semi: c.semi, src: c.src, w: w, done: false, end: i === ch.length - 1 };
@@ -408,14 +416,26 @@ function resolve(k) {
   resolved.set(k, w);
   return w;
 }
+// 한 판의 마디 차례: 내 차례 2마디, 적마다 4마디(3마디 노트 + 넘어가기 1마디). 음악은 게임처럼 8마디 고리(마디 b → 고리 b % 8)라 블록은 늘 문장 첫머리에서 시작
+function blockAt(b) {
+  const lens = seq.map(q => q.kind === "mine" ? 2 : 4), round = lens.reduce((a, x) => a + x, 0);
+  let x = b % round, i = 0;
+  while (x >= lens[i]) { x -= lens[i]; i++; }
+  return { k: Math.floor(b / round) * seq.length + i, bar: x, len: lens[i], round: Math.floor(b / round) };
+}
+function genreOf(foe, round) { const g = FOE_GENRE[foe] || "osu"; return g === "medley" ? ["drum", "arrow", "dodge", "osu"][round % 4] : g; }
+function chartFor(w, genre, slot, tier) {
+  const ch = genre === "drum" ? E.drumBar(w, slot, tier) : E.chartBar(w, slot, tier);
+  return genre === "arrow" || genre === "dodge" ? E.thin(ch, tier <= 1 ? 1 : 0.5) : ch;
+}
 function battleBar(b, t) {
-  const k = Math.floor(b / 2), half = b % 2, s = seq[k % seq.length], w = resolve(k);
-  if (half === 0 && s.kind === "enemy") { seen.set(keyOf(w), (seen.get(keyOf(w)) || 0) + 1); segVar.set(k, (seen.get(keyOf(w)) - 1) % 4); }
-  const vari = segVar.get(k) || 0, nx = seq[(k + 1) % seq.length], fill = half === 1 && nx.kind === "enemy" ? resolve(k + 1) : null;
-  const tier = s.kind === "enemy" ? TIER_OF[FOE_LV[s.foe]] : null, ch = tier === null ? [] : chartOf(w, vari * 2 + half, tier, fill);
+  const { k, bar, len, round } = blockAt(b), s = seq[k % seq.length], w = resolve(k), slot = b % 8, vari = slot >> 1, half = slot & 1;
+  const nx = seq[(k + 1) % seq.length], fill = bar === len - 1 && nx.kind === "enemy" && (s.kind === "mine" || keyOf(resolve(k + 1)) !== keyOf(w)) ? resolve(k + 1) : null;
+  const genre = s.kind === "enemy" ? genreOf(s.foe, round) : "";
+  const tier = s.kind === "enemy" && bar < 3 ? TIER_OF[FOE_LV[s.foe]] : null, ch = tier === null ? [] : chartFor(w, genre, slot, tier);
   // 한 바퀴(내 차례로 돌아옴)마다 적 체력을 25%씩 깎은 것으로: 겹이 쌓이다 다 깎으면 끝맺음 뒤 잔잔하게 처음부터
   let roundMsg = null;
-  if (half === 0 && s.kind === "mine" && k > 0) {
+  if (bar === 0 && s.kind === "mine" && k > 0) {
     if (H.prog >= 1) { E.ending(G, w, t); setProg(0); roundMsg = ["up", "다 깎음 → 끝맺음 · 다음 전투는 잔잔하게"]; }
     else { const f = setProg(H.prog + 0.25); roundMsg = ["up", "진행 " + Math.round(H.prog * 100) + "%" + (f.length ? " → 겹 + " + f.join(" · ") : "")]; }
   }
@@ -423,10 +443,10 @@ function battleBar(b, t) {
   addNotes(w, ch, t);
   bars.push({ t: t, w: w, fill: fill });
   at(t, () => {
-    show(w, s.kind === "enemy" ? `적 차례 · ${FOE[s.foe]} · 변주 ${E.VARIS[vari]}` : "내 차례");
-    markTier(tier, vari * 2 + half);
+    show(w, s.kind === "enemy" ? (bar < 3 ? `적 차례 · ${FOE[s.foe]} · ${GENRE_NAME[genre]} · ${bar + 1}/3마디` : `적 차례 · 넘어가기`) : "내 차례");
+    markTier(tier, slot);
     if (roundMsg) showHeat(H, { msgs: [roundMsg] });
-    if (half === 0) { $("queued").textContent = ""; document.querySelectorAll(".seq span").forEach((e, i) => e.classList.toggle("cur", i === k % seq.length)); }
+    if (bar === 0) { $("queued").textContent = ""; document.querySelectorAll(".seq span").forEach((e, i) => e.classList.toggle("cur", i === k % seq.length)); }
   });
   if (fill) at(t + 3 * G.beat, () => { $("queued").textContent = "넘어가기 예고 → " + fill.name; document.documentElement.style.setProperty("--next", fill.color); });
 }
@@ -448,7 +468,7 @@ function drawSeq() {
     if (it.kind === "mine") { w = E.WORLDS[prevId]; s.innerHTML = `내 차례<small>받침만</small>`; }
     else {
       w = it.wid === "echo" ? E.echoOf(prevId) : E.WORLDS[it.wid]; if (it.wid !== "echo") prevId = it.wid;
-      s.innerHTML = `${FOE[it.foe]}<small>${w.name}${w.mirror ? " (" + w.base.name + " 흉내)" : ""} · ${LVNAME[FOE_LV[it.foe]]}</small>`;
+      s.innerHTML = `${FOE[it.foe]}<small>${w.name}${w.mirror ? " (" + w.base.name + " 흉내)" : ""} · ${LVNAME[FOE_LV[it.foe]]} · ${FOE_GENRE[it.foe] === "medley" ? "돌아가며" : GENRE_NAME[FOE_GENRE[it.foe]]}</small>`;
     }
     s.style.setProperty("--c", w.color); box.appendChild(s);
   });
@@ -574,7 +594,7 @@ function draw(nowMs) {
       const x = hx + (n.time - t) * sp;
       if (x < -8 || x > LW + 8 || (n.done && !n.auto)) continue;
       if (n.auto && x < hx - 2) continue;
-      const y = n.src === "kick" ? LH - 8 : n.src === "perc" ? 8 : semiY(n.semi, LH), sz = n.src === "lead" ? 6 : 4;
+      const y = n.src === "kick" || n.src === "kick4" ? LH - 8 : n.src === "perc" ? 8 : semiY(n.semi, LH), sz = n.src === "lead" || n.src === "roll" ? 6 : 4;
       lg.fillStyle = n.src === "lead" ? n.w.color : SRC_COL[n.src]; lg.fillRect(Math.round(x - sz / 2), Math.round(y - sz / 2), sz, sz);
       if (n.end) { lg.strokeStyle = "#e8c46a"; lg.lineWidth = 1; lg.strokeRect(Math.round(x - 5) + 0.5, Math.round(y - 5) + 0.5, 10, 10); }
     }

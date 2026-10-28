@@ -8,7 +8,9 @@ extends Node
 
 const DIR := "res://assets/music/"
 const VOLUME_DB := -4.0
-const TONE_DB := 2.0
+# 적 차례(막는 동안)는 음악을 더 크게: 막기 음이 노래 위에 붕 뜨지 않고 그 안에 섞이게
+const FIGHT_DB := 5.0
+const TONE_DB := 0.0
 const BPM_OF := {"normal": 112, "hard": 124, "extreme": 136}
 const WORLD_OF := {
 	"scout": "gye", "scout_h": "gye",
@@ -57,6 +59,7 @@ var _end := {}
 var _tones := {}
 var _crack: AudioStream
 var _released := false
+var _pv_tw: Tween
 var _again_t := -1.0
 
 
@@ -176,9 +179,9 @@ func clock() -> float:
 	return mixed() - AudioServer.get_output_latency()
 
 
-# 적 공격 첫 마디 첫 박 자리: 지금부터 lead초 넘게 남은 가장 가까운 마디 첫 박
+# 적 공격 첫 박 자리: 지금부터 lead초 넘게 남은 가장 가까운 문장 첫머리(두 마디 칸 = 고리의 짝수 마디)
 func entry(lead: float) -> float:
-	return ceilf((clock() + lead) / bar) * bar
+	return ceilf((clock() + lead) / (bar * 2.0)) * bar * 2.0
 
 
 # 들리는 시각 t가 든 마디가 8마디 고리의 몇째 마디인지(악보 charts[등급][이 값])
@@ -280,6 +283,11 @@ func _retarget(secs: float) -> void:
 			if fight and not _hush:
 				v = 1.0 if on.has(nm) else (0.7 if _force.has(nm) else 0.0)
 			_vol(w, nm, v, secs)
+	if not _released:
+		if _pv_tw != null and _pv_tw.is_valid():
+			_pv_tw.kill()
+		_pv_tw = create_tween()
+		_pv_tw.tween_property(_player, "volume_db", VOLUME_DB + (FIGHT_DB if _mode == "enemy" else 0.0), maxf(secs, 0.2))
 	var dv := 0.0
 	match _mode:
 		"mine":
@@ -431,6 +439,8 @@ func release(fade: float) -> void:
 		return
 	_released = true
 	_clear_events()
+	if _pv_tw != null and _pv_tw.is_valid():
+		_pv_tw.kill()
 	var tw := create_tween().set_parallel()
 	tw.tween_property(_player, "volume_db", -60.0, fade)
 	tw.tween_property(_drone, "volume_db", -60.0, fade)

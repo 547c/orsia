@@ -146,6 +146,48 @@ window.E = (function () {
     }
     return out.map(n => ({ b: n.b, semi: n.semi, len: n.len, src: n.src }));
   };
+  // 솎기: 서로 gap박보다 가까운 음은 센 자리(2 · 4박 > 정박 > 반 박 > 그 밖, 같으면 앞 악기 · 앞 음) 하나만. 화살 · 피하기는 손이 따라갈 만큼 듬성하게
+  E.thin = function (notes, gap) {
+    const on = (b, q) => Math.abs(b / q - Math.round(b / q)) < 1e-3;
+    const st = n => (on(n.b, 2) ? 4 : on(n.b, 1) ? 3 : on(n.b, 0.5) ? 2 : 1) + (n.src === "lead" ? 0.5 : 0);
+    const keep = [];
+    for (const n of notes.slice().sort((x, y) => st(y) - st(x) || x.b - y.b)) if (!keep.some(k => Math.abs(k.b - n.b) < gap - 1e-6)) keep.push(n);
+    return keep.sort((x, y) => x.b - y.b);
+  };
+
+  // 북 장단 악보(북으로 막는 적): 그 마디 북 소리 그대로. 킥(1 · 3박)과 세계 타악의 낮은 소리 = 둥(막기 음 0), 높은 소리 = 딱(7 · 12).
+  // 등급이 오를수록 약한 타악 → 2 · 4박 킥(킥 4박 겹) → 꼬리 마디(변주 둘째 마디) 마지막 박 필인 = 노랑 길게(필인 타는 누르는 동안 저절로)
+  E.DRUM_MIN = [4, 5, 6, 7];
+  E.DRUM_CAP = [5, 7, 9, 11];
+  const LOW = new Set(["deong", "kung", "bass", "dum", "dha", "ge", "dhin", "lub", "dub", "clank", "tone"]);
+  E.drumBar = function (w, slot, tier) {
+    const v = slot >> 1, half = slot & 1, sw = w.swing || 0, at = s => (s + (s % 2 ? sw : 0)) / 4;
+    const kit = KIT[w.perc], tail = half === 1 && v % 2 === 1 && tier >= 1;
+    const out = [{ b: 0, semi: 0, len: 4, src: "kick", w: 9 }, { b: 2, semi: 0, len: 4, src: "kick", w: 9 }];
+    if (tier >= 2) for (const b of tail ? [1] : [1, 3]) out.push({ b: b, semi: 0, len: 4, src: "kick4", w: 2 });
+    const gap = tier === 0 ? 0.5 : 0.25, base = out.length;
+    // 센 타부터 넣되 등급 최소 수에 못 미치면 더 약한 타까지
+    for (let minAcc = [0.6, 0.45, 0.3, 0][tier]; ; minAcc -= 0.15) {
+      out.length = base;
+      for (const [s, nm, a] of kit.pat) {
+        const b = at(s);
+        if (a < minAcc || (tail && s >= 12) || out.some(n => Math.abs(n.b - b) < gap - 1e-6)) continue;
+        out.push({ b: b, semi: LOW.has(nm) ? 0 : a >= 0.6 ? 7 : 12, len: 1, src: "perc", w: a });
+      }
+      if (out.length >= E.DRUM_MIN[tier] - (tail ? 1 : 0) || minAcc <= 0) break;
+    }
+    while (out.length > E.DRUM_CAP[tier]) {
+      let k = -1;
+      for (let i = 0; i < out.length; i++) if (out[i].src !== "kick" && (k < 0 || out[i].w < out[k].w)) k = i;
+      out.splice(k, 1);
+    }
+    if (tail) {
+      out.push({ b: 3, semi: 7, len: 3, src: "roll" });
+      for (const [f] of kit.fill) if (f > 0 && f < 0.75) out.push({ b: 3 + f, semi: 12, len: 1, src: "rollhit" });
+    }
+    return out.sort((x, y) => x.b - y.b).map(n => ({ b: n.b, semi: n.semi, len: n.len, src: n.src }));
+  };
+
 
   let seed = 12345;
   function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }

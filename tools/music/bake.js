@@ -2,6 +2,7 @@
 // node tools/music/bake.js [세계들=gye] [빠르기들=112,124,136]   (playwright · ffmpeg 필요)
 // node tools/music/bake.js meta   소리는 그대로 두고 p2_music_meta.gd만 다시
 // node tools/music/bake.js gye,lyd tones   막기 음과 meta만(겹 고리 · 필인은 그대로)
+// node tools/music/bake.js gye,lyd charts   악보(meta)만 다시(소리는 그대로, 새 막기 음이 필요하면 tones로)
 // 겹(E.STEMS)은 8마디 고리(변주 0~3을 두 마디씩): 끝을 넘는 꼬리는 앞으로 접어 이음매가 없다
 const { chromium } = require("playwright");
 const fs = require("fs");
@@ -14,7 +15,8 @@ const SR = 44100, PRE = 0.06, BARS = 8, TAIL = 3.0;
 const metaOnly = process.argv[2] === "meta";
 const worlds = metaOnly ? [] : (process.argv[2] || "gye").split(",");
 const tonesOnly = process.argv[3] === "tones";
-const bpms = tonesOnly ? [] : (process.argv[3] || "112,124,136").split(",").map(Number);
+const chartsOnly = process.argv[3] === "charts";
+const bpms = tonesOnly || chartsOnly ? [] : (process.argv[3] || "112,124,136").split(",").map(Number);
 
 function writeOgg(file, L, R) {
   const n = L.length, b = Buffer.alloc(44 + n * 4);
@@ -66,11 +68,12 @@ function xfadeLoop(ch, start, len, xf) {
     return [enc(buf.getChannelData(0)), enc(buf.getChannelData(1))];
   }, [sec, bpm, code, SR]).then(([l, r]) => [new Float32Array(Buffer.from(l, "base64").buffer.slice(0)), new Float32Array(Buffer.from(r, "base64").buffer.slice(0))]);
 
-  // 악보: charts[tier][slot] = [[박 자리, 막기 음, 16분 길이, 소리 겹], ...]. 막기 음은 악보에 나오는 높이 전부
+  // 악보: charts[tier][slot] = [[박 자리, 막기 음, 16분 길이, 소리 겹], ...](선율), drums = 같은 꼴의 북 장단. 막기 음은 두 악보에 나오는 높이 전부
   const info = await pg.evaluate(ws => ws.map(id => {
-    const w = E.WORLDS[id], charts = [0, 1, 2, 3].map(t => [0, 1, 2, 3, 4, 5, 6, 7].map(sl => E.chartBar(w, sl, t).map(n => [Math.round(n.b * 1000) / 1000, n.semi, n.len, n.src])));
-    const tones = [...new Set(charts.flat(2).map(n => n[1]))].sort((a, b) => a - b);
-    return { id: id, tones: tones, charts: charts, stems: E.STEMS };
+    const w = E.WORLDS[id], pack = f => [0, 1, 2, 3].map(t => [0, 1, 2, 3, 4, 5, 6, 7].map(sl => f(w, sl, t).map(n => [Math.round(n.b * 1000) / 1000, n.semi, n.len, n.src])));
+    const charts = pack(E.chartBar), drums = pack(E.drumBar);
+    const tones = [...new Set(charts.flat(2).concat(drums.flat(2)).map(n => n[1]))].sort((a, b) => a - b);
+    return { id: id, tones: tones, charts: charts, drums: drums, stems: E.STEMS };
   }), worlds);
 
   const log = (f, db) => console.log(path.relative(ROOT, f).padEnd(40), "peak", db.toFixed(1), "dB");
@@ -89,13 +92,17 @@ function xfadeLoop(ch, start, len, xf) {
       [L, R] = await render(PRE + beat + 4, bpm, `const w = E.WORLDS[${W}]; G.width = 0.8; E.ending(G, w, ${PRE} + G.beat);`);
       f = path.join(dir, "end.ogg"); log(f, writeOgg(f, L, R));
     }
-    for (const semi of wi.tones) {
+    if (chartsOnly) {
+      const miss = wi.tones.filter(semi => !fs.existsSync(path.join(OUT, wi.id, "tone", `perfect_${semi < 0 ? "m" + -semi : semi}.ogg`)));
+      if (miss.length) console.log(wi.id, "막기 음 없음(tones로 구울 것):", miss.join(","));
+    }
+    for (const semi of chartsOnly ? [] : wi.tones) {
       const [L, R] = level(...await render(PRE + 2.2, 124, `E.parry(G, E.WORLDS[${W}], ${PRE}, ${semi}, "perfect");`), -27);
       const f = path.join(OUT, wi.id, "tone", `perfect_${semi < 0 ? "m" + -semi : semi}.ogg`);
       log(f, writeOgg(f, L, R));
     }
   }
-  if (!metaOnly && !tonesOnly) {
+  if (!metaOnly && !tonesOnly && !chartsOnly) {
     let [L, R] = await render(24, 124, "E.droneTo(G, 0, 1);");
     let f = path.join(OUT, "common", "drone.ogg"); log(f, writeOgg(f, xfadeLoop(L, 4, 16, 1.5), xfadeLoop(R, 4, 16, 1.5)));
     for (const nm of ["thud", "crack"]) {
@@ -112,12 +119,13 @@ function xfadeLoop(ch, start, len, xf) {
   if (fs.existsSync(metaFile)) for (const m of fs.readFileSync(metaFile, "utf8").matchAll(/^\t"(\w+)": (\{.*\}),$/gm)) old[m[1]] = m[2];
   for (const wi of info) {
     const keep = old[wi.id] ? (old[wi.id].match(/"bpms": (\[[^\]]*\])/) || [])[1] : null;
-    old[wi.id] = JSON.stringify({ tones: wi.tones, bpms: bpms.length ? bpms : JSON.parse(keep || "[]"), charts: wi.charts }).replace(/,/g, ", ").replace(/":/g, "\": ");
+    old[wi.id] = JSON.stringify({ tones: wi.tones, bpms: bpms.length ? bpms : JSON.parse(keep || "[]"), charts: wi.charts, drums: wi.drums }).replace(/,/g, ", ").replace(/":/g, "\": ");
   }
   const body = Object.keys(old).sort().map(k => `\t"${k}": ${old[k]},`).join("\n");
   fs.writeFileSync(metaFile, `class_name P2MusicMeta
 # tools/music/bake.js가 만드는 파일: 구운 세계 · 빠르기 · 막기 음(반음, C5 기준) · 음악에서 뽑은 악보. 손으로 고치지 말고 다시 구울 것
 # charts[등급 0 일반 ~ 3 보스][8마디 고리의 마디] = [[박 자리, 막기 음, 16분 길이, 소리 겹(lead · counter · kick · perc)], ...]
+# drums = 같은 꼴의 북 장단(kick · kick4 · perc, 꼬리 필인은 roll 길게 + 그 안의 rollhit)
 
 const PRE := ${PRE}
 const BARS := ${BARS}
