@@ -112,14 +112,34 @@ window.E = (function () {
     maek_summoner_low: "echo", mimic_n: "echo", mimic_h: "echo", mimic_x: "echo",
   };
 
-  // 박 쪼개기: 마디 둘(묶음 둘), 박 단위 자리. 묶음 하나가 한 마디이고 끝음은 솔(앞 마디) · 도(뒤 마디)
-  E.SUBDIV = [
-    { id: "normal", name: "일반", desc: "한 박 · 반 박", bars: [[0, 1, 2, 2.5, 3], [0, 0.5, 1, 2, 3]] },
-    { id: "deep", name: "심층", desc: "엇박", bars: [[0, 0.5, 1.5, 2.5, 3.5], [0, 0.75, 1.5, 2.25, 3]] },
-    { id: "elite", name: "정예", desc: "4쪼개기 · 셋잇단 조금", bars: [[0, 0.25, 0.5, 1, 1.5, 2, 2.25, 2.5, 3], [0, 0.5, 1, 4 / 3, 5 / 3, 2, 2.75, 3]] },
-    { id: "boss", name: "보스", desc: "4쪼개기 · 셋잇단 · 2:3", bars: [[0, 0.25, 0.5, 0.75, 1, 1.5, 2, 7 / 3, 8 / 3, 3, 3.5], [0, 2 / 3, 4 / 3, 2, 2.25, 2.5, 2.75, 3]] },
+  // 박 쪼개기: 등급마다 한 마디짜리 리듬 칸 넷(박 단위 자리). 묶음 하나가 한 마디이고 끝음은 솔(적 차례 앞 마디) · 도(뒷 마디)
+  E.LEVELS = [
+    { id: "normal", name: "일반", desc: "한 박 · 반 박", cells: [[0, 1, 2, 2.5, 3], [0, 0.5, 1, 2, 3], [0, 1, 1.5, 2, 3], [0, 1, 2, 3, 3.5]] },
+    { id: "deep", name: "심층", desc: "엇박", cells: [[0, 0.5, 1.5, 2.5, 3.5], [0, 0.75, 1.5, 2.25, 3], [0.5, 1, 1.5, 2.5, 3], [0, 1.5, 2, 2.75, 3.5]] },
+    { id: "elite", name: "정예", desc: "4쪼개기 · 셋잇단 조금", cells: [[0, 0.25, 0.5, 1, 1.5, 2, 2.25, 2.5, 3], [0, 0.5, 1, 4 / 3, 5 / 3, 2, 2.75, 3], [0, 0.25, 0.5, 0.75, 1, 2, 2.5, 3], [0, 1, 1.25, 1.5, 2, 7 / 3, 8 / 3, 3]] },
+    { id: "boss", name: "보스", desc: "4쪼개기 · 셋잇단 · 2:3", cells: [[0, 0.25, 0.5, 0.75, 1, 1.5, 2, 7 / 3, 8 / 3, 3, 3.5], [0, 2 / 3, 4 / 3, 2, 2.25, 2.5, 2.75, 3], [0, 0.75, 1.5, 2.25, 3, 3.25, 3.5], [0, 1 / 3, 2 / 3, 1, 1.5, 2, 2.5, 3, 3.25, 3.5, 3.75]] },
   ];
-  E.layer = s => s >= 20 ? 3 : s >= 10 ? 2 : s >= 5 ? 1 : 0;
+  // 적 등급 → 섞는 비율. 제 등급이 중심, 한 칸 아래는 숨 돌리기, 한 칸 위는 양념
+  E.MIX = {
+    normal: { normal: 3, deep: 1 }, deep: { normal: 1, deep: 2, elite: 1 },
+    elite: { deep: 1, elite: 2, boss: 1 }, boss: { deep: 1, elite: 2, boss: 3 },
+  };
+  E.pickCell = function (mix, avoid, r) {
+    r = r || Math.random;
+    const ids = Object.keys(mix), sum = ids.reduce((a, k) => a + mix[k], 0);
+    let pick = null;
+    for (let tries = 0; tries < 4; tries++) {
+      let x = r() * sum, id = ids[ids.length - 1];
+      for (const k of ids) if ((x -= mix[k]) < 0) { id = k; break; }
+      const lv = E.LEVELS.find(l => l.id === id), i = Math.floor(r() * lv.cells.length);
+      pick = { lv: id, i: i, pos: lv.cells[i] };
+      if (!avoid || avoid.lv !== id || avoid.i !== i) break;
+    }
+    return pick;
+  };
+  // 연속으로 얹히는 겹(쌓이는 순서). 놓치면 위에서부터 하나씩 꺼지고, 다시 막아 내면 돌아옴
+  E.PARTS = [["hat", "하이햇", 5], ["perc", "세계 타악", 5], ["kick4", "킥 4박", 10], ["bass", "베이스", 10], ["counter", "맞받는 선율", 20], ["spark", "반짝이", 20]];
+  E.earnedFor = combo => E.PARTS.filter(p => combo >= p[2]).length;
   E.groupPitches = function (w, n, cad) {
     const M = cad === "G" ? w.motifG : w.motifC, body = M.slice(0, -1), L = body.length, out = [];
     for (let k = 0; k < n - 1; k++) out.push(body[(((L - (n - 1) + k) % L) + L) % L]);
@@ -166,30 +186,45 @@ window.E = (function () {
     const dOut = c.createGain(); dOut.gain.value = 0.45;
     G.dly.connect(dl); dl.connect(pl); pl.connect(dOut); dl.connect(dlp); dlp.connect(dr); dr.connect(pr); pr.connect(dOut); dr.connect(fb); fb.connect(dl);
     dOut.connect(G.master); dOut.connect(G.rev);
-    function bus(name, gain, rev, dly, duck) {
+    // 음악 버스는 G.mus를 거쳐 마스터로(놓칠 때 휘청). 막기 음 · 놓침 소리는 곧장 마스터로
+    G.mus = c.createGain(); G.musLP = c.createBiquadFilter(); G.musLP.type = "lowpass"; G.musLP.frequency.value = 18000; G.musLP.Q.value = 0.5;
+    G.mus.connect(G.musLP); G.musLP.connect(G.master);
+    G.gates = {}; G.gateOpen = {}; G.cutEnd = {};
+    function bus(name, gain, rev, dly, o) {
+      o = o || {};
       const g = c.createGain(); g.gain.value = gain;
       const mute = c.createGain(); mute.gain.value = 1;
       let tail = g;
-      if (duck) { const dk = c.createGain(); g.connect(dk); tail = dk; G.ducks.push(dk.gain); }
-      tail.connect(mute); mute.connect(G.master);
+      if (o.duck) { const dk = c.createGain(); g.connect(dk); tail = dk; G.ducks.push(dk.gain); }
+      if (o.part) {
+        const d = c.createDelay(1), lp = c.createBiquadFilter(), gg = c.createGain();
+        d.delayTime.value = 0; lp.type = "lowpass"; lp.frequency.value = 18000; lp.Q.value = 0.7;
+        tail.connect(d); d.connect(lp); lp.connect(gg); tail = gg;
+        (G.gates[o.part] = G.gates[o.part] || []).push({ d: d, lp: lp, g: gg.gain }); G.gateOpen[o.part] = true;
+      }
+      tail.connect(mute); mute.connect(o.dry ? G.master : G.mus);
       if (rev) { const s = c.createGain(); s.gain.value = rev; mute.connect(s); s.connect(G.rev); }
       if (dly) { const s = c.createGain(); s.gain.value = dly; mute.connect(s); s.connect(G.dly); }
       (G.buses[name] = G.buses[name] || []).push(mute);
       return g;
     }
-    G.kick = bus("kick", 0.7, 0, 0, false);
-    G.hat = bus("hat", 1, 0.1, 0, false);
-    G.perc = bus("perc", 0.6, 0.2, 0.04, false);
-    G.bass = bus("bass", 0.55, 0, 0, true);
-    G.droneBus = bus("drone", 0.11, 0.15, 0, true);
-    G.bed = bus("bed", 0.32, 0.5, 0, true);
-    G.lead = bus("lead", 0.5, 0.3, 0.12, false);
-    G.mirror = bus("lead", 0.42, 0.45, 0.55, false);
-    G.counter = bus("counter", 0.36, 0.42, 0.2, true);
-    G.fx = bus("fx", 0.45, 0.6, 0.2, false);
-    G.parry = bus("parry", 0.62, 0.28, 0.06, false);
-    G.parryEcho = bus("parry", 0.55, 0.32, 0.5, false);
-    G.thudBus = bus("parry", 0.7, 0.06, 0, false);
+    G.kick = bus("kick", 0.7, 0, 0);
+    G.kick4 = bus("kick", 0.7, 0, 0, { part: "kick4" });
+    G.hat = bus("hat", 1, 0.1, 0, { part: "hat" });
+    G.perc = bus("perc", 0.6, 0.2, 0.04, { part: "perc" });
+    G.percEcho = bus("perc", 0.5, 0.3, 0.45, { part: "perc" });
+    G.fill = bus("perc", 0.6, 0.2, 0.04);
+    G.bass = bus("bass", 0.55, 0, 0, { duck: true, part: "bass" });
+    G.droneBus = bus("drone", 0.11, 0.15, 0, { duck: true });
+    G.bed = bus("bed", 0.32, 0.5, 0, { duck: true });
+    G.lead = bus("lead", 0.5, 0.3, 0.12);
+    G.mirror = bus("lead", 0.42, 0.45, 0.55);
+    G.counter = bus("counter", 0.36, 0.42, 0.2, { duck: true, part: "counter" });
+    G.spark = bus("fx", 0.45, 0.6, 0.2, { part: "spark" });
+    G.fx = bus("fx", 0.45, 0.6, 0.2);
+    G.parry = bus("parry", 0.62, 0.28, 0.06, { dry: true });
+    G.parryEcho = bus("parry", 0.55, 0.32, 0.5, { dry: true });
+    G.thudBus = bus("parry", 0.7, 0.06, 0, { dry: true });
     const nb = c.createBuffer(1, sr * 2, sr), nd = nb.getChannelData(0);
     for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
     G.noise = nb;
@@ -473,9 +508,9 @@ window.E = (function () {
   }
 
   // ── 박 뼈대 ──
-  function kick(G, t, v) {
-    drum(G, t, G.kick, 118, 46, 0.1, v, 0.34);
-    nz(G, t, "lowpass", 1400, 0.7, G.kick, v * 0.22, 0.012);
+  function kick(G, t, v, out) {
+    drum(G, t, out, 118, 46, 0.1, v, 0.34);
+    nz(G, t, "lowpass", 1400, 0.7, out, v * 0.22, 0.012);
     duck(G, t, 0.62);
   }
   function hat(G, t, v, open) {
@@ -483,7 +518,7 @@ window.E = (function () {
     nz(G, t, "highpass", 7200, 0.7, p, v * 5, open ? 0.16 : 0.03, 0.001);
     nz(G, t, "bandpass", 10000, 1.0, p, v * 2.5, open ? 0.12 : 0.02, 0.001);
   }
-  function shaker(G, t, v) { nz(G, t, "bandpass", 6500, 1.3, pan(G, G.hat, -0.2 * G.width), v, 0.05, 0.012); }
+  function shaker(G, t, v, out) { nz(G, t, "bandpass", 6500, 1.3, pan(G, out, -0.2 * G.width), v, 0.05, 0.012); }
   E.hats = function (G, w, t, L, cut) {
     for (let s = 0; s < cut * 4; s++) {
       const ts = t + s * G.s16 + sw(G, w, s) + (s % 4 ? hum(6) : 0), acc = vary(1, 0.15);
@@ -594,18 +629,20 @@ window.E = (function () {
       kit.s[nm](G, t + dt, vary(v * k * kit.gain, 0.1), pan(G, out, (kit.pan[nm] || 0) * (0.4 + 0.6 * G.width)));
     }
   }
+  // o.light: 내 차례용 가벼운 장단(겹과 상관없이 울림) · o.tail: 마지막 박을 작은 필인으로 바꿈(변주)
   E.perc = function (G, w, t, o) {
-    const kit = KIT[w.perc], out = w.mirror ? G.mirror : G.perc, cut = o.cut === undefined ? 4 : o.cut;
+    const kit = KIT[w.perc], out = o.light ? G.fill : w.mirror ? G.percEcho : G.perc, cut = o.cut === undefined ? 4 : o.cut, end = o.tail ? 12 : cut * 4;
     for (const [s, nm, v] of (o.light ? kit.light : kit.pat)) {
-      if (s >= cut * 4) continue;
+      if (s >= end) continue;
       stroke(G, kit, nm, t + s * G.s16 + sw(G, w, s) + (s % 4 ? hum(7) : hum(2)), v * (o.light ? 0.75 : 1), out);
     }
-    if (o.light) for (let s = 2; s < cut * 4; s += 4) shaker(G, t + s * G.s16 + hum(6), vary(0.2, 0.2));
-    if (w.lead === "sitar" && !o.light) for (const s of [7, 15]) if (s < cut * 4) E.inst(G, w, "chikari", t + s * G.s16 + hum(4), 72, 0.5, G.s16, G.lead);
+    if (o.tail) for (const [f, nm, v] of kit.fill) stroke(G, kit, nm, t + (3 + f) * G.beat + hum(3), v * 0.7, out);
+    if (o.light) for (let s = 2; s < cut * 4; s += 4) shaker(G, t + s * G.s16 + hum(6), vary(0.2, 0.2), out);
+    if (w.lead === "sitar" && !o.light) for (const s of [7, 15]) if (s < end) E.inst(G, w, "chikari", t + s * G.s16 + hum(4), 72, 0.5, G.s16, out);
   };
   E.fill = function (G, w, t) {
     const kit = KIT[w.perc];
-    for (const [f, nm, v] of kit.fill) stroke(G, kit, nm, t + f * G.beat + hum(3), v, G.perc);
+    for (const [f, nm, v] of kit.fill) stroke(G, kit, nm, t + f * G.beat + hum(3), v, G.fill);
   };
 
   // ── 바닥 위 받침(세계 색) · 베이스 반복 ──
@@ -670,29 +707,47 @@ window.E = (function () {
     const sub = c.createOscillator(); sub.type = "sine"; sub.frequency.value = hz(m);
     sub.connect(sus(G, t, G.bass, 0.005, v * 0.7, Math.max(0.04, dur - 0.04), 0.1)); sub.start(t); sub.stop(t + dur + 0.2);
   }
-  E.riff = function (G, w, t, cut) {
-    for (const [s, semi, len] of w.riff) {
-      if (s >= cut * 4) continue;
-      bassNote(G, w, t + s * G.s16 + sw(G, w, s) + hum(3), 36 + semi, len * G.s16, vary(0.5, 0.1));
-    }
+  E.riff = function (G, w, t, cut, v) {
+    w.riff.forEach(([s, semi, len], i) => {
+      if (s >= cut * 4) return;
+      const up = v >= 2 && i === w.riff.length - 1 ? 12 : 0;
+      bassNote(G, w, t + s * G.s16 + sw(G, w, s) + hum(3), 36 + semi + up, len * G.s16, vary(0.5, 0.1));
+    });
     if (w.esztam) for (const s of [2, 6, 10, 14]) {
       if (s >= cut * 4) continue;
       const ch = s < 8 ? [51, 55, 60] : [47, 50, 55];
-      ch.forEach((m, k) => pluck(G, t + s * G.s16 + k * 0.006 + hum(3), m, 0.16, G.lead, { bright: 0.85, decay: 0.28, exc: 0.9, cut: 4200, pan: (k - 1) * 0.3 * G.width }));
+      ch.forEach((m, k) => pluck(G, t + s * G.s16 + k * 0.006 + hum(3), m, 0.16, G.bass, { bright: 0.85, decay: 0.28, exc: 0.9, cut: 4200, pan: (k - 1) * 0.3 * G.width }));
     }
   };
 
   // ── 앞 악기 · 맞받는 선율 · 반짝이 ──
-  E.lead = function (G, w, t, half, cut, vel) {
-    const lag = w.mirror ? 2 : 0, out = w.mirror ? G.mirror : G.lead;
+  // 변주(같은 세계가 다시 나올 때 돌아가며): 0 원래 · 1 앞 마디를 음계 두 칸 위로(모방) · 2 앞 마디 솎고 뒷 마디 한 칸 아래
+  // · 3 앞 마디는 맞받는 악기가 한 옥타브 위에서 부르고 앞 악기가 받음
+  E.VARIS = ["원래", "모방", "솎음", "주고받기"];
+  function degOf(w, semi) {
+    const n = w.scale.length, o = Math.floor(semi / 12), pc = semi - 12 * o, i = w.scale.indexOf(pc);
+    return o * n + (i >= 0 ? i : w.scale.filter(x => x < pc).length);
+  }
+  function semiOf(w, d) { const n = w.scale.length; return w.scale[((d % n) + n) % n] + 12 * Math.floor(d / n); }
+  E.phrase = function (w, v) {
+    const m = w.mel;
+    if (v === 1) return m.map(([p, s, l]) => [p, p < 16 ? semiOf(w, degOf(w, s) + 2) : s, l]);
+    if (v === 2) {
+      const last = m[m.length - 1][0];
+      return m.filter(([p, , l], i) => p >= 16 || i === 0 || l >= 2).map(([p, s, l]) => [p, p >= 16 && p !== last ? semiOf(w, degOf(w, s) - 1) : s, l]);
+    }
+    return m;
+  };
+  E.lead = function (G, w, t, half, cut, vel, v) {
+    const lag = w.mirror ? 2 : 0, out = w.mirror ? G.mirror : G.lead, swap = v === 3 && half === 0;
     let prev;
-    for (const [p, semi, len] of w.mel) {
+    for (const [p, semi, len] of E.phrase(w, v || 0)) {
       if (Math.floor(p / 16) !== half) continue;
       const s = (p % 16) + lag;
       if (s >= cut * 4) continue;
-      const ts = t + s * G.s16 + sw(G, w, s) + hum(5), m = 60 + semi;
+      const ts = t + s * G.s16 + sw(G, w, s) + hum(5), m = 60 + semi + (swap ? 12 : 0);
       dip = w.mirror ? -30 : 0;
-      E.inst(G, w, w.lead, ts, m, vary(vel || 0.62, 0.12), len * G.s16, out, prev);
+      E.inst(G, w, swap ? w.counter : w.lead, ts, m, vary((vel || 0.62) * (swap ? 0.85 : 1), 0.12), len * G.s16, out, prev);
       dip = 0;
       prev = m;
     }
@@ -709,29 +764,29 @@ window.E = (function () {
     }
   };
   E.sparkle = function (G, w, t, cut) {
-    const out = pan(G, G.fx, 0), sc = w.scale, n = sc.length, top = s => 84 + sc[s % n] + 12 * Math.floor(s / n);
+    const out = pan(G, G.spark, 0), sc = w.scale, n = sc.length, top = s => 84 + sc[s % n] + 12 * Math.floor(s / n);
     const end = cut * 4;
     switch (w.spark) {
       case "pungyeong":
-        for (let k = 0; k < 3; k++) { const ts = t + rnd() * G.bar * cut / 4; if (rnd() < 0.8) partials(G, ts, hz(top(Math.floor(rnd() * n * 1.5))), pan(G, G.fx, (rnd() - 0.5) * 1.6 * G.width), [[1, 1, 1.6], [2.4, 0.3, 0.8], [4.1, 0.12, 0.4]], 0.15, 0.003); }
+        for (let k = 0; k < 3; k++) { const ts = t + rnd() * G.bar * cut / 4; if (rnd() < 0.8) partials(G, ts, hz(top(Math.floor(rnd() * n * 1.5))), pan(G, G.spark, (rnd() - 0.5) * 1.6 * G.width), [[1, 1, 1.6], [2.4, 0.3, 0.8], [4.1, 0.12, 0.4]], 0.15, 0.003); }
         break;
       case "glint":
-        for (let s = 2; s < end; s += 4) if (rnd() < 0.6) partials(G, t + s * G.s16, hz(top(Math.floor(rnd() * n))), pan(G, G.fx, (rnd() - 0.5) * 1.8 * G.width), [[1, 1, 1.2], [2, 0.2, 0.5]], 0.15, 0.01);
+        for (let s = 2; s < end; s += 4) if (rnd() < 0.6) partials(G, t + s * G.s16, hz(top(Math.floor(rnd() * n))), pan(G, G.spark, (rnd() - 0.5) * 1.8 * G.width), [[1, 1, 1.2], [2, 0.2, 0.5]], 0.15, 0.01);
         break;
       case "tsenatsel":
         for (let s = 0; s < end; s += 2) { const ts = t + s * G.s16 + sw(G, w, s); for (let k = 0; k < 4; k++) nz(G, ts + k * 0.009, "highpass", 6000, 0.8, out, (s % 4 ? 0.35 : 0.2) * (1 - k * 0.2), 0.03); }
         break;
       case "manjira":
-        for (let s = 0; s < end; s += 4) partials(G, t + s * G.s16 + hum(4), s % 8 ? 2100 : 1800, pan(G, G.fx, (s % 8 ? 0.4 : -0.4) * G.width), [[1, 1, s % 8 ? 0.08 : 0.7], [2.76, 0.4, 0.3], [5.4, 0.2, 0.15]], 0.18, 0.001);
+        for (let s = 0; s < end; s += 4) partials(G, t + s * G.s16 + hum(4), s % 8 ? 2100 : 1800, pan(G, G.spark, (s % 8 ? 0.4 : -0.4) * G.width), [[1, 1, s % 8 ? 0.08 : 0.7], [2.76, 0.4, 0.3], [5.4, 0.2, 0.15]], 0.18, 0.001);
         break;
       case "cimb":
-        for (let s = 4; s < end; s += 8) if (rnd() < 0.8) { const m = top(Math.floor(rnd() * n)); pluck(G, t + s * G.s16 - G.s16 / 2, m, 0.5, G.fx, { bright: 0.9, decay: 0.8, exc: 1, cut: 7000 }); pluck(G, t + s * G.s16, m + (rnd() < 0.5 ? -1 : 2), 0.65, G.fx, { bright: 0.9, decay: 1.0, exc: 1, cut: 7000 }); }
+        for (let s = 4; s < end; s += 8) if (rnd() < 0.8) { const m = top(Math.floor(rnd() * n)); pluck(G, t + s * G.s16 - G.s16 / 2, m, 0.5, G.spark, { bright: 0.9, decay: 0.8, exc: 1, cut: 7000 }); pluck(G, t + s * G.s16, m + (rnd() < 0.5 ? -1 : 2), 0.65, G.spark, { bright: 0.9, decay: 1.0, exc: 1, cut: 7000 }); }
         break;
       case "bleep":
         for (let s = 1; s < end; s += 2) if (rnd() < 0.35) { const o = G.c.createOscillator(); o.setPeriodicWave(pulseWave(G, 0.125)); o.frequency.value = hz(top(Math.floor(rnd() * n))); o.connect(stepEnv(G, t + s * G.s16, lpf(G, out, 5000), 0.3, 0.05, 0.03)); o.start(t + s * G.s16); o.stop(t + s * G.s16 + 0.15); }
         break;
       case "shard":
-        for (let k = 0; k < 4; k++) if (rnd() < 0.7) glassbell(G, t + Math.floor(rnd() * end) * G.s16, top(Math.floor(rnd() * n) + n), 0.25, pan(G, G.fx, (rnd() - 0.5) * 1.8 * G.width), 0.3);
+        for (let k = 0; k < 4; k++) if (rnd() < 0.7) glassbell(G, t + Math.floor(rnd() * end) * G.s16, top(Math.floor(rnd() * n) + n), 0.25, pan(G, G.spark, (rnd() - 0.5) * 1.8 * G.width), 0.3);
         break;
     }
   };
@@ -775,21 +830,62 @@ window.E = (function () {
     o.connect(env(G, t, lpf(G, G.thudBus, 300), 0.002, 0.32, 0.07)); o.start(t); o.stop(t + 0.15);
     nz(G, t, "bandpass", 520, 0.9, G.thudBus, 0.12, 0.03);
   };
+  // 연속이 부서지는 소리: 잘게 금 가는 소리 + 짧은 유리 울림
+  E.crack = function (G, t) {
+    for (const [d, f, v] of [[0, 3300, 0.5], [0.007, 5200, 0.32], [0.016, 2500, 0.3], [0.029, 4200, 0.22], [0.047, 6000, 0.12]]) nz(G, t + d, "bandpass", f, 3.5, G.thudBus, v, 0.025 + d * 0.6);
+    partials(G, t + 0.012, 1870, G.thudBus, [[1, 1, 0.25], [2.32, 0.6, 0.16], [3.9, 0.35, 0.1]], 0.06, 0.001);
+  };
+  // 한 번 놓침: 음악 전체가 잠깐 휘청(먹먹해졌다 돌아옴), 겹은 그대로
+  E.stumble = function (G, t) {
+    const f = G.musLP.frequency, g = G.mus.gain;
+    f.cancelScheduledValues(t); g.cancelScheduledValues(t);
+    f.setValueAtTime(18000, t); f.exponentialRampToValueAtTime(650, t + 0.05); f.exponentialRampToValueAtTime(18000, t + 0.5);
+    g.setValueAtTime(1, t); g.linearRampToValueAtTime(0.6, t + 0.04); g.linearRampToValueAtTime(1, t + 0.45);
+  };
+  // 겹 끄기: 그 겹만 테이프가 멈추듯 음이 처지며(지연 시간을 늘려 도플러) 닫힘 · 켜기: 필터가 열리며 돌아옴
+  E.cut = function (G, part, t) {
+    const T = 0.42, curve = new Float32Array(24);
+    for (let i = 0; i < 24; i++) curve[i] = T * 0.5 * Math.pow(i / 23, 2);
+    for (const g of G.gates[part] || []) {
+      for (const p of [g.d.delayTime, g.lp.frequency, g.g]) p.cancelScheduledValues(t);
+      g.d.delayTime.setValueCurveAtTime(curve, t, T);
+      g.lp.frequency.setValueAtTime(16000, t); g.lp.frequency.exponentialRampToValueAtTime(320, t + T);
+      g.g.setValueAtTime(1, t); g.g.setValueAtTime(1, t + T * 0.4); g.g.linearRampToValueAtTime(0, t + T);
+    }
+    G.gateOpen[part] = false; G.cutEnd[part] = t + T + 0.02;
+  };
+  E.open = function (G, part, t) {
+    t = Math.max(t, G.cutEnd[part] || 0);
+    for (const g of G.gates[part] || []) {
+      for (const p of [g.d.delayTime, g.lp.frequency, g.g]) p.cancelScheduledValues(t);
+      g.d.delayTime.setValueAtTime(0, t);
+      g.lp.frequency.setValueAtTime(600, t); g.lp.frequency.exponentialRampToValueAtTime(18000, t + 0.6);
+      g.g.setValueAtTime(0, t); g.g.linearRampToValueAtTime(1, t + 0.3);
+    }
+    G.gateOpen[part] = true;
+  };
 
   // ── 한 마디 짜기 ──
-  // sp: { w 세계, kind "enemy" | "mine", half 0|1(두 마디 중), L 층 0~3, fill 다음 세계(마지막 박에 필인 + 차오름, 킥·앞 악기는 비움) }
+  // sp: { w 세계, kind "enemy" | "mine", half 0|1(두 마디 중), on 켜진 겹 이름들(E.PARTS), vari 변주 0~3,
+  //      fill 다음 세계(마지막 박에 필인 + 차오름, 킥·앞 악기는 비움) }
   E.bar = function (G, sp, t) {
-    const w = sp.w, L = sp.L, mine = sp.kind === "mine", cut = sp.fill ? 3 : 4;
-    G.width = mine ? 0.45 : [0.35, 0.55, 0.8, 1][L];
-    E.droneTo(G, t, mine ? 0.85 : L >= 2 ? 0.5 : 1);
+    const w = sp.w, mine = sp.kind === "mine", cut = sp.fill ? 3 : 4, on = mine ? [] : sp.on || [], has = p => on.includes(p), v = sp.vari || 0;
+    const L = has("counter") || has("spark") ? 3 : has("kick4") || has("bass") ? 2 : has("hat") || has("perc") ? 1 : 0;
+    G.width = mine ? 0.45 : 0.35 + 0.65 * on.length / E.PARTS.length;
+    for (const p of on) if (!G.gateOpen[p]) E.open(G, p, t);
+    E.droneTo(G, t, mine ? 0.85 : has("bass") ? 0.5 : 1);
     if (sp.half === 0) E.bed(G, w, t, 2 * G.bar, mine ? 0.9 : 0.55 + 0.15 * L);
-    if (!mine) for (let b = 0; b < cut; b++) if (L >= 2 || b % 2 === 0) kick(G, t + b * G.beat, b === 0 ? 0.9 : vary(0.76, 0.06));
-    if (!mine && L >= 1) E.hats(G, w, t, L, cut);
+    if (!mine) for (let b = 0; b < cut; b++) {
+      if (b % 2 === 0) kick(G, t + b * G.beat, b === 0 ? 0.9 : vary(0.76, 0.06), G.kick);
+      else if (has("kick4")) kick(G, t + b * G.beat, vary(0.76, 0.06), G.kick4);
+    }
+    if (has("hat")) E.hats(G, w, t, L, cut);
     if (mine) E.perc(G, w, t, { light: true, cut: cut });
-    else if (L >= 1) E.perc(G, w, t, { cut: cut, L: L });
-    if (!mine && L >= 2) E.riff(G, w, t, cut);
-    if (!mine) E.lead(G, w, t, sp.half, cut);
-    if (!mine && L >= 3) { E.counter(G, w, t, sp.half, cut); E.sparkle(G, w, t, cut); }
+    else if (has("perc")) E.perc(G, w, t, { cut: cut, tail: sp.half === 1 && !sp.fill && v % 2 === 1 });
+    if (has("bass")) E.riff(G, w, t, cut, v);
+    if (!mine) E.lead(G, w, t, sp.half, cut, 0, v);
+    if (has("counter")) E.counter(G, w, t, sp.half, cut);
+    if (has("spark")) E.sparkle(G, w, t, cut);
     if (sp.fill) { E.fill(G, sp.fill, t + 3 * G.beat); E.riser(G, sp.fill, t + 3 * G.beat, G.beat); }
   };
 
