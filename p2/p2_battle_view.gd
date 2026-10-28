@@ -7858,12 +7858,15 @@ func _drum_notes(index: int, pat: Array, tier: int, beat: float, ap: float, call
 	var origin := t
 	var last := ""
 	var same := 0
+	var prev_t := -99.0
 	for g in pat:
 		var ids: Array = []
 		var gk: Array = g.kinds
 		for k in range(gk.size()):
 			var kind := String(gk[k])
 			t = _next_t(g, k, t, beat, origin)
+			var stream := _music != null and t - prev_t < beat * 0.6
+			prev_t = t
 			var heavy := bool(g.crush) and k == gk.size() - 1
 			if kind in ["h", "s"] and not heavy:
 				var hold := beat * 1.5 if tier >= 2 else beat
@@ -7877,6 +7880,9 @@ func _drum_notes(index: int, pat: Array, tier: int, beat: float, ap: float, call
 				side = "ka" if rng.randf() < 0.45 else "don"
 				if side == last and same >= 1:
 					side = "ka" if side == "don" else "don"
+				# 세계 음악 전투의 연타(반 박보다 촘촘)는 헷갈리지 않게 같은 색으로 타다닥
+				if stream:
+					side = last
 			same = same + 1 if side == last else 0
 			last = side
 			var note := {"pos": Vector2.ZERO, "at": t, "approach": ap, "kind": "drum", "drum": side, "sub": side, "hold": 0.0, "num": 0}
@@ -8028,6 +8034,7 @@ func _arrow_notes(index: int, pat: Array, tier: int, beat: float, ap: float, cal
 	var origin := t
 	var last := -1
 	var same := 0
+	var prev_t := -99.0
 	for g in pat:
 		var ids: Array = []
 		var styles := _arrow_styles(g, tier)
@@ -8035,6 +8042,11 @@ func _arrow_notes(index: int, pat: Array, tier: int, beat: float, ap: float, cal
 		for k in range(gk.size()):
 			t = _next_t(g, k, t, beat, origin)
 			var shots: Array = styles[k]
+			# 박 칸 계획은 칸 자리마다 화살 하나(여러 발은 다음 칸과 겹친다)
+			if g.has("beats"):
+				shots = shots.slice(0, 1)
+			var stream := _music != null and t - prev_t < beat * 0.6
+			prev_t = t
 			for s in range(shots.size()):
 				if s > 0:
 					t += half
@@ -8051,6 +8063,9 @@ func _arrow_notes(index: int, pat: Array, tier: int, beat: float, ap: float, cal
 						dir = last
 					if dir == last and same >= 1:
 						dir = (last + 1) % 4
+					# 세계 음악 전투의 연타는 한 방향에서 우르르
+					if stream:
+						dir = last
 				same = same + 1 if dir == last else 0
 				last = dir
 				var note := {"pos": Vector2.ZERO, "at": t, "approach": ap * (0.62 if String(shots[s]) == "fast" else 1.0), "kind": "a",
@@ -8092,6 +8107,9 @@ func _parry_chart(index: int, hits: Array, simple := false) -> P2NoteChart:
 	var t := beat * 2.0 + (call - beat if phrase != "" else 0.0)
 	var origin := t
 	var last := Vector2i(99, 99)
+	var prev_t := -99.0
+	var prev_pos := Vector2.ZERO
+	var flow := Vector2.ZERO
 	var recent: Array = []
 	var fresh: Array = []
 	var alt := genre != "osu"
@@ -8119,11 +8137,26 @@ func _parry_chart(index: int, hits: Array, simple := false) -> P2NoteChart:
 						var d := absi(cell.x - last.x) + absi(cell.y - last.y)
 						if last.x == 99 or (d >= 1 and d <= 3 and not recent.has(cell)):
 							break
+				var pos := c + Vector2(cell) * CELL
+				# 세계 음악 전투의 연타(반 박보다 촘촘)는 멀리 흩지 않고 앞 노트 곁에 겹쳐 이어 붙인다(완만하게 휘는 줄)
+				if _music != null and t - prev_t < beat * 0.6:
+					if flow == Vector2.ZERO:
+						flow = (c - prev_pos).normalized().rotated(rng.randf_range(-1.2, 1.2)) if prev_pos.distance_to(c) > 1.0 else Vector2.RIGHT
+					flow = flow.rotated(rng.randf_range(-0.3, 0.3))
+					var np := prev_pos + flow * NOTE_R * 0.95
+					if not area.grow(-NOTE_R * 0.6).has_point(np):
+						flow = (c - prev_pos).normalized().rotated(rng.randf_range(-0.5, 0.5))
+						np = prev_pos + flow * NOTE_R * 0.95
+					pos = np
+					cell = Vector2i(clampi(roundi((pos.x - c.x) / CELL.x), -2, 2), clampi(roundi((pos.y - c.y) / CELL.y), -1, 1))
+				else:
+					flow = Vector2.ZERO
+				prev_t = t
+				prev_pos = pos
 				last = cell
 				recent.append(cell)
 				if recent.size() > 3:
 					recent.pop_front()
-				var pos := c + Vector2(cell) * CELL
 				var note := {"pos": pos, "at": t, "approach": ap * (1.6 if kind == "f" else 1.0), "kind": kind, "hold": 0.0, "num": notes.size() + 1 if multi else 0}
 				if battle.is_spawn_slot(index) or String(battle.roles[index]) == "maek_spawn_low":
 					note.bomb = true
