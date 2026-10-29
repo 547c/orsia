@@ -3,8 +3,8 @@ extends Node2D
 # A: 간단한 2D 바닥 받침. 같은 바닥 타일을 납작하게(원근 없이) 깔고, 인물은 첨부 PNG를 정수 n배로 화면에 붙인다.
 # 인물 · 바닥 끝 · 바닥 빛 자리는 B와 같은 좌표(stage_space)에서 받아 두 보기의 화면 자리가 같다. 접지는 받침 · 그림자 자국 · 반사광을 납작한 타원으로
 
-const Space := preload("res://tools/stage_lab/godot/stage_space.gd")
-const View3D := preload("res://tools/stage_lab/godot/stage_view_3d.gd")
+const Space := preload("res://lab/stage_lab/stage_space.gd")
+const View3D := preload("res://lab/stage_lab/stage_view_3d.gd")
 
 var space: Space
 var _back: ColorRect

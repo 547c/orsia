@@ -5,10 +5,10 @@ extends Node2D
 # 음악 · 노트 판정은 본편 P2Music · P2NoteChart를 그대로 쓴다. A/B는 세계 · 빠르기 · 고리 마디 · 노트 배열 · 화면 자리 · 반경 · 판정 창 · 보정이 같다.
 # 본편 시작 장면 · 자동 로드 · 세이브 · 전투 흐름은 건드리지 않는다(이 장면만 따로 실행)
 
-const Space := preload("res://tools/stage_lab/godot/stage_space.gd")
-const View2D := preload("res://tools/stage_lab/godot/stage_view_2d.gd")
-const View3D := preload("res://tools/stage_lab/godot/stage_view_3d.gd")
-const REF := "res://tools/stage_lab/godot/ref/"
+const Space := preload("res://lab/stage_lab/stage_space.gd")
+const View2D := preload("res://lab/stage_lab/stage_view_2d.gd")
+const View3D := preload("res://lab/stage_lab/stage_view_3d.gd")
+const REF := "res://lab/stage_lab/ref/"
 # N1 = 척후 둘 → 계면 · 일반 구간 112BPM · 일반 등급 악보
 const ROLES := ["scout", "scout"]
 const WORLD := "gye"

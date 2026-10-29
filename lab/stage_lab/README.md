@@ -4,7 +4,7 @@
 
 ## 실행
 
-에디터에서 프로젝트를 열고(참조 PNG 가져오기) `res://tools/stage_lab/godot/stage_lab.tscn`을 연 뒤 현재 장면 실행(F6).
+에디터에서 프로젝트를 열고(참조 PNG 가져오기) `res://lab/stage_lab/stage_lab.tscn`을 연 뒤 현재 장면 실행(F6).
 
 ## 조작
 

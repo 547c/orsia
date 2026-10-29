@@ -3,7 +3,7 @@ extends Node
 # B: 실제 3D 바닥 + 낮은 단차 하나 + 빛 하나. 저해상도 SubViewport(화면의 n분의 1)에 그려 최근접 n배로 키운다(원화 도트 한 칸 = 화면 n px).
 # 인물은 첨부 PNG를 카메라를 향한 판(billboard)으로 발 기준점에 세운다(세로로 누르지 않음). 접지는 바닥 받침 · 그림자 자국 · 반사광으로
 
-const Space := preload("res://tools/stage_lab/godot/stage_space.gd")
+const Space := preload("res://lab/stage_lab/stage_space.gd")
 
 var space: Space
 var vp: SubViewport
