@@ -1,0 +1,504 @@
+<title>혼합 입체 무대 실험</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* 게임 전투 화면과 같은 어두운 한 가지 모습: 위 무대(2D ↔ 3D 바꿔 보기) · 옆 조작판 · 아래 각도별 비교표 */
+:root {
+  --bg: #12101a;
+  --panel: #1c1928;
+  --line: #3a3450;
+  --fg: #ece6d6;
+  --dim: #a59fb6;
+  --gold: #e8c46a;
+  --hurt: #e58b97;
+  --good: #8be0a8;
+  --sky: #9fb4d8;
+  --font-display: "Do Hyeon", "IBM Plex Sans KR", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans KR", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font: 15px/1.6 var(--font-body);
+  padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 20px; }
+h1 { font: 34px/1.15 var(--font-display); margin: 0; text-wrap: balance; }
+h2 { font: 24px/1.2 var(--font-display); margin: 0; text-wrap: balance; }
+.lead { color: var(--dim); margin: 4px 0 0; max-width: 72ch; }
+.note { color: var(--dim); font-size: 14px; margin: 0; max-width: 80ch; }
+.note b { color: var(--fg); font-weight: 600; }
+
+.viewer { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+@media (max-width: 960px) { .viewer { grid-template-columns: minmax(0, 1fr); } }
+.stage { position: relative; width: 100%; aspect-ratio: 16 / 9; max-width: 100%; background: #0b0a0f; border: 2px solid var(--line); overflow: hidden; }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; display: block; }
+#ov { cursor: crosshair; touch-action: none; }
+.tag { position: absolute; left: 10px; top: 8px; font: 18px/1 var(--font-display); color: var(--gold); background: rgba(11, 10, 15, 0.7); padding: 5px 9px; pointer-events: none; }
+
+.panel { display: grid; gap: 12px; min-width: 0; }
+.group { display: grid; gap: 6px; }
+.label { font-size: 12px; color: var(--dim); letter-spacing: 0.06em; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; }
+button {
+  font: 14px/1 var(--font-body); color: var(--fg); background: var(--panel); border: 2px solid var(--line);
+  padding: 7px 10px; cursor: pointer;
+}
+button:hover { border-color: var(--dim); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); background: #2a2540; }
+button:disabled { opacity: 0.4; cursor: default; }
+input[type="range"] { width: 100%; accent-color: var(--gold); }
+.pitch { display: flex; align-items: center; gap: 10px; }
+.pitch output { font: 15px/1 var(--font-mono); min-width: 3.2em; text-align: right; color: var(--gold); }
+
+.read { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 2px solid var(--line); }
+.read div { background: var(--panel); padding: 7px 9px; display: grid; gap: 2px; min-width: 0; }
+.read span { font-size: 12px; color: var(--dim); }
+.read b { font: 18px/1.1 var(--font-mono); font-variant-numeric: tabular-nums; }
+.result { font: 16px/1.3 var(--font-display); color: var(--fg); min-height: 1.3em; }
+.result.ok { color: var(--good); }
+.result.miss { color: var(--hurt); }
+
+.tbl { overflow-x: auto; border: 2px solid var(--line); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 760px; }
+th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--dim); font-weight: 400; font-size: 12px; letter-spacing: 0.06em; background: var(--panel); }
+td.n { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+td.v { color: var(--dim); min-width: 220px; }
+td .bad { color: var(--hurt); }
+td .good { color: var(--good); }
+tr.cur td { background: #231e36; }
+tbody tr { cursor: pointer; }
+.defs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 820px) { .defs { grid-template-columns: minmax(0, 1fr); } }
+.defs div { min-width: 0; display: grid; gap: 4px; align-content: start; }
+.defs h3 { font: 19px/1.2 var(--font-display); margin: 0; color: var(--gold); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>혼합 입체 무대 실험</h1>
+    <p class="lead">N1(척후 둘) 전투 자리를 그대로 옮겨, 지금의 2D 화면과 작은 3D 무대를 같은 그림 · 같은 크기로 바꿔 봅니다. 3D 무대는 배경의 동굴 벽과 바닥 그림을 판으로 세우고, SD 인물은 그대로 판에 붙여 세운 것입니다. 노트 · 긋기 같은 입력은 둘 다 화면 위 2D 층에서 받습니다.</p>
+  </header>
+
+  <section class="viewer" aria-label="무대">
+    <div class="stage" id="stage">
+      <canvas id="gl" width="1280" height="720"></canvas>
+      <canvas id="ov" width="1280" height="720" aria-label="무대 위 입력 시험 층"></canvas>
+      <div class="tag" id="tag">3D 무대</div>
+    </div>
+    <div class="panel">
+      <div class="group">
+        <span class="label">보기 (V 키로 바꾸기)</span>
+        <div class="row" id="modes"></div>
+      </div>
+      <div class="group">
+        <span class="label">3D 시점: 내려보는 각도</span>
+        <div class="row" id="pitches"></div>
+        <div class="pitch"><input type="range" id="pitch" min="0" max="50" step="1" value="20" aria-label="내려보는 각도"><output id="pitchOut">20°</output></div>
+      </div>
+      <div class="group">
+        <span class="label">인물 판 세우기</span>
+        <div class="row" id="stands"></div>
+      </div>
+      <div class="group">
+        <span class="label">서는 자리</span>
+        <div class="row" id="depths"></div>
+      </div>
+      <div class="group">
+        <span class="label">그림자</span>
+        <div class="row" id="shadows"></div>
+      </div>
+      <div class="group">
+        <span class="label">화면 구도</span>
+        <div class="row" id="frames"></div>
+      </div>
+      <div class="group">
+        <span class="label">조작 시험 (무대를 눌러 보기)</span>
+        <div class="row" id="tests"></div>
+        <div class="result" id="result" aria-live="polite">척후를 눌러 고르기</div>
+      </div>
+      <div class="read" id="read"></div>
+    </div>
+  </section>
+
+  <section class="group">
+    <h2>각도별 비교</h2>
+    <p class="note">같은 N1 자리를 각도마다 계산한 값입니다. 적 겹침은 <b>깊이 나눠 서기</b>(척후 1은 한 걸음 뒤, 척후 2는 앞으로 서로 가까이) 기준이고, 2D는 지금 게임 자리 그대로입니다. 줄을 누르면 그 시점으로 무대가 바뀝니다.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>보기</th><th>인물 판</th><th>인물 키 px</th><th>넓게 볼 때 키 px</th><th>바닥 보임 px</th><th>깊이 단서 px/100</th><th>적 겹침</th><th>판정 크기 px</th><th>읽기</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+  </section>
+
+  <section class="defs" aria-label="재는 것">
+    <div><h3>시점</h3><p class="note"><b>인물 키</b>는 척후 몸이 화면에서 몇 px로 보이는지(지금 게임은 200). 세운 판은 내려볼수록 짧아지고, 카메라를 향해 기운 판은 키를 지킵니다. <b>넓게 볼 때 키</b>는 적 차례에 시야를 넓혔을 때입니다.</p></div>
+    <div><h3>발붙임</h3><p class="note"><b>바닥 보임</b>은 화면에 바닥이 깔리는 높이, <b>깊이 단서</b>는 한 걸음(100) 뒤에 선 인물의 발이 화면에서 얼마나 올라가는지입니다. 둘 다 0이면 인물이 바닥 없이 한 줄 위에 서 보이고, 앞뒤에 선 적도 구분되지 않습니다.</p></div>
+    <div><h3>조작성</h3><p class="note"><b>판정 크기</b>는 적을 고르거나 그을 때 받아 주는 화면 범위의 짧은 변. 인물이 작아져도 110px 아래로는 줄이지 않습니다. <b>적 겹침</b>은 두 척후 몸이 화면에서 겹치는 비율로, 높으면 누구를 눌렀는지 헷갈립니다. 노트 시험은 적 차례 시야가 넓어지는 동안에도 노트 자리가 움직이지 않는지 봅니다.</p></div>
+  </section>
+</div>
+
+<script src="THREE_SRC"></script>
+<script>
+const A = /*ASSETS*/;
+const MAN = /*MANIFEST*/;
+const W = 1280, H = 720, FOV = 28, D0 = 360 / Math.tan(FOV / 2 * Math.PI / 180);
+// 게임 값(p2_battle_view.gd): 수로 전투 주인공 x 380 · 적 둘 860/1080 + 120 · 발 높이 366 · 몸 높이 200
+const FEET = 366, BODY = 200, MIN_HIT = 110, NOTE_R = 44;
+// 3D 바닥: 그림 맨 위 줄(369)이 뒤 끝, 발 줄(그림 446)이 z 0이 되게
+const Z_BACK = -180, Z_FRONT = 1000;
+// 깊이 나눠 서기: 척후 1은 한 걸음 뒤(z −120), 척후 2는 앞(z +90)으로 서로 가까이 — 입체 무대에서 적을 앞뒤로 모아 세울 때
+const ACTORS = [
+  { id: "p", name: "수호기사", art: "warden", x: 380, xd: 380, zd: 0 },
+  { id: "e1", name: "척후 1", art: "scout", x: 980, xd: 1050, zd: -120, foe: true },
+  { id: "e2", name: "척후 2", art: "scout", x: 1200, xd: 1150, zd: 90, foe: true },
+];
+const S = { mode: "3d", pitch: 20, stand: "up", depth: false, shadow: "blob", wide: false, test: "pick" };
+const $ = id => document.getElementById(id);
+
+// ── 무대 ──
+const gl = $("gl"), ov = $("ov"), og = ov.getContext("2d");
+const renderer = new THREE.WebGLRenderer({ canvas: gl, antialias: false, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H, false);
+renderer.shadowMap.enabled = true;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b0a0f);
+const loader = new THREE.TextureLoader();
+function tex(src, pixel) {
+  const t = loader.load(src);
+  if (pixel) { t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; }
+  return t;
+}
+const T = { full: tex(A.full), wall: tex(A.wall), floor: tex(A.floor), shadow: tex(A.shadow), warden: tex(A.warden, true), scout: tex(A.scout, true) };
+
+const g2 = new THREE.Group(), g3 = new THREE.Group();
+scene.add(g2, g3);
+// 2D: 화면 좌표 그대로(y는 아래로 음수). 게임처럼 배경 한 장 + 발밑 그림자 자국 + 인물
+const bg2 = new THREE.Mesh(new THREE.PlaneGeometry(1440, 880), new THREE.MeshBasicMaterial({ map: T.full }));
+bg2.position.set(-80 + 720, -(-80 + 440), -50);
+g2.add(bg2);
+// 3D: 벽(동굴 · 물길)은 바닥 뒤 끝에 세우고, 바닥 그림을 눕혀 깐다. 벽은 멀어진 만큼 키워 지금 화면과 같은 크기로
+const wallK = (D0 - Z_BACK) / D0;
+const wall = new THREE.Mesh(new THREE.PlaneGeometry(1440 * wallK, 369 * wallK), new THREE.MeshBasicMaterial({ map: T.wall }));
+wall.position.set(640, 369 * wallK / 2, Z_BACK);
+const floorMat = new THREE.MeshLambertMaterial({ map: T.floor });
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(1440 * wallK, Z_FRONT - Z_BACK), floorMat);
+floor.rotation.x = -Math.PI / 2;
+floor.position.set(640, 0, (Z_BACK + Z_FRONT) / 2);
+floor.receiveShadow = true;
+g3.add(wall, floor);
+g3.add(new THREE.AmbientLight(0xffffff, 0.72));
+const sun = new THREE.DirectionalLight(0xffe2b8, 0.42);
+sun.position.set(640 - 520, 900, 520);
+sun.target.position.set(640, 0, 0);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -1000, right: 1000, top: 900, bottom: -900, near: 10, far: 4000 });
+sun.shadow.bias = -0.002;
+g3.add(sun, sun.target);
+
+function actorGeo(m, s) {
+  const g = new THREE.PlaneGeometry(260 * s, 260 * s);
+  g.translate(-(m.foot[0] - 130) * s, (m.foot[1] - 130) * s, 0);
+  return g;
+}
+for (const a of ACTORS) {
+  const m = MAN[a.art], s = BODY / m.body, map = T[a.art];
+  a.man = m; a.s = s;
+  const mat = new THREE.MeshBasicMaterial({ map: map, alphaTest: 0.5, side: THREE.DoubleSide });
+  const depthMat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: map, alphaTest: 0.5, side: THREE.DoubleSide });
+  a.m2 = new THREE.Mesh(actorGeo(m, s), mat);
+  a.m2.position.set(a.x, -FEET, 1);
+  a.m3 = new THREE.Mesh(actorGeo(m, s), mat);
+  a.m3.castShadow = true;
+  a.m3.customDepthMaterial = depthMat;
+  const sh = new THREE.MeshBasicMaterial({ map: T.shadow, transparent: true, depthWrite: false, opacity: 0.85 });
+  const w = (m.right - m.left) * s * 0.85;
+  a.b2 = new THREE.Mesh(new THREE.PlaneGeometry(w, 34), sh);
+  a.b2.position.set(a.x + (m.left + m.right) / 2 * s, -FEET - 4, 0.5);
+  a.b3 = new THREE.Mesh(new THREE.PlaneGeometry(w, 64), sh);
+  a.b3.rotation.x = -Math.PI / 2;
+  g2.add(a.b2, a.m2);
+  g3.add(a.b3, a.m3);
+}
+
+const cam2 = new THREE.OrthographicCamera(-640, 640, FEET, FEET - H, -1000, 1000);
+cam2.position.set(640, -FEET, 10);
+const cam3 = new THREE.PerspectiveCamera(FOV, W / H, 10, 20000);
+
+// 시점: 발 줄 가운데(640, 0, 0)를 화면 가운데에 두고 거리 d, 각도 p로 내려봄. 넓게 = 1.32배 멀리 · 4° 더
+function camAt(cam, pitch, wide) {
+  const p = (pitch + 4 * wide) * Math.PI / 180, d = D0 * (1 + 0.32 * wide);
+  cam.position.set(640, d * Math.sin(p), d * Math.cos(p));
+  cam.lookAt(640, 0, 0);
+  cam.updateMatrixWorld(true);
+  cam.updateProjectionMatrix();
+}
+function place(pitch, stand, depth) {
+  for (const a of ACTORS) {
+    const z = depth ? a.zd : 0, x = depth ? a.xd : a.x;
+    a.m3.position.set(x, 0, z);
+    a.m3.rotation.x = stand === "lean" ? -pitch * Math.PI / 180 : 0;
+    a.b3.position.set(x + (a.man.left + a.man.right) / 2 * a.s, 0.6, z + 6);
+    a.m3.updateMatrixWorld(true);
+  }
+}
+
+// ── 화면에 비친 값 ──
+function scr(v, cam) { const p = v.clone().project(cam); return { x: (p.x + 1) / 2 * W, y: (1 - p.y) / 2 * H, z: p.z }; }
+// 몸 상자(manifest의 좌우 · 몸 높이)를 화면에 비춘 사각형
+function bodyBox(a, mesh, cam) {
+  const m = a.man, s = a.s, xs = [m.left * s, m.right * s], ys = [0, m.body * s];
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, zz = 0;
+  for (const x of xs) for (const y of ys) {
+    const p = scr(new THREE.Vector3(x, y, 0).applyMatrix4(mesh.matrixWorld), cam);
+    x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); zz += p.z / 4;
+  }
+  return { x0: x0, y0: y0, x1: x1, y1: y1, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, z: zz };
+}
+function hitBox(b) {
+  const hw = Math.max((b.x1 - b.x0) / 2, MIN_HIT / 2), hh = Math.max((b.y1 - b.y0) / 2, MIN_HIT / 2);
+  return { x0: b.cx - hw, x1: b.cx + hw, y0: b.cy - hh, y1: b.cy + hh, cx: b.cx, cy: b.cy, z: b.z };
+}
+function overlap(a, b) {
+  const w = Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)), h = Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
+  return w * h / Math.min((a.x1 - a.x0) * (a.y1 - a.y0), (b.x1 - b.x0) * (b.y1 - b.y0));
+}
+// 한 시점의 값: 인물 키 · 바닥 보임 · 깊이 단서 · 적 겹침 · 판정 크기
+function measure(mode, pitch, stand, depth, wide) {
+  const foes = ACTORS.filter(a => a.foe);
+  if (mode === "2d") {
+    cam2.zoom = 1 / (1 + 0.32 * wide); cam2.updateProjectionMatrix(); cam2.updateMatrixWorld(true);
+    for (const a of ACTORS) a.m2.updateMatrixWorld(true);
+    const bs = foes.map(a => bodyBox(a, a.m2, cam2));
+    const back = scr(new THREE.Vector3(640, -(FEET - 77), 0), cam2).y, bottom = Math.min(H, scr(new THREE.Vector3(640, -800, 0), cam2).y);
+    return { h: bs[0].y1 - bs[0].y0, floor: bottom - back, cue: 0, ov: overlap(bs[0], bs[1]), hit: Math.min(...bs.map(b => { const h = hitBox(b); return Math.min(h.x1 - h.x0, h.y1 - h.y0); })), boxes: bs };
+  }
+  camAt(cam3, pitch, wide);
+  place(pitch, stand, depth);
+  const bs = foes.map(a => bodyBox(a, a.m3, cam3));
+  const f0 = scr(new THREE.Vector3(640, 0, Z_BACK), cam3).y, f1 = Math.min(H, scr(new THREE.Vector3(640, 0, Math.min(Z_FRONT, cam3.position.z - 50)), cam3).y);
+  const cue = scr(new THREE.Vector3(640, 0, 0), cam3).y - scr(new THREE.Vector3(640, 0, -100), cam3).y;
+  return { h: bs.reduce((s, b) => s + b.y1 - b.y0, 0) / bs.length, floor: Math.max(0, f1 - f0), cue: cue, ov: overlap(bs[0], bs[1]), hit: Math.min(...bs.map(b => { const h = hitBox(b); return Math.min(h.x1 - h.x0, h.y1 - h.y0); })), boxes: bs };
+}
+function verdict(m, mode, pitch, stand) {
+  const out = [];
+  if (m.floor < 30) out.push(["bad", "바닥이 안 보임 · 한 줄 위에 선 느낌"]);
+  else if (mode === "3d" && m.cue >= 18) out.push(["good", "발밑 바닥이 깔림"]);
+  if (mode === "3d" && m.cue < 8) out.push(["bad", "앞뒤 깊이 구분 약함"]);
+  if (m.h < 180) out.push(["bad", "인물이 눌려 보임"]);
+  if (m.ov > 0.25) out.push(["bad", "적끼리 많이 겹침"]);
+  if (mode === "3d" && stand === "lean" && pitch >= 25) out.push(["", "빛 그림자가 판을 따라 짧아짐"]);
+  if (!out.length) out.push(["good", "무난"]);
+  return out.map(([c, t]) => `<span class="${c}">${t}</span>`).join(" · ");
+}
+
+// ── 그리기 ──
+let wideT = 0, lastT = performance.now(), noteRun = null;
+const notes = [], marks = [];
+let drag = null, trail = null;
+function frame(now) {
+  const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+  wideT += ((S.wide ? 1 : 0) - wideT) * Math.min(1, dt * 6);
+  const is3 = S.mode === "3d", t = now / 1000;
+  // 노트 시험: 넓어진 시야가 자리 잡은 뒤 노트를 만들고, 그동안 카메라를 살짝 흔들어 본다(노트 자리는 그대로여야 함)
+  let sway = 0;
+  if (noteRun) {
+    if (!noteRun.made && t - noteRun.t > 0.7) { makeNotes(t); noteRun.made = true; }
+    if (noteRun.made && !notes.some(q => !q.done)) noteRun = null;
+    else sway = Math.sin((t - noteRun.t) * Math.PI) * 1.5;
+  }
+  g2.visible = !is3; g3.visible = is3;
+  for (const a of ACTORS) { a.b3.visible = S.shadow === "blob" || S.shadow === "both"; a.b2.visible = S.shadow !== "none"; }
+  sun.castShadow = S.shadow === "light" || S.shadow === "both";
+  let cam = cam2;
+  if (is3) { camAt(cam3, S.pitch + sway, wideT); place(S.pitch, S.stand, S.depth); cam = cam3; }
+  else { cam2.zoom = 1 / (1 + 0.32 * wideT) * (1 + sway * 0.015); cam2.updateProjectionMatrix(); cam2.updateMatrixWorld(true); }
+  renderer.render(scene, cam);
+  drawOverlay(t, cam);
+  requestAnimationFrame(frame);
+}
+function boxesNow() {
+  const cam = S.mode === "3d" ? cam3 : cam2;
+  return ACTORS.filter(a => a.foe).map(a => ({ a: a, b: bodyBox(a, S.mode === "3d" ? a.m3 : a.m2, cam) }));
+}
+function drawOverlay(t, cam) {
+  og.clearRect(0, 0, W, H);
+  const bs = boxesNow();
+  // 판정 범위(점선) · 몸 상자(실선) · 발 기준점
+  for (const { a, b } of bs) {
+    const h = hitBox(b);
+    og.setLineDash([6, 5]); og.strokeStyle = "rgba(232,196,106,0.75)"; og.lineWidth = 2;
+    og.strokeRect(h.x0, h.y0, h.x1 - h.x0, h.y1 - h.y0);
+    og.setLineDash([]); og.strokeStyle = "rgba(159,180,216,0.55)"; og.lineWidth = 1;
+    og.strokeRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0);
+    og.fillStyle = "#e8c46a"; og.font = "16px 'Do Hyeon', sans-serif"; og.fillText(a.name, h.x0 + 4, h.y0 - 6);
+  }
+  for (const a of ACTORS) {
+    const mesh = S.mode === "3d" ? a.m3 : a.m2, p = scr(new THREE.Vector3(0, 0, 0).applyMatrix4(mesh.matrixWorld), cam);
+    og.fillStyle = "#e58b97"; og.fillRect(Math.round(p.x) - 3, Math.round(p.y) - 3, 6, 6);
+  }
+  // 긋기 자국
+  if (trail) {
+    const u = Math.min(1, (t - trail.t) / 0.5);
+    og.strokeStyle = `rgba(236,230,214,${1 - u})`; og.lineWidth = 6; og.lineCap = "round";
+    og.beginPath(); og.moveTo(trail.a.x, trail.a.y); og.lineTo(trail.b.x, trail.b.y); og.stroke();
+    if (u >= 1) trail = null;
+  }
+  if (drag) {
+    og.strokeStyle = "rgba(236,230,214,0.8)"; og.lineWidth = 3;
+    og.beginPath(); og.moveTo(drag.a.x, drag.a.y); og.lineTo(drag.b.x, drag.b.y); og.stroke();
+  }
+  // 노트: 만들 때 정한 화면 자리에 그대로(시야가 넓어져도 움직이지 않음)
+  for (const n of notes) {
+    if (n.done && t - n.done > 0.35) continue;
+    const left = n.at - t, k = Math.max(0, left / n.ap);
+    og.lineWidth = 3;
+    if (!n.done) {
+      og.strokeStyle = "rgba(232,196,106,0.9)"; og.beginPath(); og.arc(n.x, n.y, NOTE_R * (1 + 2 * k), 0, Math.PI * 2); og.stroke();
+      og.fillStyle = "rgba(236,230,214,0.18)"; og.beginPath(); og.arc(n.x, n.y, NOTE_R, 0, Math.PI * 2); og.fill();
+      og.strokeStyle = "#ece6d6"; og.beginPath(); og.arc(n.x, n.y, NOTE_R, 0, Math.PI * 2); og.stroke();
+      if (left < -0.15) judgeNote(n, "놓침", t);
+    } else {
+      og.fillStyle = n.g === "놓침" ? "#e58b97" : "#8be0a8"; og.font = "20px 'Do Hyeon', sans-serif"; og.fillText(n.g, n.x - 18, n.y - NOTE_R - 8 - (t - n.done) * 30);
+    }
+  }
+  for (const m of marks) { if (t - m.t < 0.6) { og.strokeStyle = m.c; og.lineWidth = 2; og.beginPath(); og.arc(m.x, m.y, 8, 0, Math.PI * 2); og.stroke(); } }
+  updateRead();
+}
+
+// ── 조작 시험 ──
+let tally = { pick: [0, 0], slash: [0, 0], note: [0, 0, 0] };
+function toStage(e) { const r = ov.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H }; }
+function inside(p, h) { return p.x >= h.x0 && p.x <= h.x1 && p.y >= h.y0 && p.y <= h.y1; }
+function segHits(a, b, h) {
+  if (inside(a, h) || inside(b, h)) return true;
+  const edges = [[h.x0, h.y0, h.x1, h.y0], [h.x1, h.y0, h.x1, h.y1], [h.x1, h.y1, h.x0, h.y1], [h.x0, h.y1, h.x0, h.y0]];
+  const cr = (ax, ay, bx, by, cx, cy) => (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+  return edges.some(([x0, y0, x1, y1]) => cr(a.x, a.y, b.x, b.y, x0, y0) * cr(a.x, a.y, b.x, b.y, x1, y1) < 0 && cr(x0, y0, x1, y1, a.x, a.y) * cr(x0, y0, x1, y1, b.x, b.y) < 0);
+}
+function say(text, cls) { const r = $("result"); r.textContent = text; r.className = "result " + (cls || ""); }
+ov.addEventListener("pointerdown", e => {
+  const p = toStage(e), t = performance.now() / 1000;
+  ov.setPointerCapture(e.pointerId);
+  if (S.test === "slash") { drag = { a: p, b: p }; return; }
+  if (S.test === "note") {
+    const n = notes.find(q => !q.done);
+    if (!n) return;
+    const d = Math.hypot(p.x - n.x, p.y - n.y), dt = t - n.at;
+    marks.push({ x: p.x, y: p.y, t: t, c: d <= NOTE_R ? "#8be0a8" : "#e58b97" });
+    if (d > NOTE_R * 1.3 || dt < -0.25) return;
+    judgeNote(n, d <= NOTE_R && Math.abs(dt) <= 0.06 ? "완벽" : d <= NOTE_R && Math.abs(dt) <= 0.13 ? "막음" : "놓침", t);
+    return;
+  }
+  // 고르기: 받아 주는 범위 안의 적 중 앞(카메라에 가까운) 쪽
+  const hits = boxesNow().map(o => ({ a: o.a, h: hitBox(o.b), b: o.b })).filter(o => inside(p, o.h)).sort((x, y) => x.h.z - y.h.z);
+  marks.push({ x: p.x, y: p.y, t: t, c: hits.length ? "#8be0a8" : "#e58b97" });
+  if (hits.length) {
+    tally.pick[0]++;
+    const o = hits[0], d = Math.round(Math.hypot(p.x - o.b.cx, p.y - o.b.cy));
+    say(`${o.a.name} 고름 · 몸 가운데에서 ${d}px${hits.length > 1 ? " · 두 범위가 겹친 자리(앞 척후 우선)" : ""}`, "ok");
+  } else { tally.pick[1]++; say("빈 곳", "miss"); }
+});
+ov.addEventListener("pointermove", e => { if (drag) drag.b = toStage(e); });
+ov.addEventListener("pointerup", () => {
+  if (!drag) return;
+  const a = drag.a, b = drag.b;
+  drag = null;
+  if (Math.hypot(b.x - a.x, b.y - a.y) < 30) return;
+  trail = { a: a, b: b, t: performance.now() / 1000 };
+  const cut = boxesNow().filter(o => segHits(a, b, hitBox(o.b))).map(o => o.a.name);
+  if (cut.length) { tally.slash[0]++; say(`${cut.join(" · ")} 벰`, "ok"); } else { tally.slash[1]++; say("허공", "miss"); }
+});
+function judgeNote(n, g, t) {
+  n.done = t; n.g = g;
+  tally.note[g === "완벽" ? 0 : g === "막음" ? 1 : 2]++;
+  if (!notes.some(q => !q.done)) { say(`노트 끝 · 완벽 ${tally.note[0]} · 막음 ${tally.note[1]} · 놓침 ${tally.note[2]}`, tally.note[2] ? "miss" : "ok"); }
+}
+// 노트 시험: 적 차례 구도로 넓어진 뒤, 그때 적 몸 가운데 둘레에 한 박(112BPM 0.54초)마다 6개. 만든 화면 자리에 고정
+function startNotes() {
+  notes.length = 0; tally.note = [0, 0, 0];
+  S.wide = true; syncButtons();
+  noteRun = { t: performance.now() / 1000, made: false };
+  say("시야가 넓어진 뒤 노트가 나옵니다 · 닿을 때 누르기");
+}
+function makeNotes(t) {
+  const t0 = t + 0.9, bs = boxesNow();
+  const offs = [[-50, -30], [40, -50], [0, 40], [-40, 10], [50, 20], [0, -60]];
+  for (let i = 0; i < 6; i++) {
+    const b = bs[i % 2].b;
+    notes.push({ x: b.cx + offs[i][0], y: b.cy + offs[i][1], at: t0 + i * 0.54, ap: 0.8, done: 0 });
+  }
+}
+
+// ── 읽기 · 표 ──
+function updateRead() {
+  const m = measure(S.mode, S.pitch, S.stand, S.depth, wideT);
+  const items = [
+    ["인물 키", Math.round(m.h) + " px"], ["바닥 보임", Math.round(m.floor) + " px"],
+    ["깊이 단서", S.mode === "3d" ? m.cue.toFixed(1) + " /100" : "없음"], ["적 겹침", Math.round(m.ov * 100) + " %"],
+    ["판정 크기", Math.round(m.hit) + " px"], ["고르기 · 긋기", `${tally.pick[0]}/${tally.pick[0] + tally.pick[1]} · ${tally.slash[0]}/${tally.slash[0] + tally.slash[1]}`],
+  ];
+  $("read").innerHTML = items.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join("");
+  if (S.mode === "3d") { camAt(cam3, S.pitch, wideT); place(S.pitch, S.stand, S.depth); }
+}
+const ROWS = [["2d", 0, "up"]].concat([0, 10, 20, 30, 40].flatMap(p => [["3d", p, "up"], ["3d", p, "lean"]]));
+function buildTable() {
+  $("rows").innerHTML = ROWS.map(([mode, p, st], i) => {
+    const m = measure(mode, p, st, true, 0), mw = measure(mode, p, st, true, 1);
+    return `<tr data-i="${i}"><td>${mode === "2d" ? "2D 지금" : "3D " + p + "°"}</td><td>${mode === "2d" ? "—" : st === "up" ? "세운 판" : "기운 판"}</td>` +
+      `<td class="n">${Math.round(m.h)}</td><td class="n">${Math.round(mw.h)}</td><td class="n">${Math.round(m.floor)}</td><td class="n">${mode === "2d" ? "—" : m.cue.toFixed(1)}</td>` +
+      `<td class="n">${Math.round(m.ov * 100)}%</td><td class="n">${Math.round(m.hit)}</td><td class="v">${verdict(m, mode, p, st)}</td></tr>`;
+  }).join("");
+  document.querySelectorAll("#rows tr").forEach(tr => tr.onclick = () => {
+    const [mode, p, st] = ROWS[+tr.dataset.i];
+    Object.assign(S, { mode: mode, stand: st, depth: true });
+    if (mode === "3d") S.pitch = p;
+    syncButtons();
+  });
+}
+
+// ── 조작판 ──
+const OPTS = {
+  modes: [["mode", "2d", "2D 지금"], ["mode", "3d", "3D 무대"]],
+  pitches: [0, 10, 20, 30, 40].map(p => ["pitch", p, p + "°"]),
+  stands: [["stand", "up", "세운 판"], ["stand", "lean", "기운 판 (카메라 향함)"]],
+  depths: [["depth", false, "한 줄"], ["depth", true, "깊이 나눠"]],
+  shadows: [["shadow", "blob", "자국"], ["shadow", "light", "빛 그림자"], ["shadow", "both", "둘 다"], ["shadow", "none", "없음"]],
+  frames: [["wide", false, "내 차례"], ["wide", true, "적 차례 (넓게)"]],
+  tests: [["test", "pick", "적 고르기"], ["test", "slash", "긋기"], ["test", "note", "노트"]],
+};
+for (const [box, list] of Object.entries(OPTS)) for (const [key, val, text] of list) {
+  const b = document.createElement("button"); b.type = "button"; b.textContent = text; b.dataset.key = key; b.dataset.val = JSON.stringify(val);
+  b.onclick = () => {
+    S[key] = val;
+    if (key === "test") { notes.length = 0; noteRun = null; S.wide = false; say({ pick: "척후를 눌러 고르기", slash: "척후를 가로질러 긋기", note: "" }[val]); if (val === "note") startNotes(); }
+    syncButtons();
+  };
+  $(box).appendChild(b);
+}
+function syncButtons() {
+  document.querySelectorAll(".panel button[data-key]").forEach(b => b.setAttribute("aria-pressed", String(JSON.stringify(S[b.dataset.key]) === b.dataset.val)));
+  const p3 = S.mode === "3d";
+  document.querySelectorAll("#pitches button, #stands button, #depths button").forEach(b => b.disabled = !p3);
+  $("pitch").disabled = !p3; $("pitch").value = S.pitch; $("pitchOut").textContent = S.pitch + "°";
+  $("tag").textContent = p3 ? `3D 무대 · ${S.pitch}° · ${S.stand === "up" ? "세운 판" : "기운 판"}${S.wide ? " · 넓게" : ""}` : `2D 지금${S.wide ? " · 넓게" : ""}`;
+  document.querySelectorAll("#rows tr").forEach(tr => {
+    const [mode, p, st] = ROWS[+tr.dataset.i];
+    tr.classList.toggle("cur", mode === S.mode && (mode === "2d" || (p === S.pitch && st === S.stand)));
+  });
+}
+$("pitch").oninput = e => { S.pitch = +e.target.value; syncButtons(); };
+window.addEventListener("keydown", e => { if (e.key === "v" || e.key === "V") { S.mode = S.mode === "3d" ? "2d" : "3d"; syncButtons(); } });
+window.LAB = { S: S, measure: measure, syncButtons: syncButtons, startNotes: startNotes };
+THREE.DefaultLoadingManager.onLoad = () => { buildTable(); syncButtons(); };
+buildTable(); syncButtons();
+requestAnimationFrame(frame);
+</script>
