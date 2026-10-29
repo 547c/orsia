@@ -182,7 +182,7 @@ canvas#lane { width: 100%; height: 132px; image-rendering: pixelated; display: b
 
   <section class="step" aria-labelledby="s2">
     <h2 id="s2">한 판: 적 차례대로</h2>
-    <p class="note">게임 적 차례와 같은 틀입니다. 내 차례 2마디 뒤에 적마다 4마디: 문장 첫머리부터 3마디 노트, 마지막 1마디는 넘어가기(세계가 바뀌면 그 마디 끝 박에 필인)입니다. 노트는 그 마디 음악 악보(적 등급대로)이고 막으면 그 음이 울립니다. 북 적은 북 장단(킥 · 낮은 북 빨강, 높은 북 파랑, 꼬리 필인 노랑 길게), 화살 · 피하기 적은 손이 따라갈 만큼 솎은 박(낮은 등급 한 박 · 높으면 반 박)입니다.</p>
+    <p class="note">게임 적 차례와 같은 틀입니다. 세계는 바퀴(차례)마다 하나로, 적 순서에 나온 세계를 돌아가며 씁니다: 내 차례부터 그 세계라 누가 치든 차례 내내 끊김 없이 이어집니다. 내 차례 2마디 뒤에 적마다 4마디: 문장 첫머리부터 3마디 노트, 마지막 1마디는 넘어가기(세계가 바뀌면 그 마디 끝 박에 필인)입니다. 노트는 그 마디 음악 악보(적 등급대로)이고 막으면 그 음이 울립니다. 북 적은 북 장단(킥 · 낮은 북 빨강, 높은 북 파랑, 꼬리 필인 노랑 길게), 화살 · 피하기 적은 손이 따라갈 만큼 솎은 박(낮은 등급 한 박 · 높으면 반 박)입니다.</p>
     <p class="note"><b>겹은 전투 진행을 따라 쌓입니다.</b> 적 체력을 깎을수록(여기서는 한 바퀴마다 25%) 하이햇 → 세계 타악 → 킥 4박 → 베이스 → 맞받는 선율 → 반짝이가 다음 마디부터 하나씩 더해져, 막바지에는 전부 울립니다. 다 깎으면 끝맺음과 함께 잔잔해지고 다음 전투는 잔잔하게 시작합니다. 놓치면 연속만 0이 되고 내 막기 음만 빠질 뿐, 노래는 그대로입니다(연속 5 이상이 끊기면 금 가는 소리).</p>
     <div class="row" id="presets"><span class="label">적 순서</span></div>
     <div class="seq" id="seq"></div>
@@ -251,7 +251,7 @@ let bpm = 124, listenTier = 1, autoMode = "perfect", preset = PRESETS[0];
 // 연속(combo)은 놓치면 0이 될 뿐 음악과 무관. 음악 겹은 전투 진행(prog, 적 체력을 깎은 비율)대로 earned개
 const H = { combo: 0, earned: 0, prog: 0 };
 let ctx = null, G = null, mode = "", timer = 0, timers = [], nextBar = 0, barIdx = 0, notes = [], bars = [];
-let queued = null, lastBase = "gye", curW = E.WORLDS.gye, seq = [], resolved = new Map(), segVar = new Map(), seen = new Map();
+let queued = null, lastBase = "gye", curW = E.WORLDS.gye, seq = [], segVar = new Map(), seen = new Map();
 let lastSemi = null, lastSemiAt = 0, shownW = null, chartW = null, playSlot = -1;
 const $ = id => document.getElementById(id);
 
@@ -311,7 +311,7 @@ function fresh() {
   ctx = new (window.AudioContext || window.webkitAudioContext)();
   G = E.build(ctx, bpm);
   document.querySelectorAll("#mutes input").forEach(cb => { if (!cb.checked) E.setMute(G, cb.dataset.bus, true); });
-  nextBar = ctx.currentTime + 0.12; barIdx = 0; resolved = new Map(); segVar = new Map(); seen = new Map();
+  nextBar = ctx.currentTime + 0.12; barIdx = 0; segVar = new Map(); seen = new Map();
   timer = setInterval(tick, 25);
 }
 function tick() {
@@ -406,16 +406,9 @@ function listen(id) {
 
 // ── 한 판: 내 차례 → 적 셋, 되풀이 ──
 function seqItems() { return [{ kind: "mine" }].concat(preset.foes.map(f => ({ kind: "enemy", foe: f, wid: E.ENEMY_WORLD[f] }))); }
-function resolve(k) {
-  if (resolved.has(k)) return resolved.get(k);
-  const s = seq[k % seq.length];
-  let w;
-  if (s.kind === "mine") w = k > 0 ? resolve(k - 1) : E.WORLDS[(seq.find(q => q.kind === "enemy" && q.wid !== "echo") || { wid: "gye" }).wid];
-  else if (s.wid === "echo") w = E.echoOf(baseOf(resolve(k - 1)));
-  else w = E.WORLDS[s.wid];
-  resolved.set(k, w);
-  return w;
-}
+// 바퀴(차례)마다 세계 하나: 적 순서에 나온 세계들(메아리 빼고)을 바퀴마다 돌아가며, 내 차례부터 그 세계 — 게임과 같음
+function roundWorlds(items) { const ids = [...new Set(items.filter(q => q.kind === "enemy" && q.wid !== "echo").map(q => q.wid))]; return ids.length ? ids : ["gye"]; }
+function resolve(k) { const ids = roundWorlds(seq); return E.WORLDS[ids[Math.floor(k / seq.length) % ids.length]]; }
 // 한 판의 마디 차례: 내 차례 2마디, 적마다 4마디(3마디 노트 + 넘어가기 1마디). 음악은 게임처럼 8마디 고리(마디 b → 고리 b % 8)라 블록은 늘 문장 첫머리에서 시작
 function blockAt(b) {
   const lens = seq.map(q => q.kind === "mine" ? 2 : 4), round = lens.reduce((a, x) => a + x, 0);
@@ -446,7 +439,7 @@ function battleBar(b, t) {
     show(w, s.kind === "enemy" ? (bar < 3 ? `적 차례 · ${FOE[s.foe]} · ${GENRE_NAME[genre]} · ${bar + 1}/3마디` : `적 차례 · 넘어가기`) : "내 차례");
     markTier(tier, slot);
     if (roundMsg) showHeat(H, { msgs: [roundMsg] });
-    if (bar === 0) { $("queued").textContent = ""; document.querySelectorAll(".seq span").forEach((e, i) => e.classList.toggle("cur", i === k % seq.length)); }
+    if (bar === 0) { $("queued").textContent = ""; document.querySelectorAll(".seq span:not(.rot)").forEach((e, i) => e.classList.toggle("cur", i === k % seq.length)); }
   });
   if (fill) at(t + 3 * G.beat, () => { $("queued").textContent = "넘어가기 예고 → " + fill.name; document.documentElement.style.setProperty("--next", fill.color); });
 }
@@ -460,18 +453,16 @@ function battle() {
 }
 function drawSeq() {
   const box = $("seq"); box.innerHTML = "";
-  const items = seqItems();
-  let prevId = (items.find(q => q.kind === "enemy" && q.wid !== "echo") || { wid: "gye" }).wid;
+  const items = seqItems(), ids = roundWorlds(items);
   items.forEach(it => {
     const s = document.createElement("span");
-    let w;
-    if (it.kind === "mine") { w = E.WORLDS[prevId]; s.innerHTML = `내 차례<small>받침만</small>`; }
-    else {
-      w = it.wid === "echo" ? E.echoOf(prevId) : E.WORLDS[it.wid]; if (it.wid !== "echo") prevId = it.wid;
-      s.innerHTML = `${FOE[it.foe]}<small>${w.name}${w.mirror ? " (" + w.base.name + " 흉내)" : ""} · ${LVNAME[FOE_LV[it.foe]]} · ${FOE_GENRE[it.foe] === "medley" ? "돌아가며" : GENRE_NAME[FOE_GENRE[it.foe]]}</small>`;
-    }
-    s.style.setProperty("--c", w.color); box.appendChild(s);
+    if (it.kind === "mine") s.innerHTML = `내 차례<small>잔잔하게</small>`;
+    else s.innerHTML = `${FOE[it.foe]}<small>${LVNAME[FOE_LV[it.foe]]} · ${FOE_GENRE[it.foe] === "medley" ? "돌아가며" : GENRE_NAME[FOE_GENRE[it.foe]]}</small>`;
+    s.style.setProperty("--c", it.kind === "mine" ? "#6b5f8a" : (E.WORLDS[it.wid] || E.WORLDS[ids[0]]).color); box.appendChild(s);
   });
+  const r = document.createElement("span");
+  r.innerHTML = `세계<small>${ids.map(id => E.WORLDS[id].name).join(" → ")} (바퀴마다)</small>`;
+  r.style.setProperty("--c", E.WORLDS[ids[0]].color); r.className = "rot"; box.appendChild(r);
 }
 
 // ── 화면 ──

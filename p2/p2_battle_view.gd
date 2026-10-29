@@ -7718,6 +7718,31 @@ const MUSIC_SPECIAL := {"osu": {"h": 1.0, "s": 1.0, "d": 0.5, "f": 0.0, "x": -1.
 	"dodge": {"d": 0.5, "h": 0.5, "s": 1.0, "f": 0.0, "x": 0.0}, "arrow": {"f": 0.0, "h": 0.0, "s": 0.0}, "echo": {"d": 0.5}}
 
 
+# 세계 음악 전투의 이번 차례 세계: 누가 치든 차례 내내 하나. 살아 있는 적들의 (구운) 세계를 자리 순서로 차례마다 돌아가며 쓴다.
+# 그 차례에 처음 물을 때(내 차례가 열릴 때) 정해 두어, 내 차례 잔잔한 음악 · 예고 · 적 차례가 같은 세계이고 그사이 적이 쓰러져도 바뀌지 않는다
+var _turn_world := ""
+var _turn_world_at := -1
+
+
+func _music_world() -> String:
+	if _turn_world_at == battle.turn_number and _turn_world != "":
+		return _turn_world
+	var ws: Array = []
+	for i in range(battle.monsters.size()):
+		var w := P2Music.world_of(String(battle.roles[i]))
+		if battle.monsters[i].is_alive() and P2MusicMeta.WORLDS.has(w) and not ws.has(w):
+			ws.append(w)
+	if ws.is_empty():
+		for r in battle.roles:
+			var w := P2Music.world_of(String(r))
+			if P2MusicMeta.WORLDS.has(w):
+				return w
+		return _turn_world
+	_turn_world = String(ws[posmod(battle.turn_number - 1, ws.size())])
+	_turn_world_at = battle.turn_number
+	return _turn_world
+
+
 static func _music_bars(hits: Array) -> int:
 	return 3 if hits.size() <= 3 else hits.size()
 
@@ -7729,7 +7754,7 @@ func _music_pattern(index: int, hits: Array, simple: bool, tier: int, slot: int)
 	rng.seed = hash([battle.seed_used, battle.turn_number, index, hits.size(), slot, "music"])
 	var shift := battle.pattern_level + (1 if battle.affix(index) == "rhythm" else 0)
 	var lv := clampi(tier + maxi(shift, 0), 0, 3)
-	var wm: Dictionary = P2MusicMeta.WORLDS[P2Music.world_of(role)]
+	var wm: Dictionary = P2MusicMeta.WORLDS[_music_world()]
 	var charts: Array = (wm.drums if genre == "drum" else wm.charts)[lv]
 	var pool: Array = NOTE_POOL.get(role, ["t"])
 	var occ: Dictionary = MUSIC_SPECIAL.get(genre, {})
@@ -8385,7 +8410,7 @@ func _parry_chart(index: int, hits: Array, simple := false) -> P2NoteChart:
 	_wire_chart(chart)
 	if _music != null:
 		# 첫 노트는 음악의 반 마디 칸에(붉은 예고가 끝난 뒤), 그 한 박 전에 이 적 세계의 필인
-		var world := P2Music.world_of(battle.roles[index])
+		var world := _music_world()
 		var first := beat * 2.0
 		if not notes.is_empty():
 			first = float(notes[0].at)
@@ -11121,7 +11146,7 @@ func _run_enemy_phase(t0: int) -> void:
 	_focus_attacker(-1)
 	if _music != null:
 		_music_stage(false)
-		_music.mine()
+		_music.mine(_music_world())
 	await _wait(0.32)
 	await _camera_settled()
 	_state = UI.PLAYER

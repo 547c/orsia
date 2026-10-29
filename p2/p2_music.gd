@@ -2,7 +2,8 @@ class_name P2Music
 extends Node
 
 # 전투 음악(일곱 세계). 세계마다 구운 8마디 겹 고리를 AudioStreamSynchronized 하나로 늘 함께 돌리고, 음량만 바꿔 세계와 겹을 고른다.
-# 그 재생 위치가 박자 시계(clock)라 막기 악보도 이 시계로 간다. 적 공격 노트는 그 마디에 연주되는 선율 음 그대로(P2MusicMeta 악보, 그 한 박 전에 새 세계 필인).
+# 그 재생 위치가 박자 시계(clock)라 막기 악보도 이 시계로 간다. 적 공격 노트는 그 마디에 연주되는 선율 음 그대로(P2MusicMeta 악보, 적 차례 들어갈 때 한 박 전에 필인).
+# 세계는 차례마다 하나(전투에 나온 적들의 세계를 돌아가며, 고르는 건 전투 화면): 내 차례 잔잔한 음악부터 그 세계라 적 차례까지 끊김 없이 이어진다.
 # 소리는 tools/music/bake.js로 굽는다(구운 세계는 P2MusicMeta). 겹이 쌓이는 규칙은 tools/music 시험 페이지와 같다.
 # 모든 시각 인자는 들리는 시각(clock 기준)이고, 안에서는 출력 지연을 더한 섞는 시각으로 바꿔 맞춘다
 
@@ -339,16 +340,22 @@ func enemy(world: String, at: float, force: Array = []) -> void:
 		_retarget(0.03))
 
 
-# 내 차례: 다음 박에서 겹이 빠지고 받침 · 가벼운 타악 위에 얇은 그루브만
-func mine() -> void:
-	if _mode in ["mine", "rest", "off"]:
+# 내 차례: 다음 박에서 겹이 빠지고 받침 · 가벼운 타악 위에 얇은 그루브만. world가 다르면(새 차례 세계) 다음 마디 첫 박에 한 마디 동안 천천히 갈아탄다
+func mine(world := "") -> void:
+	if _mode in ["rest", "off"]:
+		return
+	var swap := world != "" and world != _world and _idx.has(world + "/bed")
+	if _mode == "mine" and not swap:
 		return
 	_clear_events()
-	_at(ceilf(clock() / beat + 0.05) * beat, func() -> void:
+	var t := ceilf(clock() / bar + 0.05) * bar if swap else ceilf(clock() / beat + 0.05) * beat
+	_at(t, func() -> void:
 		_mode = "mine"
 		_hush = false
 		_force = []
-		_retarget(0.2))
+		if swap:
+			_world = world
+		_retarget(bar if swap else 0.2))
 
 
 # 긋기 점마다(내 차례): 지금 세계 막기 음을 아래부터 차례로
