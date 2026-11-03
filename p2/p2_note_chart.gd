@@ -10,10 +10,14 @@ extends Node2D
 # 겹치면 앞 번호가 위에 또렷하고, 뒤 번호는 앞 노트가 끝날 때까지 흐리다.
 # 박자: beat가 있으면 시작부터 끝까지 반주(박마다 킥, 반 박마다 하이햇, 2·4박 스네어)를 cue로 내보낸다. 노트는 이 박자 위에 놓인다.
 # 부름(call): 노트마다 at - call 시각에 같은 자리에서 빛과 음이 먼저 울린다(보스가 리듬을 보여 주고 플레이어가 따라 친다). 그때는 누를 수 없다.
-# 시계는 이 노드의 _process로만 간다: 일시정지·창 포커스가 빠지면 같이 멈춘다. 세계 슬로모션과 무관하게 일정하다
+# 시계는 이 노드의 _process로만 간다: 일시정지·창 포커스가 빠지면 같이 멈춘다. 세계 슬로모션과 무관하게 일정하다.
+# 박자 시계(follow)가 있으면 시간은 전투 음악 재생 위치를 따른다(노트가 음악 박에서 어긋나지 않게, 멈춤은 음악 쪽이 맡음)
 
 signal closed(i: int)
 signal judged(i: int, grade: String, dt: float)
+# 노트 소리가 날 순간: 쳐 낸 그때(길게 · 따라가기 · 두 번은 첫 누름에, 막기 · 피하기는 닿는 박에). n = 같은 노트 안 몇째 타:
+# 길게 누르는 동안 노트의 under(그 길이가 덮은 [시각, 음])가 제 박 조금 앞에 1부터 차례로, 두 번의 뒤 타도 1
+signal struck(i: int, n: int)
 signal cue(key: String, step: int, vol: float)
 signal timing(d: float, grade: String)
 signal held(id: Variant, down: bool, label: String)
@@ -26,9 +30,12 @@ const TOO_EARLY := 0.4
 const FADE_IN := 0.14
 const BURST := 0.32
 const HOLD_SLACK := 0.08
+const RING_AHEAD := 0.08
 const DOUBLE_WIN := 0.28
 const FLEE_R := 86.0
 static var offset := 0.0
+# 듣기 점검용 자동 막기(P2Music의 F7): 노트가 닫히는 순간 저절로 누른다
+static var auto := false
 static var hit_keys: Array = []
 const COLOR := {"t": Color("#bfe9e2"), "h": Color("#ff9a3a"), "d": Color("#ff6fcf"), "s": Color("#6fe07a"), "f": Color("#b48cff"), "x": Color("#ff4a3a")}
 const LABEL := {"h": "길게", "d": "두 번", "s": "따라가기", "f": "도망", "x": "누르지 마"}
@@ -52,6 +59,8 @@ var beat := 0.0
 # 히든 모드: 다가오는 고리·완벽 띠가 접근 시간의 40~60% 사이에 사라진다
 var hidden_mod := false
 var call := 0.0
+var clock := Callable()
+var t0 := 0.0
 var _cues: Array = []
 var _t := 0.0
 var _cursor := Vector2(-9999, -9999)
@@ -94,6 +103,54 @@ func _ready() -> void:
 	_c = P2Pixel.attach(self, _paint)
 	if _cursor.x < -9000.0:
 		_cursor = get_local_mouse_position()
+
+
+func follow(c: Callable, start: float) -> void:
+	clock = c
+	t0 = start
+	_t = float(c.call()) - start
+
+
+# 이번 프레임만큼 시간을 보내고 흐른 시간을 돌려줌
+func _advance(delta: float) -> float:
+	if clock.is_valid():
+		var now := float(clock.call()) - t0
+		var dt := maxf(0.0, now - _t)
+		_t = maxf(_t, now)
+		if auto:
+			_auto_press()
+		return dt
+	var d := 0.0 if _focus_lost else delta
+	_t += d
+	return d
+
+
+# 누른 순간의 시간(박자 시계가 있으면 프레임을 기다리지 않고 바로 읽음)
+func _catch_up() -> void:
+	if clock.is_valid():
+		_t = maxf(_t, float(clock.call()) - t0)
+
+
+func _auto_press() -> void:
+	for i in range(notes.size()):
+		var n: Dictionary = notes[i]
+		if n.grade != "" or n.kind == "x":
+			continue
+		if n.holding:
+			if n.kind == "s":
+				_cursor = ball(i)
+			continue
+		if n.kind == "d" and float(n.second) >= 0.0:
+			if _t - float(n.second) >= 0.06:
+				press_now()
+			return
+		if n.start == "" and _t >= float(n.at) + offset:
+			press_now()
+		return
+
+
+func remaining() -> float:
+	return end_time() - _t
 
 
 # 누르기 키: 키보드 아무 키(되풀이 제외). Esc·Tab·F1~F12·Shift·Ctrl·Alt·Win·잠금 키는 원래 쓰임대로 둔다
@@ -179,8 +236,7 @@ func _notification(what: int) -> void:
 
 
 func _process(delta: float) -> void:
-	var dt := 0.0 if _focus_lost else delta
-	_t += dt
+	var dt := _advance(delta)
 	while not _cues.is_empty() and float(_cues[0].t) - _lat <= _t:
 		var c: Dictionary = _cues.pop_front()
 		cue.emit(String(c.key), int(c.step), float(c.vol))
@@ -199,6 +255,7 @@ func _process(delta: float) -> void:
 					if _cursor.distance_to(ball(i)) <= radius * 1.6:
 						n.ok = float(n.ok) + dt
 		if n.holding:
+			_ring_under(i)
 			n.tick = float(n.tick) + dt
 			if float(n.tick) >= 0.11:
 				n.tick = 0.0
@@ -245,6 +302,7 @@ func _flee(n: Dictionary) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	_catch_up()
 	if is_hit_key(event):
 		var id := key_id(event as InputEventKey)
 		if event.pressed:
@@ -294,7 +352,7 @@ func _press(at: Vector2) -> bool:
 		var n: Dictionary = notes[i]
 		if n.grade == "" and n.kind == "d" and float(n.second) >= 0.0:
 			if at.distance_to(n.pos) <= radius * 1.6:
-				_judge(i, n.start if _t - float(n.second) >= 0.04 else _drop(n.start), _t - float(n.at))
+				_second(i)
 				return true
 	var i := _current()
 	if i < 0 or at.distance_to(notes[i].pos) > radius * 1.4:
@@ -308,7 +366,7 @@ func press_now() -> void:
 	for i in range(notes.size()):
 		var n: Dictionary = notes[i]
 		if n.grade == "" and n.kind == "d" and float(n.second) >= 0.0:
-			_judge(i, n.start if _t - float(n.second) >= 0.04 else _drop(n.start), _t - float(n.at))
+			_second(i)
 			return
 	var i := _current()
 	if i >= 0:
@@ -328,6 +386,26 @@ func _drop(g: String) -> String:
 	return "good" if g == "perfect" else "miss"
 
 
+# 길게 누르는 동안: 덮인 음 차례가 오면 그 박 RING_AHEAD초 앞에 알린다(소리는 받는 쪽이 제 박에 맞춤)
+func _ring_under(i: int) -> void:
+	var n: Dictionary = notes[i]
+	var u: Array = n.get("under", [])
+	var k := int(n.get("rung", 0))
+	while k < u.size() and _t >= float(n.at) + float(u[k][0]) - RING_AHEAD:
+		k += 1
+		struck.emit(i, k)
+	n.rung = k
+
+
+# 두 번 노트의 두 번째 누름
+func _second(i: int) -> void:
+	var n: Dictionary = notes[i]
+	var g: String = n.start if _t - float(n.second) >= 0.04 else _drop(n.start)
+	if g != "miss":
+		struck.emit(i, 1)
+	_judge(i, g, _t - float(n.at))
+
+
 func _hit(i: int) -> void:
 	var n: Dictionary = notes[i]
 	var d := _t - float(n.at) - offset
@@ -343,6 +421,7 @@ func _hit(i: int) -> void:
 	if g == "miss":
 		_judge(i, g, d)
 		return
+	struck.emit(i, 0)
 	match String(n.kind):
 		"h", "s":
 			n.start = g
@@ -594,15 +673,20 @@ func _draw_burst(n: Dictionary, u: float) -> void:
 	var fade := 1.0 - u
 	var feint: bool = n.kind == "x"
 	var kind := String(n.kind)
-	match String(n.grade):
+	var g := String(n.grade)
+	# 박자 시계 악보(세계 음악)에서는 막음도 완벽처럼 터진다(색과 글자만 파랑)
+	if g == "good" and clock.is_valid():
+		g = "perfect"
+	var col := C_GOOD if String(n.grade) == "good" else C_PERFECT
+	match g:
 		"perfect":
 			if u < 0.3:
 				_c.draw_colored_polygon(_body(kind, p, radius * (1.0 + u), n), Color(1, 1, 1, 0.85 * (1.0 - u / 0.3)))
-			_ring(kind, p, radius * lerpf(1.0, 2.0, u), n, Color(C_PERFECT, fade), lerpf(5.0, 1.0, u))
+			_ring(kind, p, radius * lerpf(1.0, 2.0, u), n, Color(col, fade), lerpf(5.0, 1.0, u))
 			for i in range(8):
 				var dir := Vector2.RIGHT.rotated(TAU * (i + 0.5) / 8.0)
-				_c.draw_line(p + dir * radius * lerpf(1.1, 1.7, u), p + dir * radius * lerpf(1.4, 2.3, u), Color(C_PERFECT, fade), P2Pixel.w(3.0), false)
-			_label(p, "참음!" if feint else "완벽!", C_PERFECT, u)
+				_c.draw_line(p + dir * radius * lerpf(1.1, 1.7, u), p + dir * radius * lerpf(1.4, 2.3, u), Color(col, fade), P2Pixel.w(3.0), false)
+			_label(p, "막음" if String(n.grade) == "good" else ("참음!" if feint else "완벽!"), col, u)
 		"good":
 			_ring(kind, p, radius * lerpf(1.0, 1.5, u), n, Color(C_GOOD, fade), 3.0)
 			_label(p, "막음", C_GOOD, u)

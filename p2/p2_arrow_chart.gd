@@ -105,8 +105,7 @@ func end_time() -> float:
 
 
 func _process(delta: float) -> void:
-	var dt := 0.0 if _focus_lost else delta
-	_t += dt
+	var dt := _advance(delta)
 	while not _cues.is_empty() and float(_cues[0].t) - _lat <= _t:
 		var c: Dictionary = _cues.pop_front()
 		cue.emit(String(c.key), int(c.step), float(c.vol))
@@ -116,9 +115,15 @@ func _process(delta: float) -> void:
 		if not n.closed and _t >= float(n.at):
 			n.closed = true
 			closed.emit(i)
+			# 닿는 박에 방패가 맞는 쪽이면 그 박에 소리(판정은 GRACE 뒤)
+			if n.grade == "" and face == int(n.lane):
+				n.rang = true
+				struck.emit(i, 0)
 		if n.grade == "" and _t >= float(n.at) + GRACE:
 			var ok := face == int(n.lane)
 			if ok:
+				if not bool(n.get("rang", false)):
+					struck.emit(i, 0)
 				_block_t = _t
 				_shatter(n)
 			else:
@@ -145,6 +150,7 @@ func _shatter(n: Dictionary) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	_catch_up()
 	if event is InputEventMouseMotion:
 		_aim((make_input_local(event) as InputEventMouseMotion).position)
 		return

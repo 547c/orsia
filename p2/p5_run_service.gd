@@ -1139,7 +1139,7 @@ static func _note_achievements(c: Dictionary, r: Dictionary, fresh: Array) -> vo
 
 # 원정에서 만난 무리만(예전 저장은 보스 기록으로도)
 static func practice_open(cb: Dictionary, gid: String) -> bool:
-	if (cb.get("seen_groups", []) as Array).has(gid):
+	if P2Catalog.dev_open() or (cb.get("seen_groups", []) as Array).has(gid):
 		return true
 	for k in (cb.get("boss_best", {}) as Dictionary):
 		if String(k).get_slice("@", 0) == gid:

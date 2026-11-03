@@ -40,6 +40,7 @@ func _x_of(t: float) -> float:
 
 
 func _input(event: InputEvent) -> void:
+	_catch_up()
 	if event is InputEventMouseButton and event.pressed:
 		var mb := (event as InputEventMouseButton).button_index
 		if mb == MOUSE_BUTTON_LEFT or mb == MOUSE_BUTTON_RIGHT:

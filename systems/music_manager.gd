@@ -81,10 +81,14 @@ func stop() -> void:
 	if _fade_tween != null and _fade_tween.is_valid():
 		_fade_tween.kill()
 
-	var outgoing := _active_player
-	_fade_tween = create_tween()
-	_fade_tween.tween_property(outgoing, "volume_db", MUTE_VOLUME_DB, FADE_DURATION)
-	_fade_tween.tween_callback(outgoing.stop)
+	# 겹침(크로스페이드) 도중에 멈추면 사라지던 곡이 그 크기로 남으므로 둘 다 줄여 끈다
+	_fade_tween = create_tween().set_parallel(true)
+	for p in [_player_a, _player_b]:
+		if p.playing:
+			_fade_tween.tween_property(p, "volume_db", MUTE_VOLUME_DB, FADE_DURATION)
+	_fade_tween.chain().tween_callback(func() -> void:
+		_player_a.stop()
+		_player_b.stop())
 
 
 # 음악을 음소거 (재생/크로스페이드 상태는 그대로 유지되고, Music 버스만 무음 처리됨)

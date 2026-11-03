@@ -12,6 +12,16 @@ const CLASSIC := {"parry": false, "slash": false, "juice": false}
 var real_mouse := 0
 
 
+# vfx 시험 장면: 점검 창은 초점을 안 받아서 음악(P2Music)이 '초점 잃음'으로 멈춘다. 그 뒤에 '초점 돌아옴'을 넣어 준다
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_OUT and (phase.begins_with("vfx_") or phase.begins_with("music_")):
+		_wake.call_deferred()
+
+
+func _wake() -> void:
+	get_tree().root.propagate_notification(NOTIFICATION_APPLICATION_FOCUS_IN)
+
+
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouse and event.device != PTR_DEVICE:
 		real_mouse += 1
@@ -42,6 +52,20 @@ func _ready() -> void:
 	match phase:
 		"scripts":
 			run_scripts()
+		"vfx_battle":
+			await run_vfx_battle()
+		"music_boss":
+			await run_music_boss()
+		"music_full":
+			await run_music_full()
+		"vfx_px":
+			await run_vfx_px()
+		"vfx_px_demo":
+			await run_vfx_px_demo()
+		"vfx_ring":
+			await run_vfx_ring()
+		"vfx_ring_demo":
+			await run_vfx_ring_demo()
 		"perf":
 			await run_perf()
 		"playcheck":
@@ -214,6 +238,778 @@ func _ready() -> void:
 	get_tree().quit(1 if fails > 0 else 0)
 
 
+# ── 본편 전투에 붙인 픽셀 효과 · 음계 고리 확인 (세계 음악 · 실제 빠르기, --p5-music) ──
+var _vb := {}
+
+
+func _vb_shot_later(name: String, delay: float) -> void:
+	await secs(delay)
+	await shot(name)
+
+
+func _vb_fx_in(n: Node) -> void:
+	if not (n is P2PxFx2D):
+		return
+	var f := n as P2PxFx2D
+	await get_tree().process_frame
+	if not is_instance_valid(f) or f.sheet == null:
+		return
+	var id := f.sheet.id
+	_vb.fx[id] = int((_vb.fx as Dictionary).get(id, 0)) + 1
+	if not (_vb.shot as Dictionary).has(id):
+		_vb.shot[id] = true
+		_vb_shot_later("vb_" + id, 0.03)
+
+
+func run_vfx_battle() -> void:
+	Engine.time_scale = 1.0
+	_fe_skill = {"perfect": 0.95, "good": 0.03}
+	_fe_rng.seed = 9090
+	P2BattleView.feel_force = {"parry": true, "slash": true, "juice": true}
+	_fe_auto = true
+	fe_autoloop()
+	await new_profile(381)
+	check(Flow.start_expedition(), "원정 출발")
+	check(await wait_until(func(): return host() != null and host().dungeon != null, 30.0), "원정 지도")
+	var h := host()
+	await secs(0.6)
+	_vb = {"fx": {}, "shot": {}}
+	for id in ["n1", "n2"]:
+		h.dismiss_notices()
+		if not RunService.can_start_encounter(id):
+			continue
+		h._on_engage(id)
+		check(await h.engage_confirm(id), "%s 전투 시작" % id)
+		check(await battle_ready(h), "%s 차례" % id)
+		var v: P2BattleView = h.battle_view
+		await frames(3)
+		check(v._music != null, "%s: 세계 음악 전투" % id)
+		check(v._mana_parts.size() == 7 and v._mana_title != null, "마나 구슬 묶음 7개 · 제목")
+		v._fx.child_entered_tree.connect(_vb_fx_in)
+		if v._prompt_close.visible:
+			v._prompt_close.pressed.emit()
+		# 적 차례가 열릴 때까지 카드를 내고, 열리면 고리 확인
+		# 람다는 바깥 지역 변수를 복사해 쥐므로 상태는 사전에
+		var st := {"seen": false, "ok": false, "lit": false, "title": "", "restored": false, "ended": false}
+		var watcher := func() -> void:
+			while is_instance_valid(v) and not v.battle.battle_over:
+				await get_tree().process_frame
+				if not is_instance_valid(v):
+					break
+				if v._stage_on and v._ring != null and v._ring.modulate.a > 0.95:
+					if not bool(st.seen):
+						st.seen = true
+						st.ok = v._ring.position == P2BattleView.MANA_ORB and v._ring.world != "" and (v._mana_parts as Array).all(func(n): return not is_instance_valid(n) or (n as CanvasItem).modulate.a < 0.05)
+						st.title = v._mana_title.text
+						_vb_shot_later("vb_ring_%s" % id, 0.6)
+					for pc in v._ring._hits:
+						if v._ring._now - float(v._ring._hits[pc]) < 0.3:
+							st.lit = true
+				if bool(st.seen) and not v._stage_on and v._ring != null and v._ring.modulate.a < 0.05:
+					st.restored = v._mana_title.text == "마나" and (v._mana_parts as Array).all(func(n): return not is_instance_valid(n) or (n as CanvasItem).modulate.a > 0.95)
+			st.ended = true
+		watcher.call()
+		await play_some(h, 400)
+		await wait_until(func(): return bool(st.ended), 5.0)
+		check(bool(st.seen) and bool(st.ok), "%s: 적 차례에 마나 자리에 음계 고리(세계 %s), 마나 구슬은 흐려짐" % [id, String(st.title)])
+		check(String(st.title) != "" and String(st.title) != "마나", "%s: 제목 = 지금 세계 이름(%s)" % [id, String(st.title)])
+		check(bool(st.lit), "%s: 쳐 낸 음이 고리에 켜짐" % id)
+		check(bool(st.restored), "%s: 적 차례가 끝나면 마나 구슬 · 제목 돌아옴" % id)
+		await wait_until(func(): return h.battle_view == null, 40.0)
+		await secs(1.0)
+		await lf_reward(h)
+	note("나온 효과: %s" % str(_vb.fx))
+	check(int((_vb.fx as Dictionary).get("hit_spark", 0)) > 0, "맞는 순간 효과(내 공격 · 놓친 막기)")
+	check(int((_vb.fx as Dictionary).get("parry_perfect", 0)) > 0, "완벽 패링 효과(다 막은 타격)")
+	_fe_auto = false
+
+
+# ── 세계 음악 전투로 원정 끝까지 (실제 빠르기, --p5-music) ──
+# 봇이 카드 · 노트 · 긋기를 하고, 전투마다 음악 쪽을 잰다: 노트가 박 격자(한 박 12칸)에 놓였는지, 음악 시계가 실제 시간과 어긋나는지,
+# 프레임 멈칫, 첫 노트까지 여유, 나온 세계, 전투가 끝난 뒤 음악이 남는지
+
+var _mw := {}
+
+
+func _mw_reset() -> void:
+	_mw = {"on": true, "grid_max": 0.0, "notes": 0, "charts": 0, "lead_min": 99.0, "worlds": {}, "drift_max": 0.0, "drift_n": 0,
+		"slow_n": 0, "slow_max": 0.0, "back_n": 0, "back_max": 0.0, "seen": {}, "head_bad": 0, "off_grid": 0, "slow_ctx": [], "t_start": Time.get_ticks_msec()}
+
+
+func _mw_watch(v: P2BattleView) -> void:
+	var last_c := -1.0
+	var last_us := Time.get_ticks_usec()
+	while bool(_mw.get("on", false)) and is_instance_valid(v):
+		await get_tree().process_frame
+		if not is_instance_valid(v):
+			break
+		var us := Time.get_ticks_usec()
+		var real := float(us - last_us) / 1000000.0
+		last_us = us
+		if real > 0.05:
+			_mw.slow_n = int(_mw.slow_n) + 1
+			_mw.slow_max = maxf(float(_mw.slow_max), real)
+			var charts_now := v._ui.get_children().filter(func(x): return x is P2NoteChart).size()
+			(_mw.slow_ctx as Array).append("%.0fms@%.1f초(%s · 악보 %d · %d턴)" % [real * 1000.0, (Time.get_ticks_msec() - int(_mw.t_start)) / 1000.0, v.current_state(), charts_now, v.battle.turn_number])
+		var m: P2Music = v._music
+		if m == null or not is_instance_valid(m):
+			last_c = -1.0
+			continue
+		var c := m.clock()
+		if last_c >= 0.0:
+			if c < last_c - 0.0005:
+				_mw.back_n = int(_mw.back_n) + 1
+				_mw.back_max = maxf(float(_mw.back_max), last_c - c)
+			var drift := absf((c - last_c) - real)
+			if real < 0.1 and drift > 0.03:
+				_mw.drift_n = int(_mw.drift_n) + 1
+				_mw.drift_max = maxf(float(_mw.drift_max), drift)
+		last_c = c
+		for ch in v._ui.get_children():
+			if not (ch is P2NoteChart):
+				continue
+			var nc := ch as P2NoteChart
+			var key := nc.get_instance_id()
+			if (_mw.seen as Dictionary).has(key) or not nc.clock.is_valid() or nc.notes.is_empty():
+				continue
+			_mw.seen[key] = true
+			_mw.charts = int(_mw.charts) + 1
+			if nc.has_meta("world"):
+				_mw.worlds[String(nc.get_meta("world"))] = true
+			var grid := m.beat / 12.0
+			var swing: float = {"gye": 0.06, "tez": 0.2, "bhv": 0.04}.get(String(nc.get_meta("world", "")), 0.0)
+			var first_t := 99999.0
+			for n in nc.notes:
+				var t_abs := nc.t0 + float(n.at)
+				first_t = minf(first_t, t_abs)
+				var q := t_abs / grid
+				var off := absf(q - roundf(q)) * grid
+				var q2 := (t_abs - swing * m.beat / 4.0) / grid
+				off = minf(off, absf(q2 - roundf(q2)) * grid)
+				_mw.grid_max = maxf(float(_mw.grid_max), off)
+				if off > 0.003:
+					_mw.off_grid = int(_mw.off_grid) + 1
+				_mw.notes = int(_mw.notes) + 1
+			_mw.lead_min = minf(float(_mw.lead_min), first_t - c)
+			# 공격 블록은 문장 첫머리(두 마디 칸)에서 시작: 첫 노트가 문장 첫 마디 안에
+			if fposmod(first_t + 0.002, m.bar * 2.0) > m.bar + 0.002:
+				_mw.head_bad = int(_mw.head_bad) + 1
+
+
+func _music_nodes() -> int:
+	var n := 0
+	for c in get_tree().root.get_children():
+		if c is P2Music:
+			n += 1
+	return n
+
+
+# 보스 하나만 연습실로(세계 음악 · 실제 빠르기): --boss=hboss 등. 멈칫 프레임이 언제인지 본다
+func run_music_boss() -> void:
+	var gid := "hboss"
+	for a in OS.get_cmdline_user_args():
+		if String(a).begins_with("--boss="):
+			gid = String(a).substr(7)
+	Engine.time_scale = 1.0
+	_fe_skill = {"perfect": 0.85, "good": 0.1}
+	_fe_rng.seed = 4242
+	P2BattleView.feel_force = {"parry": true, "slash": true, "juice": true}
+	_fe_auto = true
+	fe_autoloop()
+	await new_profile(377)
+	check(await RunService.commit_profile("music boss", func(c, _r, _f):
+		c.combat["seen_groups"] = [gid]
+		return true), "연습 대상: %s" % gid)
+	var rp := P5RecordsPanel.open_in(get_tree())
+	await secs(0.5)
+	check(rp.start_practice(gid), "%s 연습 시작" % gid)
+	check(await wait_until(func(): return host() != null and host().battle_view != null, 30.0), "연습 전투 화면")
+	var h := host()
+	check(await battle_ready(h), "차례")
+	var v: P2BattleView = h.battle_view
+	await frames(3)
+	note("%s %s: 세계 음악 %s" % [gid, str(v.battle.roles), "켜짐 (BPM %d)" % v._music.bpm if v._music != null else "꺼짐"])
+	_mw_reset()
+	_mw_watch(v)
+	await play_some(h, 400)
+	await wait_until(func(): return h.current_modal() == "field_result", 40.0)
+	_mw.on = false
+	note("음악 연습 %s: 악보 %d개 · 노트 %d개 · 박 격자 최대 어긋남 %.1fms · 시계 어긋남 %d · 뒤로 %d · 멈칫 프레임 %d번(최대 %.0fms) %s" % [gid, int(_mw.charts), int(_mw.notes),
+		float(_mw.grid_max) * 1000.0, int(_mw.drift_n), int(_mw.back_n), int(_mw.slow_n), float(_mw.slow_max) * 1000.0, str(_mw.slow_ctx)])
+	_fe_auto = false
+
+
+func run_music_full() -> void:
+	var slot := 291
+	_fe_skill = {"perfect": 0.85, "good": 0.1}
+	for a in OS.get_cmdline_user_args():
+		if String(a).begins_with("--skill="):
+			var parts := String(a).substr(8).split(",")
+			_fe_skill = {"perfect": float(parts[0]), "good": float(parts[1]) if parts.size() > 1 else 0.0}
+		elif String(a).begins_with("--slot="):
+			slot = int(String(a).substr(7))
+	var sectors: Array = ["normal", "hard", "extreme"]
+	for a in OS.get_cmdline_user_args():
+		if String(a).begins_with("--sectors="):
+			sectors = Array(String(a).substr(10).split(","))
+	Engine.time_scale = 1.0
+	_fe_rng.seed = slot * 7919
+	note("봇 실력: 완벽 %.0f%% · 막음 %.0f%% · 실제 빠르기 · 세계 음악 켬" % [float(_fe_skill.perfect) * 100.0, float(_fe_skill.good) * 100.0])
+	P2BattleView.feel_force = {"parry": true, "slash": true, "juice": true}
+	_fe_auto = true
+	fe_autoloop()
+	await new_profile(slot)
+	check(SaveManager.commit("music"), "원정 전 저장")
+	check(Flow.start_expedition(), "원정 출발")
+	check(await wait_until(func(): return host() != null and host().dungeon != null, 30.0), "원정 지도")
+	var h := host()
+	await secs(0.6)
+	var plan := {"normal": ["n1", "n2", "elite", "n3", "n4", "boss"], "hard": ["h1a", "h2", "elite", "hboss"], "extreme": ["x1", "x2", "elite", "xboss"]}
+	var dead := false
+	var fought := 0
+	var music_fights := 0
+	var all_worlds := {}
+	for sector in ["normal", "hard", "extreme"]:
+		if dead or not sectors.has(sector):
+			break
+		if sector != "normal":
+			if not await wait_until(func(): return String(RunService.run.get("phase", "")) == "sector_choice", 15.0):
+				check(false, "%s 앞: 구간 선택 창 (지금 %s)" % [sector, String(RunService.run.get("phase", ""))])
+				break
+			h.show_trait_choice()
+			await secs(0.3)
+			check(await h.choose_continue(String(RunService.run.trait_offer[0])) and String(RunService.run.sector) == sector, "계속 → %s" % sector)
+			await secs(0.5)
+			h.dismiss_notices()
+			if sector == "hard":
+				check(RunService.commit_route("a"), "경로 A")
+		for id in plan[sector]:
+			h.dismiss_notices()
+			if not RunService.can_start_encounter(id):
+				note("%s %s: 시작할 수 없어 건너뜀" % [sector, id])
+				continue
+			var hp0 := int(GameState.get_flag("player_hp"))
+			h._on_engage(id)
+			if not await h.engage_confirm(id):
+				check(false, "%s 전투 시작" % id)
+				break
+			if not await battle_ready(h):
+				check(false, "%s 차례" % id)
+				break
+			var v: P2BattleView = h.battle_view
+			var b := v.battle
+			var roles: Array = b.roles.duplicate()
+			var want_music := P2Music.supports(roles, sector)
+			await frames(3)
+			var has_music: bool = v._music != null
+			check(has_music == want_music, "%s %s %s: 세계 음악 %s" % [sector, id, str(roles), "켜짐 (BPM %d)" % v._music.bpm if has_music else "꺼짐(세계 없는 적 → 예전 음악)"])
+			if v._prompt_close.visible:
+				v._prompt_close.pressed.emit()
+			_mw_reset()
+			_mw_watch(v)
+			var t0 := Time.get_ticks_msec()
+			await play_some(h, 400)
+			var turns := b.turn_number
+			var rs: Dictionary = v._rs.duplicate(true) if is_instance_valid(v) else {}
+			var fixes := v.reconcile_fixes if is_instance_valid(v) else -1
+			var over := b.battle_over
+			await wait_until(func(): return h.battle_view == null, 40.0)
+			_mw.on = false
+			var hp1 := int(GameState.get_flag("player_hp"))
+			fought += 1
+			if has_music:
+				music_fights += 1
+				for w in _mw.worlds:
+					all_worlds[w] = true
+				note("음악 %s %s: 악보 %d개 · 노트 %d개 · 박 격자 최대 어긋남 %.1fms · 첫 노트까지 최소 %.2f초 · 첫머리 아닌 블록 %d · 세계 %s · 시계 어긋남 %d번(최대 %.0fms) · 시계 뒤로 %d번(최대 %.1fms) · 격자 밖 노트 %d · 멈칫 프레임 %d번(최대 %.0fms) %s" % [
+					sector, id, int(_mw.charts), int(_mw.notes), float(_mw.grid_max) * 1000.0, float(_mw.lead_min), int(_mw.head_bad),
+					str((_mw.worlds as Dictionary).keys()), int(_mw.drift_n), float(_mw.drift_max) * 1000.0, int(_mw.back_n), float(_mw.back_max) * 1000.0, int(_mw.off_grid), int(_mw.slow_n), float(_mw.slow_max) * 1000.0, str(_mw.slow_ctx)])
+				if int(_mw.charts) > 0:
+					check(float(_mw.grid_max) < 0.004, "%s %s: 노트가 박 격자(한 박 12칸, 세계 스윙 포함) 위 · 최대 %.1fms" % [sector, id, float(_mw.grid_max) * 1000.0])
+					check(float(_mw.lead_min) > 0.3, "%s %s: 첫 노트까지 여유 %.2f초(악보가 늦게 뜨지 않음)" % [sector, id, float(_mw.lead_min)])
+					check(int(_mw.head_bad) == 0, "%s %s: 공격 블록이 문장 첫 마디에서 시작(어긋난 블록 %d)" % [sector, id, int(_mw.head_bad)])
+				else:
+					note("%s %s: 이 전투엔 적 공격 악보가 없었음" % [sector, id])
+				check(int(_mw.drift_n) <= 2 and float(_mw.back_max) < 0.010, "%s %s: 음악 시계가 실제 시간과 맞게 흐름(어긋남 %d · 뒤로 최대 %.1fms)" % [sector, id, int(_mw.drift_n), float(_mw.back_max) * 1000.0])
+			note("전투 %s %s: 체력 %d → %d · %d턴 · 패링 완벽 %d 막음 %d 놓침 %d · 최대 연속 %d · 걸린 %.0f초" % [
+				sector, id, hp0, hp1, turns, int(rs.get("p", 0)), int(rs.get("g", 0)), int(rs.get("m", 0)), int(rs.get("best", 0)), (Time.get_ticks_msec() - t0) / 1000.0])
+			check(over and fixes == 0, "%s %s: 끝까지 진행 · 표시 = 실제 (보정 %d)" % [sector, id, fixes])
+			await secs(2.5)
+			check(_music_nodes() == 0, "%s %s: 전투 뒤 세계 음악이 남지 않음(남은 %d)" % [sector, id, _music_nodes()])
+			if hp1 <= 0:
+				note("쓰러짐: %s %s" % [sector, id])
+				dead = true
+				break
+			await lf_reward(h)
+			if String(RunService.run.get("phase", "")) == "reward":
+				check(false, "%s %s 뒤 보상 단계에서 멈춤" % [sector, id])
+				dead = true
+				break
+	note("원정 결과: 전투 %d번(세계 음악 %d번) · 나온 세계 %s · 쓰러짐 %s · 마지막 단계 %s" % [fought, music_fights, str(all_worlds.keys()), str(dead), String(RunService.run.get("phase", "끝"))])
+	_fe_auto = false
+
+
+# ── vfx-lab 시험 장면: 픽셀 효과 셋 · 음계 고리 (장면은 그대로 두고 키 · 시각만 넣어 본다) ──
+
+const PX_SCENE := "res://p2/vfx/px_fx_test.tscn"
+const RING_SCENE := "res://p2/scale_ring/scale_ring_test.tscn"
+
+
+func _key(code: Key) -> void:
+	var e := InputEventKey.new()
+	e.keycode = code
+	e.physical_keycode = code
+	e.pressed = true
+	get_viewport().push_input(e)
+	await frames(2)
+	var u := InputEventKey.new()
+	u.keycode = code
+	u.physical_keycode = code
+	u.pressed = false
+	get_viewport().push_input(u)
+	await frames(1)
+
+
+func _grab() -> Image:
+	await RenderingServer.frame_post_draw
+	return get_viewport().get_texture().get_image()
+
+
+func _lum(img: Image, r: Rect2i) -> float:
+	var rr := r.intersection(Rect2i(Vector2i.ZERO, img.get_size()))
+	var sum := 0.0
+	var n := 0
+	for y in range(rr.position.y, rr.end.y, 2):
+		for x in range(rr.position.x, rr.end.x, 2):
+			var c := img.get_pixel(x, y)
+			sum += 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
+			n += 1
+	return sum / maxf(1.0, float(n))
+
+
+func _same(a: Image, b: Image, r: Rect2i) -> bool:
+	var rr := r.intersection(Rect2i(Vector2i.ZERO, a.get_size()))
+	for y in range(rr.position.y, rr.end.y, 3):
+		for x in range(rr.position.x, rr.end.x, 3):
+			if a.get_pixel(x, y) != b.get_pixel(x, y):
+				return false
+	return true
+
+
+func _crop(img: Image, r: Rect2i) -> Image:
+	var rr := r.intersection(Rect2i(Vector2i.ZERO, img.get_size()))
+	var out := img.get_region(rr)
+	out.convert(Image.FORMAT_RGBA8)
+	return out
+
+
+# 효과 하나를 접촉 시각 = 지금 으로 건다. 장은 시험 시계 이동량(_shift)으로 세운다
+func _px_fire(t: Node, id: String, at: Vector3) -> Array:
+	t._shift = 0.0
+	var before: Array = (t._fx as Array).duplicate()
+	t._fire(id, at, t._clock())
+	var made: Array = []
+	for f in t._fx:
+		if not before.has(f):
+			made.append(f)
+	return made
+
+
+func _px_clear(t: Node) -> void:
+	t._shift = 30.0
+	await frames(4)
+	t._shift = 0.0
+	await frames(2)
+
+
+func _px_rect(f: Variant) -> Rect2:
+	if not is_instance_valid(f):
+		return Rect2()
+	var body: Variant = (f as Node).get("_body")
+	if body == null:
+		return Rect2()
+	return (body as Node).get("region_rect")
+
+
+func _px_dur(sh: P2PxSheet, i: int) -> float:
+	return (sh.starts[i + 1] if i + 1 < sh.starts.size() else sh.length) - sh.starts[i]
+
+
+func _px_shift_to(t: Node, sh: P2PxSheet, i: int) -> void:
+	t._shift = sh.starts[i] + _px_dur(sh, i) * 0.5 - sh.contact_t
+	await frames(3)
+
+
+func run_vfx_px() -> void:
+	Engine.time_scale = 1.0
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	get_tree().change_scene_to_file(PX_SCENE)
+	await frames(10)
+	_wake()
+	var t := get_tree().current_scene
+	check(t != null and t.has_method("_fire"), "효과 시험 장면 열림")
+	if t == null:
+		return
+	var c0: float = t._clock()
+	var started := await wait_until(func(): return float(t._clock()) > c0 + 0.05, 5.0)
+	var c1: float = t._clock()
+	await secs(0.5)
+	var c2: float = t._clock()
+	check(started and c2 - c1 > 0.35 and c2 - c1 < 0.65, "음악 시계가 흐름 (0.5초 동안 %.3f초)" % (c2 - c1))
+	get_tree().paused = true
+	await frames(4)
+	var p1: float = t._clock()
+	await secs(0.3)
+	var p2: float = t._clock()
+	check(absf(p2 - p1) < 0.02, "멈추면 음악 시계도 멈춤 (0.3초 동안 %.4f초)" % (p2 - p1))
+	var cam := get_viewport().get_camera_3d()
+	var bodies := {"slash_basic": ["수호자", 40], "hit_spark": ["강아지", 32], "parry_perfect": ["수호자", 40]}
+	for spec in [["slash_basic", t.GUARD], ["hit_spark", t.PUPPY], ["parry_perfect", t.PARRY_AT]]:
+		var id := String(spec[0])
+		var at: Vector3 = spec[1]
+		var sh := P2PxSheet.get_sheet(id)
+		check(sh != null and sh.color != null and sh.light != null, "%s 시트 · 빛 마스크 읽음" % id)
+		if sh == null:
+			continue
+		var durs: Array = []
+		for i in range(sh.starts.size()):
+			durs.append(roundi(_px_dur(sh, i) * 1000.0))
+		var src := sh.color.get_image()
+		var tall := 0
+		var wide := 0
+		for r in sh.rects:
+			var u := src.get_region(Rect2i(r)).get_used_rect()
+			wide = maxi(wide, u.size.x)
+			tall = maxi(tall, u.size.y)
+		var cu := src.get_region(Rect2i(sh.rects[sh.contact])).get_used_rect()
+		note("%s: 장 %d · 길이 %.2f초 · 장 시간(ms) %s · 접촉 장 %d(%.3f초) · 기준점 %s · 장 크기 %s · 그림 최대 %d×%dpx · 접촉 장 그림 %d×%dpx(기준점 위 %d · 아래 %d · 왼쪽 %d · 오른쪽 %d) · 비교: %s 몸 %dpx" % [
+			id, sh.rects.size(), sh.length, str(durs), sh.contact, sh.contact_t, str(sh.pivot), str(sh.rects[0].size), wide, tall, cu.size.x, cu.size.y,
+			roundi(sh.pivot.y - cu.position.y), roundi(cu.end.y - sh.pivot.y), roundi(sh.pivot.x - cu.position.x), roundi(cu.end.x - sh.pivot.x),
+			String(bodies[id][0]), int(bodies[id][1])])
+		var made := _px_fire(t, id, at)
+		check(made.size() == 2, "%s: 3D · 2D 효과 둘 생김" % id)
+		var ok_frames := true
+		var strip: Array = []
+		var foot3: Vector2 = cam.unproject_position(at)
+		var foot2: Vector2 = t._row_at(at)
+		for i in range(sh.rects.size()):
+			await _px_shift_to(t, sh, i)
+			for f in made:
+				if _px_rect(f) != sh.rects[i]:
+					ok_frames = false
+			if i == sh.contact or i == 0 or i == sh.rects.size() - 1 or i == sh.contact - 1 or i == sh.contact + 1:
+				var img := await _grab()
+				var r3 := Rect2i(Vector2i(foot3) + Vector2i(-230, -330), Vector2i(460, 400))
+				var r2 := Rect2i(Vector2i(foot2) + Vector2i(-150, -200), Vector2i(300, 260))
+				strip.append([i, _crop(img, r3), _crop(img, r2)])
+				if i == sh.contact:
+					img.save_png(out_dir.path_join("px_%s_contact_full.png" % id))
+		check(ok_frames, "%s: 효과 시각만 옮겨도 3D · 2D가 그 시각의 장을 그림" % id)
+		# 되감기: 뒤쪽 장 가운데에서 0.1초 뒤로 → 앞 장, 첫 장보다 앞이면 안 보임
+		var late := mini(sh.contact + 5, sh.rects.size() - 2)
+		await _px_shift_to(t, sh, late)
+		var at_late := _px_rect(made[0])
+		var want := sh.frame_at(sh.starts[late] + _px_dur(sh, late) * 0.5 - 0.1)
+		t._shift -= 0.1
+		await frames(3)
+		var back := _px_rect(made[0])
+		check(at_late == sh.rects[late] and want >= 0 and back == sh.rects[want], "%s: %d장에서 0.1초 되감으면 %d장으로 돌아감" % [id, late, want])
+		t._shift = -sh.contact_t - 0.05
+		await frames(3)
+		var b0: Variant = (made[0] as Node).get("_body")
+		check(b0 != null and not (b0 as Node3D).visible, "%s: 첫 장보다 앞으로 되감으면 안 보임" % id)
+		# 멈춤: 시계를 안 옮기면 같은 그림
+		await _px_shift_to(t, sh, sh.contact)
+		var s1 := await _grab()
+		await frames(6)
+		var s2 := await _grab()
+		check(_same(s1, s2, Rect2i(Vector2i(foot2) + Vector2i(-140, -190), Vector2i(280, 220))), "%s: 멈춘 동안 그림이 그대로" % id)
+		# 빛 마스크(더하기) · 효과 줄이기
+		var reg := Rect2i(Vector2i(foot3) + Vector2i(-200, -300), Vector2i(400, 330))
+		for f in made:
+			f.reduced = false
+		await frames(3)
+		var glow_on := _lum(await _grab(), reg)
+		for f in made:
+			f.reduced = true
+		await frames(3)
+		var glow_off := _lum(await _grab(), reg)
+		var g3: Variant = (made[0] as Node).get("_glow")
+		check(glow_on > glow_off and g3 != null and not (g3 as Node3D).visible, "%s: 효과 줄이기 = 빛 마스크 꺼짐(밝기 %.4f → %.4f)" % [id, glow_on, glow_off])
+		await _px_clear(t)
+		# 실제 순간 광원: 같은 접촉 장을 광원 켬 · 끔으로 두 번
+		var lum := {}
+		for flash in [true, false]:
+			t._flash = flash
+			made = _px_fire(t, id, at)
+			await _px_shift_to(t, sh, sh.contact)
+			var lamp: Variant = (made[0] as Node).get("_lamp")
+			var near := Rect2i(Vector2i(foot3) + Vector2i(-160, -40), Vector2i(320, 70))
+			lum[flash] = _lum(await _grab(), near)
+			if flash and id == "parry_perfect":
+				var base_e: float = (made[0] as Node).get("flash_energy")
+				var tries: Array = []
+				for e in [2.0, 8.0, 16.0, 24.0, 40.0]:
+					(made[0] as Node).set("flash_energy", e)
+					await frames(3)
+					tries.append("%d:%.4f" % [int(e), _lum(await _grab(), near)])
+				(made[0] as Node).set("flash_energy", base_e)
+				await frames(3)
+				note("parry_perfect 접촉 장 · 발밑 바닥 밝기(광원 세기:밝기) %s" % ", ".join(PackedStringArray(tries)))
+			if flash:
+				var le := (lamp as Light3D).light_energy if lamp != null else 0.0
+				check(lamp != null and (lamp as Light3D).visible and le > 0.0, "%s: 접촉 장에 순간 광원 켜짐(세기 %.2f · 장 빛 양 %.2f)" % [id, le, sh.glow_at(sh.contact)])
+			await _px_clear(t)
+		t._flash = true
+		check(float(lum[true]) > float(lum[false]) + 0.002, "%s: 순간 광원이 바닥 · 벽을 실제로 밝힘(%.4f → %.4f)" % [id, float(lum[false]), float(lum[true])])
+		# 장 모음(위 3D 무대 · 아래 2D 2배): 첫 장 · 접촉 앞 · 접촉 · 접촉 뒤 · 끝 장
+		var cw := 0
+		var ch := 0
+		for e in strip:
+			cw += (e[1] as Image).get_width()
+			ch = maxi(ch, (e[1] as Image).get_height() + (e[2] as Image).get_height())
+		var sheet_img := Image.create(maxi(cw, 1), maxi(ch, 1), false, Image.FORMAT_RGBA8)
+		sheet_img.fill(Color("#0b0d13"))
+		var x := 0
+		for e in strip:
+			var a3: Image = e[1]
+			var a2: Image = e[2]
+			sheet_img.blit_rect(a3, Rect2i(Vector2i.ZERO, a3.get_size()), Vector2i(x, 0))
+			sheet_img.blit_rect(a2, Rect2i(Vector2i.ZERO, a2.get_size()), Vector2i(x + (a3.get_width() - a2.get_width()) / 2, a3.get_height()))
+			x += a3.get_width()
+		sheet_img.save_png(out_dir.path_join("px_%s_frames.png" % id))
+		note("%s: 장 모음 저장(장 %s)" % [id, str(strip.map(func(e): return int(e[0])))])
+	get_tree().paused = false
+	await frames(2)
+	var r0: bool = t._reduced
+	var l0: bool = t._flash
+	await _key(KEY_R)
+	await _key(KEY_L)
+	check(t._reduced != r0 and t._flash != l0, "R · L 키가 효과 줄이기 · 순간 광원을 바꿈")
+	await _key(KEY_R)
+	await _key(KEY_L)
+	await _key(KEY_P)
+	check(get_tree().paused, "P 키 = 멈춤")
+	await _key(KEY_P)
+	check(not get_tree().paused, "P 다시 = 풀림")
+	# 흐르는 음악에서: 매 프레임 그린 장 = 그 음악 시각의 장
+	var sh2 := P2PxSheet.get_sheet("slash_basic")
+	var flow := _px_fire(t, "slash_basic", t.GUARD)
+	var miss := 0
+	var seen := {}
+	for k in range(40):
+		await frames(1)
+		if not is_instance_valid(flow[0]):
+			break
+		var rel := float(t._clock()) - float((flow[0] as Node).get("start"))
+		var want_i := sh2.frame_at(rel)
+		var got := _px_rect(flow[0])
+		seen[got] = true
+		if want_i >= 0 and got != sh2.rects[want_i] and absf(rel - sh2.starts[want_i]) > 0.02:
+			miss += 1
+	check(miss == 0 and seen.size() >= 4, "흐르는 음악 시계를 따라 장이 넘어감(본 장 %d개, 어긋남 %d)" % [seen.size(), miss])
+	await shot("px_scene_running")
+
+
+func run_vfx_px_demo() -> void:
+	Engine.time_scale = 1.0
+	get_tree().change_scene_to_file(PX_SCENE)
+	await frames(10)
+	_wake()
+	await secs(0.8)
+	for k in [KEY_1, KEY_2, KEY_3]:
+		await _key(k)
+		await secs(0.9)
+	await _key(KEY_4)
+	await secs(1.4)
+	await _key(KEY_L)
+	await _key(KEY_4)
+	await secs(1.4)
+	await _key(KEY_L)
+	await _key(KEY_R)
+	await _key(KEY_4)
+	await secs(1.4)
+	await _key(KEY_R)
+	await _key(KEY_4)
+	await secs(0.25)
+	await _key(KEY_P)
+	await secs(1.0)
+	await _key(KEY_BRACKETLEFT)
+	await secs(0.5)
+	await _key(KEY_BRACKETLEFT)
+	await secs(0.5)
+	await _key(KEY_P)
+	await secs(1.5)
+
+
+func run_vfx_ring() -> void:
+	Engine.time_scale = 1.0
+	get_tree().change_scene_to_file(RING_SCENE)
+	await frames(10)
+	_wake()
+	var t := get_tree().current_scene
+	check(t != null and t.has_method("_switch"), "음계 고리 시험 장면 열림")
+	if t == null:
+		return
+	await secs(1.5)
+	var rings: Array = t._rings
+	var big: P2ScaleRing = rings[0]
+	check(big.world == "gye", "처음 세계 = 계면")
+	var beat_ok := true
+	var beats_seen := {}
+	for k in range(30):
+		await frames(2)
+		var bar_t := fposmod(big._now, big._bar) / big._bar
+		beats_seen[int(floor(bar_t * 4.0))] = true
+		if absf(big._now - float(t._music.clock())) > 0.05:
+			beat_ok = false
+	check(beat_ok and beats_seen.size() >= 2, "고리가 음악 시각을 받아 박 눈금이 넘어감(본 박 %s)" % str(beats_seen.keys()))
+	var lit_seen := false
+	for k in range(300):
+		await frames(1)
+		for pc in big._hits:
+			if big._now - float(big._hits[pc]) < 0.2:
+				lit_seen = true
+		if lit_seen:
+			break
+	check(lit_seen, "악보 음이 제 박에 고리 음 자리를 켬")
+	await shot("ring_gye")
+	await _key(KEY_2)
+	var sw: float = t._switch_at
+	check(big.world == "lyd" and absf(big._morph_t0 - (sw - float(t._music.beat))) < 0.01, "2 키 = 리디안: 다음 문장 첫머리 %.2f에 음악이 넘어가고, 고리는 한 박 앞에서 바뀌기 시작" % sw)
+	var stage_imgs: Array = []
+	for want_k in [0.0, 0.5, 1.0]:
+		var target: float = big._morph_t0 + big._morph_len * want_k
+		var ok := await wait_until(func(): return big._now >= target, 12.0)
+		if ok:
+			var img := await _grab()
+			stage_imgs.append(_crop(img, Rect2i(Vector2i(big.position), Vector2i(big.size))))
+			var c: Color = big._color()
+			note("계면→리디안 전환 %.1f: 고리 색 %s (채도 %.2f · 밝기 %.2f)" % [want_k, c.to_html(false), c.s, c.v])
+	if stage_imgs.size() == 3:
+		var w0: int = (stage_imgs[0] as Image).get_width()
+		var hh: int = (stage_imgs[0] as Image).get_height()
+		var strip := Image.create(w0 * 3, hh, false, Image.FORMAT_RGBA8)
+		for i in range(3):
+			strip.blit_rect(stage_imgs[i], Rect2i(Vector2i.ZERO, (stage_imgs[i] as Image).get_size()), Vector2i(i * w0, 0))
+		strip.save_png(out_dir.path_join("ring_switch_gye_lyd.png"))
+	# 긴 음(리디안 악보에 많음): 누르는 동안 그 자리가 켜진 채
+	var held_seen := false
+	for k in range(720):
+		await frames(1)
+		if not big._held.is_empty():
+			held_seen = true
+			for pc in big._held:
+				if big._now - float(big._hits.get(pc, -99.0)) > 0.4:
+					await shot("ring_hold")
+					break
+			if big._held.size() > 0 and big._now - float(big._hits.get(big._held.keys()[0], 0.0)) > 0.4:
+				break
+	check(held_seen, "긴 음 = 길게 누르는 동안 그 자리 켜 둠(리디안)")
+	var d := P2ScaleRing.data()
+	var order: Array = d.order
+	var worst := 9.0
+	var worst_pair := ""
+	var sum := 0.0
+	var n := 0
+	var probe := P2ScaleRing.new()
+	probe.pix = 1
+	probe.visible = false
+	t.add_child(probe)
+	for a in order:
+		for b in order:
+			if a == b:
+				continue
+			probe.set_world(String(a))
+			probe.feed(0.0, 0.5, 2.0, 0)
+			probe.set_world(String(b), 0.0, 1.0)
+			probe.feed(0.5, 0.5, 2.0, 0)
+			var c: Color = probe._color()
+			var ca := Color(String(d.worlds[a].color))
+			var cb := Color(String(d.worlds[b].color))
+			var keep := c.s / maxf(0.01, (ca.s + cb.s) * 0.5)
+			sum += keep
+			n += 1
+			if keep < worst:
+				worst = keep
+				worst_pair = "%s→%s 가운데 %s(채도 %.2f, 양끝 평균의 %.0f%%)" % [a, b, c.to_html(false), c.s, keep * 100.0]
+	probe.queue_free()
+	note("전환 한가운데 채도 유지(양끝 평균 대비): 평균 %.0f%% · 가장 칙칙한 쌍 %s" % [sum / maxf(1.0, float(n)) * 100.0, worst_pair])
+	var demo_rings: Array = []
+	for i in range(order.size()):
+		var r := P2ScaleRing.new()
+		r.pix = 3
+		r.position = Vector2(20 + i * 178, 450)
+		t.add_child(r)
+		r.set_world(String(order[i]))
+		r.feed(0.0, 0.5, 2.0, 0)
+		r.set_world(String(order[(i + 1) % order.size()]), 0.0, 1.0)
+		r.feed(0.5, 0.5, 2.0, 0)
+		demo_rings.append(r)
+	await frames(3)
+	var demo := await _grab()
+	_crop(demo, Rect2i(0, 440, 1280, 180)).save_png(out_dir.path_join("ring_mid_colors.png"))
+	for r in demo_rings:
+		r.queue_free()
+	# 색 견본: 쌍마다 위 = 예전(RGB 섞기) 가운데 · 아래 = 지금(색상환) 가운데, 양옆은 두 세계 색
+	var swatch := Control.new()
+	swatch.position = Vector2(0, 430)
+	t.add_child(swatch)
+	var pairs: Array = []
+	for i in range(order.size()):
+		pairs.append([String(order[i]), String(order[(i + 1) % order.size()])])
+	pairs.append(["bhv", "hun"])
+	for i in range(pairs.size()):
+		var ca := Color(String(d.worlds[pairs[i][0]].color))
+		var cb := Color(String(d.worlds[pairs[i][1]].color))
+		var pr := P2ScaleRing.new()
+		pr.visible = false
+		t.add_child(pr)
+		pr.set_world(pairs[i][0])
+		pr.feed(0.0, 0.5, 2.0, 0)
+		pr.set_world(pairs[i][1], 0.0, 1.0)
+		pr.feed(0.5, 0.5, 2.0, 0)
+		var cols := [[ca, ca.lerp(cb, 0.5), cb], [ca, pr._color(), cb]]
+		pr.queue_free()
+		for row in range(2):
+			for j in range(3):
+				var cr := ColorRect.new()
+				cr.color = cols[row][j]
+				cr.position = Vector2(20 + i * 156 + j * 46, 20 + row * 60)
+				cr.size = Vector2(44, 52)
+				swatch.add_child(cr)
+	await frames(3)
+	_crop(await _grab(), Rect2i(0, 440, 1280, 140)).save_png(out_dir.path_join("ring_color_compare.png"))
+	swatch.queue_free()
+	var e0: int = t._music.earned
+	for k in range(3):
+		await _key(KEY_EQUAL)
+	await secs(2.5)
+	check(int(t._music.earned) > e0, "+ 키 = 겹 더하기(겹 %d → %d)" % [e0, int(t._music.earned)])
+	await shot("ring_running")
+
+
+func run_vfx_ring_demo() -> void:
+	Engine.time_scale = 1.0
+	get_tree().change_scene_to_file(RING_SCENE)
+	await frames(10)
+	_wake()
+	await secs(3.0)
+	await _key(KEY_EQUAL)
+	await _key(KEY_EQUAL)
+	await _key(KEY_2)
+	await secs(4.0)
+	await _key(KEY_EQUAL)
+	await _key(KEY_3)
+	await secs(4.0)
+	await _key(KEY_EQUAL)
+	await _key(KEY_1)
+	await secs(4.0)
+	for k in [KEY_4, KEY_5, KEY_6, KEY_7]:
+		await _key(k)
+		await secs(1.2)
+
+
 # 모든 스크립트·장면을 한 번씩 불러 본다 (자동 로드가 있는 실제 실행 안에서)
 func run_scripts() -> void:
 	var stack := ["res://"]
@@ -356,7 +1152,8 @@ func _quiet_window() -> void:
 				break
 	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_NO_FOCUS, true)
 	DisplayServer.window_set_mouse_passthrough(PackedVector2Array([Vector2(0, 0), Vector2(1, 0), Vector2(1, 1)]))
-	AudioServer.set_bus_mute(0, true)
+	if not OS.get_cmdline_user_args().has("--p5-movie"):
+		AudioServer.set_bus_mute(0, true)
 
 
 func ptr_move(p: Vector2, mask := 0) -> void:
@@ -3948,8 +4745,8 @@ func run_genres() -> void:
 	dr.beat = 0.5
 	v._ui.add_child(dr)
 	var dg: Dictionary = await drive.call(dr, [[0.8, click.call(false)], [1.2, key.call(KEY_F, true)], [1.21, key.call(KEY_F, false)], [1.6, key.call(KEY_K, true)], [1.61, key.call(KEY_K, false)],
-		[2.05, key.call(KEY_J, true)], [2.06, key.call(KEY_J, false)], [2.15, click.call(true)], [2.25, key.call(KEY_J, true)], [2.26, key.call(KEY_J, false)], [2.35, click.call(false)]], 5, "genre_01_drum", 2.2)
-	check(str(dg) == str({0: "perfect", 1: "miss", 2: "perfect", 3: "perfect", 4: "miss"}), "북 장단: 왼쪽 클릭 둥 · 색 틀림 놓침 · K 딱 · 연타 4번 · 안 친 큰 북 놓침 %s" % str(dg))
+		[2.02, key.call(KEY_J, true)], [2.55, key.call(KEY_J, false)]], 5, "genre_01_drum", 2.2)
+	check(str(dg) == str({0: "perfect", 1: "miss", 2: "perfect", 3: "perfect", 4: "miss"}), "북 장단: 왼쪽 클릭 둥 · 색 틀림 놓침 · K 딱 · 노랑 길게 끝까지 누름 · 안 친 큰 북 놓침 %s" % str(dg))
 	if is_instance_valid(dr):
 		dr.queue_free()
 	# 박자 피하기

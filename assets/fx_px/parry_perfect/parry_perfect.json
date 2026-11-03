@@ -1,0 +1,381 @@
+{
+ "frames": [
+  {
+   "filename": "parry_perfect 0",
+   "frame": {
+    "x": 0,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "sourceSize": {
+    "w": 170,
+    "h": 98
+   },
+   "duration": 33
+  },
+  {
+   "filename": "parry_perfect 1",
+   "frame": {
+    "x": 170,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "sourceSize": {
+    "w": 170,
+    "h": 98
+   },
+   "duration": 33
+  },
+  {
+   "filename": "parry_perfect 2",
+   "frame": {
+    "x": 340,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "sourceSize": {
+    "w": 170,
+    "h": 98
+   },
+   "duration": 33
+  },
+  {
+   "filename": "parry_perfect 3",
+   "frame": {
+    "x": 510,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "sourceSize": {
+    "w": 170,
+    "h": 98
+   },
+   "duration": 33
+  },
+  {
+   "filename": "parry_perfect 4",
+   "frame": {
+    "x": 680,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "sourceSize": {
+    "w": 170,
+    "h": 98
+   },
+   "duration": 33
+  },
+  {
+   "filename": "parry_perfect 5",
+   "frame": {
+    "x": 850,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "sourceSize": {
+    "w": 170,
+    "h": 98
+   },
+   "duration": 33
+  },
+  {
+   "filename": "parry_perfect 6",
+   "frame": {
+    "x": 1020,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "sourceSize": {
+    "w": 170,
+    "h": 98
+   },
+   "duration": 33
+  },
+  {
+   "filename": "parry_perfect 7",
+   "frame": {
+    "x": 1190,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "sourceSize": {
+    "w": 170,
+    "h": 98
+   },
+   "duration": 33
+  },
+  {
+   "filename": "parry_perfect 8",
+   "frame": {
+    "x": 0,
+    "y": 98,
+    "w": 170,
+    "h": 98
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "sourceSize": {
+    "w": 170,
+    "h": 98
+   },
+   "duration": 33
+  },
+  {
+   "filename": "parry_perfect 9",
+   "frame": {
+    "x": 170,
+    "y": 98,
+    "w": 170,
+    "h": 98
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "sourceSize": {
+    "w": 170,
+    "h": 98
+   },
+   "duration": 33
+  },
+  {
+   "filename": "parry_perfect 10",
+   "frame": {
+    "x": 340,
+    "y": 98,
+    "w": 170,
+    "h": 98
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "sourceSize": {
+    "w": 170,
+    "h": 98
+   },
+   "duration": 33
+  },
+  {
+   "filename": "parry_perfect 11",
+   "frame": {
+    "x": 510,
+    "y": 98,
+    "w": 170,
+    "h": 98
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "sourceSize": {
+    "w": 170,
+    "h": 98
+   },
+   "duration": 33
+  },
+  {
+   "filename": "parry_perfect 12",
+   "frame": {
+    "x": 680,
+    "y": 98,
+    "w": 170,
+    "h": 98
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "sourceSize": {
+    "w": 170,
+    "h": 98
+   },
+   "duration": 33
+  },
+  {
+   "filename": "parry_perfect 13",
+   "frame": {
+    "x": 850,
+    "y": 98,
+    "w": 170,
+    "h": 98
+   },
+   "rotated": false,
+   "trimmed": false,
+   "spriteSourceSize": {
+    "x": 0,
+    "y": 0,
+    "w": 170,
+    "h": 98
+   },
+   "sourceSize": {
+    "w": 170,
+    "h": 98
+   },
+   "duration": 33
+  }
+ ],
+ "meta": {
+  "app": "orsia tools/fx/bake_px.mjs",
+  "version": "1",
+  "image": "parry_perfect.png",
+  "light": "parry_perfect_light.png",
+  "format": "RGBA8888",
+  "size": {
+   "w": 1360,
+   "h": 196
+  },
+  "scale": "1",
+  "frameTags": [
+   {
+    "name": "parry_perfect",
+    "from": 0,
+    "to": 13,
+    "direction": "forward"
+   }
+  ],
+  "pivot": [
+   82,
+   81
+  ],
+  "loop": false,
+  "fps": 30,
+  "contact": 0,
+  "role": "parry",
+  "glow": [
+   1,
+   0.561,
+   0.333,
+   0.172,
+   0.075,
+   0.049,
+   0.019,
+   0.011,
+   0.006,
+   0.003,
+   0.002,
+   0.001,
+   0,
+   0
+  ],
+  "glow_color": [
+   0.834,
+   1,
+   0.91
+  ],
+  "source": {
+   "pixelfx": "a84159688af3ca37a4be05a0d422b94451b2e24e",
+   "id": "impacts/parry",
+   "options": {
+    "palette": [
+     "#0b2530",
+     "#17606a",
+     "#2aa6a0",
+     "#6fe0c8",
+     "#c8f4dc",
+     "#f6fbea",
+     "#ffffff"
+    ],
+    "height": 32,
+    "seed": 11
+   },
+   "speed": 1.8,
+   "until": 0.8,
+   "license": "MIT (tools/fx/pixelfx/LICENSE, NOTICE.md)"
+  }
+ }
+}

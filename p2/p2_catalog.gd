@@ -953,7 +953,17 @@ static func practice_sector(gid: String) -> String:
 
 
 static func diff_unlocked(cleared: Dictionary, id: String) -> bool:
-	return not DIFF_NEEDS.has(id) or bool(cleared.get(String(DIFF_NEEDS[id]), false))
+	return dev_open() or not DIFF_NEEDS.has(id) or bool(cleared.get(String(DIFF_NEEDS[id]), false))
+
+
+# 시험용: 에디터에서 실행하면 모든 난이도 · 연습 무리가 열린다(내보낸 게임 · 점검 드라이버 · --locked는 그대로)
+static func dev_open() -> bool:
+	if not OS.has_feature("editor"):
+		return false
+	for a in OS.get_cmdline_user_args():
+		if String(a) == "--locked" or String(a).begins_with("--p5-smoke"):
+			return false
+	return true
 
 
 const OBSIDIAN_CHANCE := 10

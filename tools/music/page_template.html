@@ -1,0 +1,600 @@
+<title>오르시아 일곱 세계</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* 게임 화면처럼 어두운 한 가지 모습: 위 고정 띠(지금 세계 · 박 · 연속 · 겹) · 아래 세계 카드 · 한 판 · 악보 · 적 표 */
+:root {
+  --bg: #12101a;
+  --panel: #1c1928;
+  --line: #3a3450;
+  --fg: #ece6d6;
+  --dim: #a59fb6;
+  --gold: #e8c46a;
+  --hurt: #e58b97;
+  --world: #9fb4d8;
+  --next: #9fb4d8;
+  --font-display: "Do Hyeon", "IBM Plex Sans KR", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans KR", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font: 15px/1.6 var(--font-body);
+  padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 18px; }
+h1 { font: 34px/1.15 var(--font-display); margin: 0; text-wrap: balance; }
+h2 { font: 25px/1.2 var(--font-display); margin: 0; text-wrap: balance; }
+.lead { color: var(--dim); margin: 4px 0 0; max-width: 68ch; }
+.note { color: var(--dim); font-size: 14px; margin: 0; max-width: 76ch; }
+.note b { color: var(--fg); font-weight: 600; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+
+.top {
+  background: var(--panel); border: 2px solid var(--line); border-left: 6px solid var(--world);
+  padding: 12px 14px; display: grid; grid-template-columns: 120px minmax(0, 1fr) minmax(0, 340px); gap: 16px; align-items: center;
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+}
+@media (max-width: 820px) { .top { grid-template-columns: 96px minmax(0, 1fr); position: static; } .top .side { grid-column: 1 / -1; } }
+canvas#ring { width: 120px; height: 120px; image-rendering: pixelated; display: block; }
+@media (max-width: 820px) { canvas#ring { width: 96px; height: 96px; } }
+.now { min-width: 0; display: grid; gap: 6px; }
+.world { font: 30px/1.05 var(--font-display); color: var(--world); }
+.world small { font: 15px/1 var(--font-body); color: var(--dim); margin-left: 6px; }
+.scale { font: 15px/1.4 var(--font-body); color: var(--dim); word-spacing: 0.15em; }
+.scale .cg { color: var(--gold); }
+.inst { font-size: 13px; color: var(--dim); }
+.status { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.turn { font: 17px/1.1 var(--font-display); padding: 5px 10px; border: 2px solid var(--gold); color: var(--fg); }
+.queued { font: 17px/1 var(--font-display); color: var(--next); }
+.beats { display: inline-flex; gap: 5px; }
+.beats i { width: 12px; height: 12px; border: 2px solid var(--line); display: block; }
+.beats i.on { background: var(--world); border-color: var(--world); }
+.beats i.fill { background: var(--next); border-color: var(--next); }
+.side { display: grid; gap: 8px; justify-items: end; min-width: 0; }
+@media (max-width: 820px) { .side { justify-items: start; } }
+.combo { display: flex; align-items: baseline; gap: 10px; }
+.streak { font: 15px/1 var(--font-body); color: var(--dim); }
+.streak b { display: inline-block; font: 30px/1 var(--font-display); color: var(--gold); margin-right: 4px; font-variant-numeric: tabular-nums; }
+.streak b.broke { animation: shatter 0.6s ease-out; }
+@keyframes shatter {
+  0% { transform: none; color: var(--hurt); }
+  20% { transform: translateX(-5px) rotate(-6deg); color: var(--hurt); }
+  40% { transform: translateX(5px) rotate(5deg); }
+  70% { transform: translateY(8px); opacity: 0.25; }
+  100% { transform: none; opacity: 1; }
+}
+.prog { font-size: 12px; color: var(--gold); border: 2px solid var(--line); padding: 2px 6px; }
+.parts { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+@media (max-width: 820px) { .parts { justify-content: flex-start; } }
+.parts span { font-size: 12px; padding: 3px 7px; border: 2px dashed var(--line); color: #6f6888; transition: border-color 0.2s, color 0.2s; }
+.parts span.on { border-style: solid; border-color: var(--world); color: var(--fg); }
+.parts span.off { border-style: solid; border-color: var(--hurt); color: var(--hurt); text-decoration: line-through; }
+.ev { font-size: 14px; min-height: 1.4em; color: var(--dim); text-align: right; }
+@media (max-width: 820px) { .ev { text-align: left; } }
+.ev.cut, .ev.miss { color: var(--hurt); }
+.ev.back, .ev.up { color: var(--gold); }
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.label { font-size: 12px; letter-spacing: 0.08em; color: var(--dim); min-width: 52px; }
+
+button {
+  font: 14px/1.2 var(--font-body); color: var(--fg); background: #26223a; border: 2px solid var(--line);
+  padding: 7px 10px; cursor: pointer; text-align: left;
+}
+button:hover { border-color: var(--dim); }
+button:focus-visible, .toggle:focus-within { outline: 2px solid var(--gold); outline-offset: 2px; }
+button[aria-pressed="true"] { border-color: var(--world); color: var(--world); background: #1e2633; }
+.stop { border-color: #7a4a52; color: #f0b4bc; }
+.slip { border-color: #7a4a52; color: var(--hurt); }
+.go { font: 20px/1 var(--font-display); padding: 11px 18px; border-color: var(--gold); color: var(--gold); }
+.go.playing { background: var(--gold); color: var(--bg); }
+.toggle { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; border: 2px solid var(--line); padding: 6px 10px; background: #26223a; font-size: 14px; }
+.toggle input { accent-color: var(--gold); }
+
+.step { background: var(--panel); border: 2px solid var(--line); padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 900px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 460px) { .cards { grid-template-columns: 1fr; } }
+.wcard { display: grid; gap: 4px; align-content: start; padding: 10px 12px; border-left: 6px solid var(--c); min-width: 0; }
+.wcard[aria-pressed="true"] { border-color: var(--c); border-left-width: 6px; color: var(--fg); background: #2a2540; box-shadow: inset 0 0 0 1px var(--c); }
+.wcard .wn { font: 22px/1.1 var(--font-display); color: var(--c); }
+.wcard .wn small { font: 12px/1 var(--font-mono); color: var(--dim); margin-right: 6px; }
+.wcard .ww { font-size: 12px; color: var(--dim); }
+.wcard .ws { font: 14px/1.4 var(--font-body); word-spacing: 0.1em; }
+.wcard .ws .cg { color: var(--gold); }
+.wcard .wi { font-size: 13px; color: var(--fg); }
+.wcard .wf { font-size: 12px; color: var(--dim); }
+
+.seq { display: flex; flex-wrap: wrap; gap: 6px; }
+.seq span { white-space: nowrap; border: 2px solid var(--line); border-left: 6px solid var(--c); padding: 5px 10px; font-size: 14px; }
+.seq span small { color: var(--dim); margin-left: 4px; font-size: 12px; }
+.seq span.cur { background: var(--c); color: var(--bg); }
+.seq span.cur small { color: var(--bg); }
+canvas#lane { width: 100%; height: 132px; image-rendering: pixelated; display: block; background: #0e0c15; border: 2px solid var(--line); }
+.judge { font: 26px/1 var(--font-display); min-width: 74px; color: var(--gold); }
+.judge.block { color: var(--fg); }
+.judge.miss { color: var(--hurt); }
+
+.subs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 640px) { .subs { grid-template-columns: 1fr; } }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--dim); }
+.legend i { display: inline-block; width: 9px; height: 9px; margin-right: 5px; vertical-align: -1px; }
+.scard { display: grid; gap: 6px; padding: 10px; min-width: 0; align-content: start; }
+.scard .sn { font: 20px/1 var(--font-display); }
+.scard .sd { font-size: 12px; color: var(--dim); }
+.scard canvas { width: 100%; height: auto; aspect-ratio: 320 / 120; max-width: 100%; image-rendering: pixelated; display: block; background: #0e0c15; }
+.scard[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); background: #2a2540; }
+.scard.used { box-shadow: inset 0 0 0 2px var(--world); }
+
+.tbl { overflow-x: auto; }
+.map { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
+.map th, .map td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.map th { color: var(--dim); font-weight: 400; font-size: 12px; letter-spacing: 0.06em; }
+.dot { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: middle; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } .streak b.broke { animation: none; color: var(--hurt); } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>일곱 세계 음악 시험실</h1>
+    <p class="lead">적마다 세계(음계와 악기)가 바뀝니다. 일곱 세계 모두 도와 솔을 함께 가져서, 끊기지 않는 C · G 바닥음 위에서 이어 넘어갑니다. 세계를 눌러 듣고, 아래에서 한 판을 돌려 보세요.</p>
+  </header>
+
+  <div class="controls">
+    <div class="row" id="bpms"><span class="label">빠르기</span></div>
+    <div class="row" id="sets"><span class="label">전투 진행</span></div>
+  </div>
+
+  <section class="top" aria-live="polite">
+    <canvas id="ring" width="64" height="64" aria-label="12음 고리: 지금 세계 음계 모양, 금색은 도와 솔"></canvas>
+    <div class="now">
+      <div class="world" id="world">대기 중<small>아래에서 세계를 누르세요</small></div>
+      <div class="scale" id="scale">도 · 솔이 모든 세계의 바닥</div>
+      <div class="inst" id="inst">—</div>
+      <div class="status">
+        <span class="turn" id="turn">—</span>
+        <span class="beats" id="beats" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span class="queued" id="queued"></span>
+      </div>
+    </div>
+    <div class="side">
+      <div class="combo"><span class="prog" id="prog" title="적 체력을 깎은 비율. 오를수록 겹이 쌓입니다">진행 0%</span><span class="streak"><b id="streak">0</b>연속</span></div>
+      <div class="parts" id="parts" aria-label="음악 겹"></div>
+      <div class="ev" id="ev"></div>
+      <div class="row"><button class="slip" id="slip" type="button">놓침 한 번</button><button class="stop" id="stop" type="button">■ 멈춤</button></div>
+    </div>
+  </section>
+
+  <section class="step" aria-labelledby="s1">
+    <h2 id="s1">세계 듣기</h2>
+    <p class="note">누르면 그 세계를 2마디씩 되풀이하고, 되풀이할 때마다 앞 악기 선율이 <b>원래 → 모방 → 솎음 → 주고받기</b>로 돌아갑니다. 재생 중에 다른 세계를 누르면 다음 2마디 경계로 넘어가며, 그 앞 한 박에 새 세계 타악 필인과 짧게 차오르는 소리가 들어갑니다. 겹은 위의 연속 넣기로 고르고, 놓침 한 번으로 부서지는 느낌을 시험합니다.</p>
+    <div class="cards" id="cards"></div>
+    <div class="row">
+      <label class="toggle"><input type="checkbox" id="lp" checked><span>막기 음 함께 (자동 완벽)</span></label>
+      <label class="toggle"><input type="checkbox" id="lm"><span>내 차례 소리로 (받침 + 가벼운 타악)</span></label>
+    </div>
+    <div class="row" id="mutes"><span class="label">부분 끄기</span></div>
+  </section>
+
+  <section class="step" aria-labelledby="s2">
+    <h2 id="s2">한 판: 적 차례대로</h2>
+    <p class="note">게임 적 차례와 같은 틀입니다. 세계는 바퀴(차례)마다 하나로, 적 순서에 나온 세계를 돌아가며 씁니다: 내 차례부터 그 세계라 누가 치든 차례 내내 끊김 없이 이어집니다. 내 차례 2마디 뒤에 적마다 4마디: 문장 첫머리부터 3마디 노트, 마지막 1마디는 넘어가기(세계가 바뀌면 그 마디 끝 박에 필인)입니다. 노트는 그 마디 음악 악보(적 등급대로)이고 막으면 그 음이 울립니다. 북 적은 북 장단(킥 · 낮은 북 빨강, 높은 북 파랑, 꼬리 필인 노랑 길게), 화살 · 피하기 적은 손이 따라갈 만큼 솎은 박(낮은 등급 한 박 · 높으면 반 박)입니다.</p>
+    <p class="note"><b>겹은 전투 진행을 따라 쌓입니다.</b> 적 체력을 깎을수록(여기서는 한 바퀴마다 25%) 하이햇 → 세계 타악 → 킥 4박 → 베이스 → 맞받는 선율 → 반짝이가 다음 마디부터 하나씩 더해져, 막바지에는 전부 울립니다. 다 깎으면 끝맺음과 함께 잔잔해지고 다음 전투는 잔잔하게 시작합니다. 놓치면 연속만 0이 되고 내 막기 음만 빠질 뿐, 노래는 그대로입니다(연속 5 이상이 끊기면 금 가는 소리).</p>
+    <div class="row" id="presets"><span class="label">적 순서</span></div>
+    <div class="seq" id="seq"></div>
+    <canvas id="lane" width="320" height="66" aria-label="다가오는 노트, 높이는 음 높이, 금색 선은 도와 솔"></canvas>
+    <div class="row">
+      <button class="go" id="go" type="button">▶ 한 판 시작</button>
+      <button id="hit" type="button">막기 (Space)</button>
+      <span class="judge" id="judge"></span>
+    </div>
+    <div class="row" id="autos"><span class="label">막기</span></div>
+  </section>
+
+  <section class="step" aria-labelledby="s3">
+    <h2 id="s3">악보: 음악이 곧 노트</h2>
+    <p class="note">적 공격 노트는 그 마디에 음악이 실제로 연주하는 음입니다. 앞 악기 선율이 뼈대이고, 등급이 오를수록 잔음 → 맞받는 선율 → 킥 → 세계 타악이 더해집니다. 8마디 고리라 같은 마디에서는 늘 같은 노트가 오고, 내 차례에도 앞 악기가 작게 같은 선율을 들려줍니다. 게임도 이 악보를 그대로 씁니다. 등급을 누르면 <b>세계 듣기</b>에서 그 등급 노트가 나오고, 한 판에서는 적 등급대로 나옵니다. 아래 그림은 지금 세계의 8마디(가로 = 시각, 세로 = 음 높이)입니다.</p>
+    <div class="legend"><span><i style="background:#ece6d6"></i>앞 악기</span><span><i style="background:#b28cff"></i>맞받는 선율</span><span><i style="background:#6b5f8a"></i>킥</span><span><i style="background:#e8c46a"></i>세계 타악</span></div>
+    <div class="subs" id="subs"></div>
+  </section>
+
+  <section class="step" aria-labelledby="s4">
+    <h2 id="s4">적 → 세계</h2>
+    <div class="tbl"><table class="map">
+      <thead><tr><th>세계</th><th>막기 장르</th><th>적 (게임 열쇠) · 리듬 등급</th></tr></thead>
+      <tbody id="maprows"></tbody>
+    </table></div>
+    <p class="note">악기는 모두 브라우저에서 합성한 소리입니다. 같은 엔진 함수가 오프라인 렌더링(E.render)도 하므로, 고른 소리는 다음 단계에서 겹별로 WAV로 구워 게임에 넣습니다.</p>
+  </section>
+</div>
+
+<script>
+/*ENGINE*/
+</script>
+<script>
+const FOE = { scout: "척후병", scout_h: "추격 척후", archer: "사수", archer_h: "심층 사수", breaker: "파괴자", guard_h: "철갑 수비병", elite: "정예 돌격대장", maek_elite_low: "맥 거완", leader: "돌파 대장", hexer: "해골 저주꾼", poisoner: "독침병", shieldbearer: "방패병", banner: "기수", boss: "균열 수문장", hard_boss: "심층 파수자", maek_noble_mid: "맥 귀족", ruins_boss: "폭주한 근원체", cannon: "포격 장치", curse: "저주 장치", x_boss: "균열의 핵", maek_summoner_low: "맥 소환사", mimic_n: "상자 미믹", mimic_h: "심층 미믹", mimic_x: "균열 미믹" };
+// 리듬 등급(게임에서는 rank와 구간으로 정할 것)
+const FOE_LV = {
+  scout: "normal", archer: "normal", breaker: "normal", shieldbearer: "normal", banner: "normal", hexer: "normal", poisoner: "normal",
+  scout_h: "deep", archer_h: "deep", guard_h: "deep", cannon: "deep", curse: "deep", mimic_n: "deep",
+  elite: "elite", leader: "elite", maek_elite_low: "elite", mimic_h: "elite", mimic_x: "elite",
+  boss: "boss", hard_boss: "boss", ruins_boss: "boss", maek_noble_mid: "boss", maek_summoner_low: "boss", x_boss: "boss",
+};
+const GENRE = { gye: "고리 (게임의 얼굴)", lyd: "화살 막기", tez: "북 장단 · 정예", bhv: "박자 피하기", hun: "방패 · 지원 · 구간 보스", mac: "장치", core: "최종 보스", echo: "따라 치기 (부름-응답)" };
+const PRESETS = [
+  { name: "척후 → 사수 → 파괴자", foes: ["scout", "archer", "breaker"] },
+  { name: "방패병 → 저주꾼 → 기수", foes: ["shieldbearer", "hexer", "banner"] },
+  { name: "척후 → 미믹 → 사수", foes: ["scout", "mimic_n", "archer"] },
+  { name: "척후 → 맥 거완 → 사수", foes: ["scout", "maek_elite_low", "archer"] },
+  { name: "심층 사수 → 수비병 → 포격 장치", foes: ["archer_h", "guard_h", "cannon"] },
+  { name: "포격 장치 → 균열의 핵 → 저주 장치", foes: ["cannon", "x_boss", "curse"] },
+];
+const BPMS = [[112, "구간 Ⅰ"], [124, "구간 Ⅱ"], [136, "구간 Ⅲ"]];
+const SETS = [0, 0.25, 0.5, 0.75, 1];
+const MUTES = [["lead", "앞 악기"], ["counter", "맞받는 선율"], ["perc", "세계 타악"], ["bed", "받침"], ["drone", "바닥음"], ["bass", "베이스"], ["kick", "킥"], ["hat", "하이햇"], ["fx", "반짝이 · 차오름"], ["parry", "막기 음"]];
+const AUTOS = [["manual", "직접"], ["perfect", "자동 완벽"], ["mixed", "자동 섞임 (완벽 · 막음 · 놓침)"]];
+const TIERS = [["normal", "일반", "앞 악기 긴 음 위주"], ["deep", "심층", "앞 악기 선율 전부"], ["elite", "정예", "+ 맞받는 선율 · 킥"], ["boss", "보스", "+ 세계 타악"]];
+const LVNAME = Object.fromEntries(TIERS.map(l => [l[0], l[1]]));
+const TIER_OF = Object.fromEntries(TIERS.map((l, i) => [l[0], i]));
+const SRC_COL = { lead: "#ece6d6", counter: "#b28cff", kick: "#6b5f8a", kick4: "#6b5f8a", perc: "#e8c46a", roll: "#ffcf3a", rollhit: "#ffcf3a" };
+// 적 → 막기 장르(게임 P2Catalog parry). 최종 보스는 바퀴마다 돌아가며
+const FOE_GENRE = { scout: "osu", scout_h: "osu", archer: "arrow", archer_h: "arrow", breaker: "drum", guard_h: "drum", elite: "drum", maek_elite_low: "drum", leader: "drum",
+  hexer: "dodge", poisoner: "dodge", shieldbearer: "osu", banner: "osu", boss: "osu", hard_boss: "osu", maek_noble_mid: "arrow", ruins_boss: "osu", cannon: "dodge", curse: "osu",
+  x_boss: "medley", maek_summoner_low: "osu", mimic_n: "osu", mimic_h: "osu", mimic_x: "osu" };
+const GENRE_NAME = { osu: "고리", arrow: "화살", drum: "북", dodge: "피하기" };
+
+let bpm = 124, listenTier = 1, autoMode = "perfect", preset = PRESETS[0];
+// 연속(combo)은 놓치면 0이 될 뿐 음악과 무관. 음악 겹은 전투 진행(prog, 적 체력을 깎은 비율)대로 earned개
+const H = { combo: 0, earned: 0, prog: 0 };
+let ctx = null, G = null, mode = "", timer = 0, timers = [], nextBar = 0, barIdx = 0, notes = [], bars = [];
+let queued = null, lastBase = "gye", curW = E.WORLDS.gye, seq = [], segVar = new Map(), seen = new Map();
+let lastSemi = null, lastSemiAt = 0, shownW = null, chartW = null, playSlot = -1;
+const $ = id => document.getElementById(id);
+
+function at(t, fn) { timers.push(setTimeout(fn, Math.max(0, (t - ctx.currentTime) * 1000))); }
+function baseOf(w) { return w.mirror ? w.base.id : w.id; }
+function keyOf(w) { return w.mirror ? "echo:" + w.base.id : w.id; }
+function worldOf(id) { return id === "echo" ? E.echoOf(lastBase) : E.WORLDS[id]; }
+function scaleHTML(sc) { return sc.map(pc => pc === 0 || pc === 7 ? `<span class="cg">${E.NAMES[pc]}</span>` : E.NAMES[pc]).join(" "); }
+function show(w, turn) {
+  shownW = w;
+  if (w !== chartW) drawCharts(w);
+  document.documentElement.style.setProperty("--world", w.color);
+  $("world").innerHTML = w.name + "<small>" + w.where + "</small>";
+  $("scale").innerHTML = scaleHTML(w.scale);
+  $("inst").textContent = `앞 ${w.leadName} · 맞받는 ${w.counterName} · 타악 ${w.percName} · 받침 ${w.bedName} · 반짝이 ${w.sparkName}`;
+  if (turn !== undefined) $("turn").textContent = turn;
+}
+
+// ── 연속과 겹 ──
+function partsOn() { return E.PARTS.slice(0, H.earned).map(p => p[0]); }
+function hit(grow) {
+  if (grow) H.combo++;
+  return { msgs: [] };
+}
+function miss(t) {
+  const big = H.combo >= 5;
+  H.combo = 0;
+  if (big) E.crack(G, t);
+  return { big: big, msgs: [["miss", big ? "연속 부서짐 · 노래는 그대로" : "놓침 · 내 막기 음만 빠짐"]] };
+}
+function showHeat(s, out) {
+  const b = $("streak");
+  if (out && out.big) { b.classList.remove("broke"); void b.offsetWidth; b.classList.add("broke"); }
+  b.textContent = s.combo;
+  $("prog").textContent = "진행 " + Math.round(s.prog * 100) + "%";
+  document.querySelectorAll("#parts span").forEach((el, i) => { el.className = i < s.earned ? "on" : ""; });
+  if (out) for (const [kind, msg] of out.msgs) { const e = $("ev"); e.textContent = msg; e.className = "ev " + kind; }
+}
+// 전투 진행을 v로: 새로 넘은 겹 이름들을 돌려준다(겹은 다음 마디부터)
+function setProg(v) {
+  const before = H.earned;
+  H.prog = Math.max(0, Math.min(1, v)); H.earned = E.earnedFor(H.prog);
+  return E.PARTS.slice(before, H.earned).map(p => p[1]);
+}
+
+function stopAll() {
+  clearInterval(timer); timer = 0; timers.forEach(clearTimeout); timers = [];
+  if (ctx) { const c = ctx; setTimeout(() => c.close(), 80); }
+  ctx = null; G = null; mode = ""; notes = []; bars = []; queued = null;
+  $("go").classList.remove("playing"); $("go").textContent = "▶ 한 판 시작";
+  $("turn").textContent = "—"; $("queued").textContent = ""; $("judge").textContent = "";
+  document.querySelectorAll(".seq span").forEach(s => s.classList.remove("cur"));
+  document.querySelectorAll(".wcard").forEach(c => c.setAttribute("aria-pressed", "false"));
+  document.querySelectorAll(".scard").forEach(c => c.classList.remove("used"));
+}
+function fresh() {
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  G = E.build(ctx, bpm);
+  document.querySelectorAll("#mutes input").forEach(cb => { if (!cb.checked) E.setMute(G, cb.dataset.bus, true); });
+  nextBar = ctx.currentTime + 0.12; barIdx = 0; segVar = new Map(); seen = new Map();
+  timer = setInterval(tick, 25);
+}
+function tick() {
+  while (nextBar < ctx.currentTime + 0.35) { (mode === "battle" ? battleBar : listenBar)(barIdx, nextBar); nextBar += G.bar; barIdx++; }
+  const now = ctx.currentTime;
+  if (mode === "battle" && autoMode === "manual") for (const n of notes) if (!n.done && now > n.time + 0.15) judge(n, 1);
+  notes = notes.filter(n => n.time > now - 1.5);
+  bars = bars.filter(b => b.t > now - 2 * G.bar);
+}
+
+// ── 막기 노트: 그 마디 악보(E.chartBar) 그대로. 필인 마디는 마지막 박을 비운다 ──
+function chartOf(w, slot, tier, fill) { return E.chartBar(w, slot, tier).filter(n => !fill || n.b < 3); }
+function withForced(on, ch) {
+  const used = new Set(ch.map(n => n.src === "roll" || n.src === "rollhit" ? "perc" : n.src));
+  return on.concat(["counter", "perc", "kick4"].filter(p => !on.includes(p) && used.has(p)));
+}
+function addNotes(w, ch, t) {
+  ch.forEach((c, i) => {
+    const n = { time: t + c.b * G.beat, semi: c.semi, src: c.src, w: w, done: false, end: i === ch.length - 1 };
+    notes.push(n);
+    if (mode === "listen" || autoMode !== "manual") autoJudge(n);
+  });
+}
+function autoJudge(n) {
+  let r = "perfect";
+  if (mode === "battle" && autoMode === "mixed") { const x = Math.random(); r = x < 0.1 ? "miss" : x < 0.3 ? "block" : "perfect"; }
+  n.done = true; n.auto = true;
+  let out;
+  if (r === "miss") out = miss(n.time + 0.12);
+  else { E.parry(G, n.w, r === "block" ? n.time + 0.08 : n.time, n.semi, "perfect"); out = hit(mode === "battle"); }
+  const snap = Object.assign({}, H);
+  at(n.time, () => { flash(n, r); showHeat(snap, out); });
+}
+function judge(n, d) {
+  n.done = true;
+  const a = Math.abs(d), now = ctx.currentTime;
+  let r = "miss", out;
+  if (a <= 0.065) { r = "perfect"; E.parry(G, n.w, Math.max(now, n.time), n.semi, r); out = hit(true); }
+  else if (a <= 0.13) { r = "block"; E.parry(G, n.w, now, n.semi, "perfect"); out = hit(true); }
+  else out = miss(now);
+  flash(n, r); showHeat(H, out);
+}
+function flash(n, r) {
+  const j = $("judge");
+  j.textContent = { perfect: "완벽", block: "막음", miss: "놓침" }[r]; j.className = "judge " + r;
+  if (r !== "miss") { lastSemi = n.semi; lastSemiAt = performance.now(); }
+}
+function press() {
+  if (mode !== "battle" || autoMode !== "manual" || !ctx) return;
+  const now = ctx.currentTime; let best = null;
+  for (const n of notes) if (!n.done && Math.abs(n.time - now) < 0.2 && (!best || Math.abs(n.time - now) < Math.abs(best.time - now))) best = n;
+  if (best) judge(best, now - best.time);
+}
+function slip() {
+  if (!ctx) return;
+  const out = miss(ctx.currentTime + 0.02);
+  const j = $("judge"); j.textContent = "놓침"; j.className = "judge miss";
+  showHeat(H, out);
+}
+function markTier(tier, slot) {
+  document.querySelectorAll(".scard").forEach(c => c.classList.toggle("used", tier !== null && c.dataset.id === TIERS[tier][0]));
+  const ps = tier === null ? -1 : slot;
+  if (ps !== playSlot) { playSlot = ps; if (chartW) drawCharts(chartW); }
+}
+
+// ── 세계 듣기: 2마디씩 되풀이, 고른 세계는 다음 2마디 경계로 ──
+function listenBar(b, t) {
+  const half = b % 2;
+  if (half === 0 && queued) { curW = worldOf(queued); if (queued !== "echo") lastBase = queued; queued = null; }
+  if (half === 0) seen.set(keyOf(curW), (seen.get(keyOf(curW)) || 0) + 1);
+  const w = curW, vari = (seen.get(keyOf(w)) - 1) % 4, mine = $("lm").checked, fill = half === 1 && queued ? worldOf(queued) : null;
+  const notesOn = !mine && $("lp").checked, ch = notesOn ? chartOf(w, vari * 2 + half, listenTier, fill) : [];
+  E.bar(G, { w: w, kind: mine ? "mine" : "enemy", half: half, on: withForced(partsOn(), ch), vari: vari, fill: fill }, t);
+  addNotes(w, ch, t);
+  bars.push({ t: t, w: w, fill: fill });
+  at(t, () => { show(w, mine ? "내 차례 소리" : "듣기 · 변주 " + E.VARIS[vari]); markTier(notesOn ? listenTier : null, vari * 2 + half); if (half === 0) $("queued").textContent = queued ? "다음 → " + worldOf(queued).name : ""; });
+  if (fill) at(t + 3 * G.beat, () => { $("queued").textContent = "넘어가기 예고 → " + fill.name; document.documentElement.style.setProperty("--next", fill.color); });
+}
+function listen(id) {
+  if (mode === "listen" && ctx && id === keyOf(curW).split(":")[0] && !queued) return;
+  document.querySelectorAll(".wcard").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.id === id)));
+  if (mode === "listen" && ctx) {
+    queued = id; $("queued").textContent = "다음 → " + worldOf(id).name;
+    document.documentElement.style.setProperty("--next", worldOf(id).color);
+    return;
+  }
+  stopAll(); mode = "listen";
+  document.querySelectorAll(".wcard").forEach(c => c.setAttribute("aria-pressed", String(c.dataset.id === id)));
+  curW = worldOf(id); if (id !== "echo") lastBase = id;
+  fresh(); show(curW, "듣기");
+}
+
+// ── 한 판: 내 차례 → 적 셋, 되풀이 ──
+function seqItems() { return [{ kind: "mine" }].concat(preset.foes.map(f => ({ kind: "enemy", foe: f, wid: E.ENEMY_WORLD[f] }))); }
+// 바퀴(차례)마다 세계 하나: 적 순서에 나온 세계들(메아리 빼고)을 바퀴마다 돌아가며, 내 차례부터 그 세계 — 게임과 같음
+function roundWorlds(items) { const ids = [...new Set(items.filter(q => q.kind === "enemy" && q.wid !== "echo").map(q => q.wid))]; return ids.length ? ids : ["gye"]; }
+function resolve(k) { const ids = roundWorlds(seq); return E.WORLDS[ids[Math.floor(k / seq.length) % ids.length]]; }
+// 한 판의 마디 차례: 내 차례 2마디, 적마다 4마디(3마디 노트 + 넘어가기 1마디). 음악은 게임처럼 8마디 고리(마디 b → 고리 b % 8)라 블록은 늘 문장 첫머리에서 시작
+function blockAt(b) {
+  const lens = seq.map(q => q.kind === "mine" ? 2 : 4), round = lens.reduce((a, x) => a + x, 0);
+  let x = b % round, i = 0;
+  while (x >= lens[i]) { x -= lens[i]; i++; }
+  return { k: Math.floor(b / round) * seq.length + i, bar: x, len: lens[i], round: Math.floor(b / round) };
+}
+function genreOf(foe, round) { const g = FOE_GENRE[foe] || "osu"; return g === "medley" ? ["drum", "arrow", "dodge", "osu"][round % 4] : g; }
+function chartFor(w, genre, slot, tier) {
+  const ch = genre === "drum" ? E.drumBar(w, slot, tier) : E.chartBar(w, slot, tier);
+  return genre === "arrow" || genre === "dodge" ? E.thin(ch, tier <= 1 ? 1 : 0.5) : ch;
+}
+function battleBar(b, t) {
+  const { k, bar, len, round } = blockAt(b), s = seq[k % seq.length], w = resolve(k), slot = b % 8, vari = slot >> 1, half = slot & 1;
+  const nx = seq[(k + 1) % seq.length], fill = bar === len - 1 && nx.kind === "enemy" && (s.kind === "mine" || keyOf(resolve(k + 1)) !== keyOf(w)) ? resolve(k + 1) : null;
+  const genre = s.kind === "enemy" ? genreOf(s.foe, round) : "";
+  const tier = s.kind === "enemy" && bar < 3 ? TIER_OF[FOE_LV[s.foe]] : null, ch = tier === null ? [] : chartFor(w, genre, slot, tier);
+  // 한 바퀴(내 차례로 돌아옴)마다 적 체력을 25%씩 깎은 것으로: 겹이 쌓이다 다 깎으면 끝맺음 뒤 잔잔하게 처음부터
+  let roundMsg = null;
+  if (bar === 0 && s.kind === "mine" && k > 0) {
+    if (H.prog >= 1) { E.ending(G, w, t); setProg(0); roundMsg = ["up", "다 깎음 → 끝맺음 · 다음 전투는 잔잔하게"]; }
+    else { const f = setProg(H.prog + 0.25); roundMsg = ["up", "진행 " + Math.round(H.prog * 100) + "%" + (f.length ? " → 겹 + " + f.join(" · ") : "")]; }
+  }
+  E.bar(G, { w: w, kind: s.kind, half: half, on: withForced(partsOn(), ch), vari: vari, fill: fill }, t);
+  addNotes(w, ch, t);
+  bars.push({ t: t, w: w, fill: fill });
+  at(t, () => {
+    show(w, s.kind === "enemy" ? (bar < 3 ? `적 차례 · ${FOE[s.foe]} · ${GENRE_NAME[genre]} · ${bar + 1}/3마디` : `적 차례 · 넘어가기`) : "내 차례");
+    markTier(tier, slot);
+    if (roundMsg) showHeat(H, { msgs: [roundMsg] });
+    if (bar === 0) { $("queued").textContent = ""; document.querySelectorAll(".seq span:not(.rot)").forEach((e, i) => e.classList.toggle("cur", i === k % seq.length)); }
+  });
+  if (fill) at(t + 3 * G.beat, () => { $("queued").textContent = "넘어가기 예고 → " + fill.name; document.documentElement.style.setProperty("--next", fill.color); });
+}
+function battle() {
+  if (mode === "battle") { stopAll(); return; }
+  stopAll(); mode = "battle";
+  H.combo = 0; setProg(0); showHeat(H);
+  seq = seqItems();
+  $("go").classList.add("playing"); $("go").textContent = "■ 한 판 멈춤";
+  fresh();
+}
+function drawSeq() {
+  const box = $("seq"); box.innerHTML = "";
+  const items = seqItems(), ids = roundWorlds(items);
+  items.forEach(it => {
+    const s = document.createElement("span");
+    if (it.kind === "mine") s.innerHTML = `내 차례<small>잔잔하게</small>`;
+    else s.innerHTML = `${FOE[it.foe]}<small>${LVNAME[FOE_LV[it.foe]]} · ${FOE_GENRE[it.foe] === "medley" ? "돌아가며" : GENRE_NAME[FOE_GENRE[it.foe]]}</small>`;
+    s.style.setProperty("--c", it.kind === "mine" ? "#6b5f8a" : (E.WORLDS[it.wid] || E.WORLDS[ids[0]]).color); box.appendChild(s);
+  });
+  const r = document.createElement("span");
+  r.innerHTML = `세계<small>${ids.map(id => E.WORLDS[id].name).join(" → ")} (바퀴마다)</small>`;
+  r.style.setProperty("--c", E.WORLDS[ids[0]].color); r.className = "rot"; box.appendChild(r);
+}
+
+// ── 화면 ──
+const cards = $("cards");
+E.ORDER.concat(["echo"]).forEach((id, i) => {
+  const w = id === "echo" ? { name: "메아리", where: "바로 앞 세계 흉내", color: "#cfc9dc", scale: null, leadName: "앞 세계 악기가 8분 늦게 따라 부름" } : E.WORLDS[id];
+  const foes = Object.keys(E.ENEMY_WORLD).filter(k => E.ENEMY_WORLD[k] === id).map(k => FOE[k]).join(" · ");
+  const b = document.createElement("button"); b.type = "button"; b.className = "wcard"; b.dataset.id = id; b.style.setProperty("--c", w.color);
+  b.setAttribute("aria-pressed", "false");
+  b.innerHTML = `<span class="wn"><small>${id === "echo" ? "*" : i + 1}</small>${w.name}</span><span class="ww">${w.where}</span>` +
+    (w.scale ? `<span class="ws">${scaleHTML(w.scale)}</span><span class="wi">${w.leadName} · ${w.counterName} · ${w.percName}</span>` : `<span class="ws">고른 앞 세계 음계 그대로</span><span class="wi">${w.leadName}</span>`) +
+    `<span class="wf">${foes}</span>`;
+  b.onclick = () => listen(id);
+  cards.appendChild(b);
+});
+const mb = $("mutes");
+MUTES.forEach(([bus, nm]) => {
+  const l = document.createElement("label"); l.className = "toggle";
+  l.innerHTML = `<input type="checkbox" checked data-bus="${bus}" id="mute-${bus}"><span>${nm}</span>`;
+  l.querySelector("input").onchange = e => { if (G) E.setMute(G, bus, !e.target.checked); };
+  mb.appendChild(l);
+});
+E.PARTS.forEach(([id, nm]) => { const s = document.createElement("span"); s.textContent = nm; s.dataset.id = id; $("parts").appendChild(s); });
+SETS.forEach(v => {
+  const b = document.createElement("button"); b.type = "button"; b.textContent = Math.round(v * 100) + "%";
+  b.onclick = () => { const f = setProg(v); showHeat(H, { msgs: [["up", "진행 " + Math.round(v * 100) + "% → 겹 " + H.earned + "개" + (f.length ? " (+ " + f.join(" · ") + ")" : "")]] }); };
+  $("sets").appendChild(b);
+});
+BPMS.forEach(([v, nm]) => {
+  const b = document.createElement("button"); b.type = "button"; b.textContent = `${nm} · ${v}`; b.setAttribute("aria-pressed", String(v === bpm));
+  b.onclick = () => {
+    bpm = v; document.querySelectorAll("#bpms button").forEach(o => o.setAttribute("aria-pressed", String(o === b)));
+    if (mode === "battle") { stopAll(); battle(); } else if (mode === "listen") { const id = curW.mirror ? "echo" : curW.id; stopAll(); listen(id); }
+  };
+  $("bpms").appendChild(b);
+});
+PRESETS.forEach(p => {
+  const b = document.createElement("button"); b.type = "button"; b.textContent = p.name; b.setAttribute("aria-pressed", String(p === preset));
+  b.onclick = () => { preset = p; document.querySelectorAll("#presets button").forEach(o => o.setAttribute("aria-pressed", String(o === b))); drawSeq(); if (mode === "battle") { stopAll(); battle(); } };
+  $("presets").appendChild(b);
+});
+drawSeq();
+AUTOS.forEach(([v, nm]) => {
+  const b = document.createElement("button"); b.type = "button"; b.textContent = nm; b.setAttribute("aria-pressed", String(v === autoMode));
+  b.onclick = () => { autoMode = v; document.querySelectorAll("#autos button").forEach(o => o.setAttribute("aria-pressed", String(o === b))); };
+  $("autos").appendChild(b);
+});
+function selectTier(i, b) {
+  listenTier = i; document.querySelectorAll(".scard").forEach(o => o.setAttribute("aria-pressed", String(o === b)));
+  if (mode !== "battle") { $("lp").checked = true; $("lm").checked = false; if (mode !== "listen") listen(curW.mirror ? "echo" : curW.id); }
+}
+TIERS.forEach(([id, nm, desc], i) => {
+  const b = document.createElement("button"); b.type = "button"; b.className = "scard"; b.dataset.id = id; b.setAttribute("aria-pressed", String(i === listenTier));
+  b.innerHTML = `<span class="sn">${nm}</span><span class="sd">${desc} · <span class="cnt"></span></span><canvas width="320" height="120"></canvas>`;
+  b.onclick = () => selectTier(i, b);
+  $("subs").appendChild(b);
+});
+const rows = $("maprows");
+E.ORDER.concat(["echo"]).forEach(id => {
+  const w = id === "echo" ? { name: "메아리", where: "바로 앞 세계 흉내", color: "#cfc9dc" } : E.WORLDS[id], tr = document.createElement("tr");
+  const foes = Object.keys(E.ENEMY_WORLD).filter(k => E.ENEMY_WORLD[k] === id).map(k => `${FOE[k]} <span style="color:var(--dim)">${k} · ${LVNAME[FOE_LV[k]]}</span>`).join("<br>");
+  tr.innerHTML = `<td><span class="dot" style="background:${w.color}"></span>${w.name} · ${w.where}</td><td>${GENRE[id]}</td><td>${foes}</td>`;
+  rows.appendChild(tr);
+});
+$("go").onclick = battle;
+$("hit").onclick = press;
+$("slip").onclick = slip;
+$("stop").onclick = stopAll;
+window.addEventListener("keydown", e => { if (e.code === "Space" && mode === "battle" && !(e.target instanceof HTMLInputElement)) { e.preventDefault(); press(); } });
+showHeat(H);
+drawCharts(E.WORLDS.gye);
+
+// 악보 그림: 8마디를 두 줄로(줄마다 네 마디) · 16분 눈금 · 세로는 음 높이, 소리 겹마다 색. 지금 울리는 마디는 밝게
+function drawCharts(w) {
+  chartW = w;
+  document.querySelectorAll(".scard").forEach((card, tier) => {
+    const cv = card.querySelector("canvas"), g = cv.getContext("2d"), W = cv.width, x0 = 6, bw = (W - 12) / 4, RH = 56;
+    g.fillStyle = "#0e0c15"; g.fillRect(0, 0, W, cv.height);
+    let total = 0;
+    for (let slot = 0; slot < 8; slot++) {
+      const r = slot >> 2, xb = x0 + (slot % 4) * bw, y0 = 4 + r * (RH + 4), ch = E.chartBar(w, slot, tier);
+      total += ch.length;
+      if (slot === playSlot && card.classList.contains("used")) { g.fillStyle = "#231e36"; g.fillRect(Math.round(xb), y0, Math.round(bw), RH); }
+      for (let k = 0; k <= 16; k++) { g.fillStyle = k % 16 === 0 ? "#6b5f8a" : k % 4 === 0 ? "#3a3450" : "#221e30"; g.fillRect(Math.round(xb + k * bw / 16), y0 + (k % 4 ? 10 : 0), 1, k % 4 ? RH - 20 : RH); }
+      for (const n of ch) {
+        const x = Math.round(xb + n.b * bw / 4), y = Math.round(y0 + RH - 6 - (Math.max(-9, Math.min(19, n.semi)) + 9) / 28 * (RH - 12));
+        g.fillStyle = SRC_COL[n.src] || "#ece6d6";
+        if (n.src === "lead" || n.src === "counter") g.fillRect(x - 1, y - 2, Math.max(4, Math.round(n.len * bw / 16) - 1), 4);
+        else g.fillRect(x - 2, n.src === "kick" ? y0 + RH - 6 : y0 + 3, 4, 4);
+      }
+    }
+    card.querySelector(".cnt").textContent = `마디마다 ${Math.round(total / 8 * 10) / 10}개`;
+  });
+}
+
+// 12음 고리 · 다가오는 노트 · 박 칸
+const rc = $("ring"), rg = rc.getContext("2d"), RW = rc.width, RC = RW / 2, RR = 22;
+const lc = $("lane"), lg = lc.getContext("2d");
+function fitLane() { lc.width = Math.max(160, Math.round(lc.clientWidth / 2)); }
+window.addEventListener("resize", fitLane); fitLane();
+function px(c, x, y, s, col) { c.fillStyle = col; c.fillRect(Math.round(x - s / 2), Math.round(y - s / 2), s, s); }
+function pos(pc, r) { const a = -Math.PI / 2 + pc * Math.PI / 6; return [RC + Math.cos(a) * r, RC + Math.sin(a) * r]; }
+function semiY(s, H) { return H - 6 - (s + 7) / 28 * (H - 12); }
+function draw(nowMs) {
+  const w = shownW || E.WORLDS.gye, col = shownW ? w.color : "#6b5f8a", sc = w.scale;
+  rg.fillStyle = "#1c1928"; rg.fillRect(0, 0, RW, RW);
+  for (let k = 0; k < 360; k += 2) { const a = k * Math.PI / 180; px(rg, RC + Math.cos(a) * (RR + 6), RC + Math.sin(a) * (RR + 6), 1, "#6b5426"); }
+  const pts = sc.map(pc => pos(pc, RR));
+  rg.globalAlpha = 0.25; rg.fillStyle = col; rg.beginPath(); pts.forEach(([x, y], i) => i ? rg.lineTo(x, y) : rg.moveTo(x, y)); rg.closePath(); rg.fill(); rg.globalAlpha = 1;
+  for (let pc = 0; pc < 12; pc++) { const [x, y] = pos(pc, RR), lit = sc.includes(pc); px(rg, x, y, lit ? 4 : 2, pc === 0 || pc === 7 ? "#e8c46a" : lit ? col : "#3a3450"); }
+  if (lastSemi !== null && nowMs - lastSemiAt < 450) { const [x, y] = pos(((lastSemi % 12) + 12) % 12, RR); px(rg, x, y, 7, "#ffffff"); }
+  const LW = lc.width, LH = lc.height, hx = 22, sp = 120;
+  lg.fillStyle = "#0e0c15"; lg.fillRect(0, 0, LW, LH);
+  for (const s of [-5, 0, 7, 12, 19]) for (let x = 0; x < LW; x += 3) px(lg, x, semiY(s, LH), 1, s % 12 === 0 ? "#6b5426" : "#3b3460");
+  const beatsEl = $("beats").children;
+  if (ctx && G) {
+    const t = ctx.currentTime;
+    for (const b of bars) for (let k = 0; k < 4; k++) { const x = hx + (b.t + k * G.beat - t) * sp; if (x > 0 && x < LW) for (let y = 0; y < LH; y += 2) px(lg, x, y, 1, k ? "#221e30" : "#3a3450"); }
+    for (const n of notes) {
+      const x = hx + (n.time - t) * sp;
+      if (x < -8 || x > LW + 8 || (n.done && !n.auto)) continue;
+      if (n.auto && x < hx - 2) continue;
+      const y = n.src === "kick" || n.src === "kick4" ? LH - 8 : n.src === "perc" ? 8 : semiY(n.semi, LH), sz = n.src === "lead" || n.src === "roll" ? 6 : 4;
+      lg.fillStyle = n.src === "lead" ? n.w.color : SRC_COL[n.src]; lg.fillRect(Math.round(x - sz / 2), Math.round(y - sz / 2), sz, sz);
+      if (n.end) { lg.strokeStyle = "#e8c46a"; lg.lineWidth = 1; lg.strokeRect(Math.round(x - 5) + 0.5, Math.round(y - 5) + 0.5, 10, 10); }
+    }
+    let cur = null;
+    for (const b of bars) if (b.t <= t) cur = b;
+    const k = cur ? Math.floor((t - cur.t) / G.beat) : -1;
+    for (let i = 0; i < 4; i++) beatsEl[i].className = i === k ? (cur.fill && i === 3 ? "fill" : "on") : "";
+  } else for (let i = 0; i < 4; i++) beatsEl[i].className = "";
+  for (let y = 0; y < LH; y += 2) px(lg, hx, y, 1, "#e8c46a");
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+</script>
